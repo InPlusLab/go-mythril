@@ -5,11 +5,13 @@ import (
 )
 
 type WorldState struct {
-	Balances *smt.Array
+	Balances    *smt.Array
+	Constraints *Constraints
 }
 
 func NewWordState() *WorldState {
 	return &WorldState{
-		Balances: &smt.Array{},
+		Balances:    &smt.Array{},
+		Constraints: NewConstraints(),
 	}
 }

@@ -3,6 +3,7 @@ package ethereum
 import (
 	"fmt"
 	"go-mythril/laser/ethereum/state"
+	//"go-mythril/laser/smt"
 )
 
 type LaserEVM struct {
@@ -38,6 +39,7 @@ func (evm *LaserEVM) Run() {
 	globalState := <-evm.WorkList
 	fmt.Println("Run", globalState)
 	// TODO: test smt here:
-	// globalState.WorldState.Balances
+	// globalState.WorldState.Constraints.Add(&smt.Bool) (a<1)
+	// globalState.WorldState.Constraints.IsPossible()
 	evm.FinalState <- globalState
 }
