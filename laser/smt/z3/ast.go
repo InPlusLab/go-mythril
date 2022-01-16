@@ -1,9 +1,7 @@
 package z3
 
 // #include <stdlib.h>
-// #cgo CFLAGS: -IC:/Z3/src/api
-// #cgo LDFLAGS: -LC:/Z3/build -llibz3
-// #include "z3.h"
+// #include "goZ3Config.h"
 import "C"
 
 // AST represents an AST value in Z3.
@@ -48,8 +46,8 @@ func (a *AST) BvSize() uint {
 // is following identical naming convention.
 func (c *Context) Const(s *Symbol, typ *Sort) *AST {
 	return &AST{
-		rawCtx: c.raw,
-		rawAST: C.Z3_mk_const(c.raw, s.rawSymbol, typ.rawSort),
+		rawCtx:  c.raw,
+		rawAST:  C.Z3_mk_const(c.raw, s.rawSymbol, typ.rawSort),
 		rawSort: typ.rawSort,
 	}
 }
@@ -104,4 +102,3 @@ func (a *AST) Simplify() *AST {
 		rawAST: C.Z3_simplify(a.rawCtx, a.rawAST),
 	}
 }
-

@@ -5,9 +5,7 @@ import (
 )
 
 // #include <stdlib.h>
-// #cgo CFLAGS: -IC:/Z3/src/api
-// #cgo LDFLAGS: -LC:/Z3/build -llibz3
-// #include "z3.h"
+// #include "goZ3Config.h"
 import "C"
 
 // Distinct creates an AST node representing adding.
@@ -174,7 +172,7 @@ func (a *AST) Extract(high uint, low uint) *AST {
 
 // If creates an if(a) t2 then t3 structure. t1 is bool sort, t2 and t3 must be the same sort.
 // created by chz
-func (a *AST) If(t2 *AST,t3 *AST) *AST {
+func (a *AST) If(t2 *AST, t3 *AST) *AST {
 	return &AST{
 		rawCtx: a.rawCtx,
 		rawAST: C.Z3_mk_ite(a.rawCtx, a.rawAST, t2.rawAST, t3.rawAST),

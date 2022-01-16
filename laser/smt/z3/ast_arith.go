@@ -5,9 +5,7 @@ import (
 )
 
 // #include <stdlib.h>
-// #cgo CFLAGS: -IC:/Z3/src/api
-// #cgo LDFLAGS: -LC:/Z3/build -llibz3
-// #include "z3.h"
+// #include "goZ3Config.h"
 import "C"
 
 // Add creates an AST node representing adding.

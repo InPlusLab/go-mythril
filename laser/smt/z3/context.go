@@ -1,8 +1,6 @@
 package z3
 
-// #cgo CFLAGS: -IC:/Z3/src/api
-// #cgo LDFLAGS: -LC:/Z3/build -llibz3
-// #include "z3.h"
+// #include "goZ3Config.h"
 import "C"
 
 // Context is what handles most of the interactions with Z3.
@@ -23,9 +21,9 @@ func (c *Context) Close() error {
 
 	// Clear error handling
 	/*
-	errorHandlerMapLock.Lock()
-	delete(errorHandlerMap, c.raw)
-	errorHandlerMapLock.Unlock()
+		errorHandlerMapLock.Lock()
+		delete(errorHandlerMap, c.raw)
+		errorHandlerMapLock.Unlock()
 	*/
 
 	return nil
@@ -35,4 +33,3 @@ func (c *Context) Close() error {
 func (c *Context) Z3Value() C.Z3_context {
 	return c.raw
 }
-

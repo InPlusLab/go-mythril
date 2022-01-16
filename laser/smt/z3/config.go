@@ -1,13 +1,12 @@
 package z3
 
 import (
-"unsafe"
+	"unsafe"
 )
 
 // #include <stdlib.h>
-// #cgo CFLAGS: -IC:/Z3/src/api
-// #cgo LDFLAGS: -LC:/Z3/build -llibz3
-// #include "z3.h"
+// #cgo LDFLAGS: -L/usr/local/z3/build -lz3
+// #include "goZ3Config.h"
 import "C"
 
 // Config is used to set configuration for Z3. This should be created with
@@ -65,4 +64,3 @@ func (c *Config) SetParamValue(k, v string) {
 func (c *Config) Z3Value() C.Z3_config {
 	return c.raw
 }
-

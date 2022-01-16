@@ -1,9 +1,7 @@
 package z3
 
 // #include <stdlib.h>
-// #cgo CFLAGS: -IC:/Z3/src/api
-// #cgo LDFLAGS: -LC:/Z3/build -llibz3
-// #include "z3.h"
+// #include "goZ3Config.h"
 import "C"
 
 // Sort represents a sort in Z3.
@@ -32,8 +30,7 @@ func (c *Context) IntSort() *Sort {
 // created by chz
 func (c *Context) BvSort(size uint) *Sort {
 	return &Sort{
-		rawCtx: c.raw,
+		rawCtx:  c.raw,
 		rawSort: C.Z3_mk_bv_sort(c.raw, C.uint(size)),
 	}
 }
-

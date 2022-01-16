@@ -1,9 +1,7 @@
 package z3
 
 // #include <stdlib.h>
-// #cgo CFLAGS: -IC:/Z3/src/api
-// #cgo LDFLAGS: -LC:/Z3/build -llibz3
-// #include "z3.h"
+// #include "goZ3Config.h"
 /*
 int _Z3_model_eval(Z3_context c, Z3_model m, Z3_ast t, int model_completion, Z3_ast * v) {
   return Z3_model_eval(c, m, t, (bool) model_completion, v);
