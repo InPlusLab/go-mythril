@@ -17,11 +17,10 @@ func main() {
 	s := ctx.NewSolver()
 	defer s.Close()
 
-	x := ctx.Const(ctx.Symbol("x"), ctx.BvSort(16))
-	y := ctx.Const(ctx.Symbol("y"), ctx.BvSort(16))
-	s.Assert(x.BvAdd(y).Eq(ctx.Int(2, ctx.BvSort(16))))
-	s.Assert(x.BvULt(ctx.Int(10, ctx.BvSort(16))))
-	s.Assert(y.BvULt(ctx.Int(10, ctx.BvSort(16))))
+	arr := ctx.NewArray("arr1", 16, 16)
+	arrNew := arr.SetItem(ctx.Int(1, ctx.BvSort(16)), ctx.Int(2, ctx.BvSort(16)))
+	arrItem := ctx.Const(ctx.Symbol("item"), ctx.BvSort(16))
+	s.Assert(arrNew.GetItem(ctx.Int(1, ctx.BvSort(16))).Eq(arrItem))
 
 	if v := s.Check(); v != z3.True {
 		fmt.Println("Unsolveable")

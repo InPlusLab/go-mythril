@@ -34,3 +34,11 @@ func (c *Context) BvSort(size uint) *Sort {
 		rawSort: C.Z3_mk_bv_sort(c.raw, C.uint(size)),
 	}
 }
+
+// ArraySort returns the array type
+func (c *Context) ArraySort(domain *Sort, vRange *Sort) *Sort {
+	return &Sort{
+		rawCtx:  c.raw,
+		rawSort: C.Z3_mk_array_sort(c.raw, domain.rawSort, vRange.rawSort),
+	}
+}
