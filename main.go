@@ -18,9 +18,12 @@ func main() {
 	defer s.Close()
 
 	arr := ctx.NewArray("arr1", 16, 16)
+	// SetItem will return a new array.
+	// arrNew[1] = 2
 	arrNew := arr.SetItem(ctx.Int(1, ctx.BvSort(16)), ctx.Int(2, ctx.BvSort(16)))
-	arrItem := ctx.Const(ctx.Symbol("item"), ctx.BvSort(16))
-	s.Assert(arrNew.GetItem(ctx.Int(1, ctx.BvSort(16))).Eq(arrItem))
+	item := ctx.Const(ctx.Symbol("item"), ctx.BvSort(16))
+
+	s.Assert(arrNew.GetItem(ctx.Int(1, ctx.BvSort(16))).Eq(item))
 
 	if v := s.Check(); v != z3.True {
 		fmt.Println("Unsolveable")

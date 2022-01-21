@@ -30,12 +30,6 @@ func (a *AST) DeclName() *Symbol {
 	}
 }
 
-// BvSize returns the size of bitvector
-// created by chz
-func (a *AST) BvSize() uint {
-	return uint(C.Z3_get_bv_sort_size(a.rawCtx, a.rawSort))
-}
-
 //-------------------------------------------------------------------
 // Var, Literal Creation
 //-------------------------------------------------------------------
