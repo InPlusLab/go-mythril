@@ -10,8 +10,21 @@ type Bitvec struct {
 	rawSort C.Z3_sort
 }
 
+// NewBitvec corresponds to BitVec() in Python
+// It implements the class BitVecRef
 func (c *Context) NewBitvec(bvSymbol string, size uint) *Bitvec {
 	ast := C.Z3_mk_const(c.raw, c.Symbol(bvSymbol).rawSymbol, c.BvSort(size).rawSort)
+	return &Bitvec{
+		rawCtx:  c.raw,
+		rawAST:  ast,
+		rawSort: c.BvSort(size).rawSort,
+	}
+}
+
+// NewBitvecVal corresponds to BitVecVal() in Python
+// It implements the class BitVecNumRef
+func (c *Context) NewBitvecVal(value uint, size uint) *Bitvec {
+	ast := C.Z3_mk_int(c.raw, C.int(value), c.BvSort(size).rawSort)
 	return &Bitvec{
 		rawCtx:  c.raw,
 		rawAST:  ast,
@@ -25,6 +38,14 @@ func (c *Context) NewBitvec(bvSymbol string, size uint) *Bitvec {
 // created by chz
 func (a *Bitvec) BvSize() uint {
 	return uint(C.Z3_get_bv_sort_size(a.rawCtx, a.rawSort))
+}
+
+// AsAST returns the ast of bv
+func (b *Bitvec) AsAST() *AST {
+	return &AST{
+		rawCtx: b.rawCtx,
+		rawAST: b.rawAST,
+	}
 }
 
 // The arith op in Bitvec
@@ -122,8 +143,8 @@ func (a *Bitvec) BvMulNoOverflow(t *Bitvec, isSigned bool) *Bitvec {
 
 // BvSLt creates a "signed <" for bitvector
 // created by chz
-func (a *Bitvec) BvSLt(a2 *Bitvec) *Bitvec {
-	return &Bitvec{
+func (a *Bitvec) BvSLt(a2 *Bitvec) *Bool {
+	return &Bool{
 		rawCtx: a.rawCtx,
 		rawAST: C.Z3_mk_bvslt(a.rawCtx, a.rawAST, a2.rawAST),
 	}
@@ -131,8 +152,8 @@ func (a *Bitvec) BvSLt(a2 *Bitvec) *Bitvec {
 
 // BvSLe creates a "signed <=" for bitvector
 // created by chz
-func (a *Bitvec) BvSLe(a2 *Bitvec) *Bitvec {
-	return &Bitvec{
+func (a *Bitvec) BvSLe(a2 *Bitvec) *Bool {
+	return &Bool{
 		rawCtx: a.rawCtx,
 		rawAST: C.Z3_mk_bvsle(a.rawCtx, a.rawAST, a2.rawAST),
 	}
@@ -140,8 +161,8 @@ func (a *Bitvec) BvSLe(a2 *Bitvec) *Bitvec {
 
 // BvSGt creates a "signed >" for bitvector
 // created by chz
-func (a *Bitvec) BvSGt(a2 *Bitvec) *Bitvec {
-	return &Bitvec{
+func (a *Bitvec) BvSGt(a2 *Bitvec) *Bool {
+	return &Bool{
 		rawCtx: a.rawCtx,
 		rawAST: C.Z3_mk_bvsgt(a.rawCtx, a.rawAST, a2.rawAST),
 	}
@@ -149,8 +170,8 @@ func (a *Bitvec) BvSGt(a2 *Bitvec) *Bitvec {
 
 // BvSGe creates a "signed >=" for bitvector
 // created by chz
-func (a *Bitvec) BvSGe(a2 *Bitvec) *Bitvec {
-	return &Bitvec{
+func (a *Bitvec) BvSGe(a2 *Bitvec) *Bool {
+	return &Bool{
 		rawCtx: a.rawCtx,
 		rawAST: C.Z3_mk_bvsge(a.rawCtx, a.rawAST, a2.rawAST),
 	}
@@ -158,8 +179,8 @@ func (a *Bitvec) BvSGe(a2 *Bitvec) *Bitvec {
 
 // BvULt creates an "unsigned <" for bitvector
 // created by chz
-func (a *Bitvec) BvULt(a2 *Bitvec) *Bitvec {
-	return &Bitvec{
+func (a *Bitvec) BvULt(a2 *Bitvec) *Bool {
+	return &Bool{
 		rawCtx: a.rawCtx,
 		rawAST: C.Z3_mk_bvult(a.rawCtx, a.rawAST, a2.rawAST),
 	}
@@ -167,8 +188,8 @@ func (a *Bitvec) BvULt(a2 *Bitvec) *Bitvec {
 
 // BvULe creates an "unsigned <=" for bitvector
 // created by chz
-func (a *Bitvec) BvULe(a2 *Bitvec) *Bitvec {
-	return &Bitvec{
+func (a *Bitvec) BvULe(a2 *Bitvec) *Bool {
+	return &Bool{
 		rawCtx: a.rawCtx,
 		rawAST: C.Z3_mk_bvule(a.rawCtx, a.rawAST, a2.rawAST),
 	}
@@ -176,8 +197,8 @@ func (a *Bitvec) BvULe(a2 *Bitvec) *Bitvec {
 
 // BvUGt creates an "unsigned >" for bitvector
 // created by chz
-func (a *Bitvec) BvUGt(a2 *Bitvec) *Bitvec {
-	return &Bitvec{
+func (a *Bitvec) BvUGt(a2 *Bitvec) *Bool {
+	return &Bool{
 		rawCtx: a.rawCtx,
 		rawAST: C.Z3_mk_bvugt(a.rawCtx, a.rawAST, a2.rawAST),
 	}
@@ -185,8 +206,8 @@ func (a *Bitvec) BvUGt(a2 *Bitvec) *Bitvec {
 
 // BvUGe creates an "unsigned >=" for bitvector
 // created by chz
-func (a *Bitvec) BvUGe(a2 *Bitvec) *Bitvec {
-	return &Bitvec{
+func (a *Bitvec) BvUGe(a2 *Bitvec) *Bool {
+	return &Bool{
 		rawCtx: a.rawCtx,
 		rawAST: C.Z3_mk_bvuge(a.rawCtx, a.rawAST, a2.rawAST),
 	}

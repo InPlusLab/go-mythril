@@ -96,3 +96,14 @@ func (a *AST) Simplify() *AST {
 		rawAST: C.Z3_simplify(a.rawCtx, a.rawAST),
 	}
 }
+
+// IsAppOf is used to determine the AST's type, such as true, false, add, etc.
+// Part of the Z3_decl_kind constants in enum.go
+// created by chz
+func (a *AST) IsAppOf(k C.Z3_decl_kind) bool {
+	var res bool
+	res = bool(C.Z3_is_app(a.rawCtx, a.rawAST)) &&
+		C.Z3_get_decl_kind(a.rawCtx, C.Z3_get_app_decl(a.rawCtx, C.Z3_to_app(a.rawCtx, a.rawAST))) == k
+
+	return res
+}

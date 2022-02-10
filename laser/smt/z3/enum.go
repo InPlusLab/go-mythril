@@ -8,7 +8,10 @@ import "C"
 type LBool int8
 
 const (
-	False LBool = C.Z3_L_FALSE
-	Undef       = C.Z3_L_UNDEF
-	True        = C.Z3_L_TRUE
+	False   LBool = C.Z3_L_FALSE
+	Undef         = C.Z3_L_UNDEF
+	True          = C.Z3_L_TRUE
+	OpTrue        = C.Z3_OP_TRUE
+	OpFalse       = C.Z3_OP_FALSE
+	OpAdd         = C.Z3_OP_ADD
 )
