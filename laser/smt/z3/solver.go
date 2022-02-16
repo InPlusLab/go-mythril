@@ -1,7 +1,9 @@
 package z3
 
+// #include <stdlib.h>
 // #include "goZ3Config.h"
 import "C"
+import "unsafe"
 
 // Solver is a single solver tied to a specific Context within Z3.
 //
@@ -28,6 +30,19 @@ func (c *Context) NewSolver() *Solver {
 	}
 }
 
+// SetTimeout sets the timeout of the solver, timeout is in milliseconds.
+func (s *Solver) SetTimeout(time uint) {
+	ctx := s.rawCtx
+	params := C.Z3_mk_params(ctx)
+
+	ns := C.CString("timeout")
+	defer C.free(unsafe.Pointer(ns))
+	timeOutSymbol := C.Z3_mk_string_symbol(ctx, ns)
+
+	C.Z3_params_set_uint(ctx, params, timeOutSymbol, C.uint(time))
+	C.Z3_solver_set_params(ctx, s.rawSolver, params)
+}
+
 // Close frees the memory associated with this.
 func (s *Solver) Close() error {
 	C.Z3_solver_dec_ref(s.rawCtx, s.rawSolver)
@@ -37,8 +52,10 @@ func (s *Solver) Close() error {
 // Assert asserts a constraint onto the Solver.
 //
 // Maps to: Z3_solver_assert
-func (s *Solver) Assert(a *AST) {
-	C.Z3_solver_assert(s.rawCtx, s.rawSolver, a.rawAST)
+func (s *Solver) Assert(args ...*AST) {
+	for _, arg := range args {
+		C.Z3_solver_assert(s.rawCtx, s.rawSolver, arg.rawAST)
+	}
 }
 
 // Check checks if the currently set formula is consistent.
@@ -58,4 +75,24 @@ func (s *Solver) Model() *Model {
 	}
 	m.IncRef()
 	return m
+}
+
+// Sexpr returns the formatted string of solver with all constrains.
+func (s *Solver) Sexpr() string {
+	return C.GoString(C.Z3_solver_to_string(s.rawCtx, s.rawSolver))
+}
+
+// Reset just reset the solver
+func (s *Solver) Reset() {
+	C.Z3_solver_reset(s.rawCtx, s.rawSolver)
+}
+
+// Push sets the drawbacking points of the solver
+func (s *Solver) Push() {
+	C.Z3_solver_push(s.rawCtx, s.rawSolver)
+}
+
+// Pop just pops num constrains from the solver
+func (s *Solver) Pop(num uint) {
+	C.Z3_solver_pop(s.rawCtx, s.rawSolver, C.uint(num))
 }

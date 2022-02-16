@@ -15,14 +15,16 @@ func main() {
 	config.Close()
 	defer ctx.Close()
 
-	s := ctx.NewSolver()
+	s := ctx.NewOptimize()
 	defer s.Close()
 
-	x := ctx.NewBitvecVal(1, 16)
-	y := ctx.NewBitvecVal(1, 16)
-	k := x.BvSLe(y)
+	x := ctx.Const(ctx.Symbol("X"), ctx.IntSort())
+	y := ctx.Const(ctx.Symbol("Y"), ctx.IntSort())
+	ten := ctx.Int(10, ctx.IntSort())
+	zero := ctx.Int(0, ctx.IntSort())
+	s.Assert(x.Ge(zero), y.Ge(zero), x.Add(y).Eq(ten))
 
-	fmt.Println(k.IsTrue())
+	s.Maximize(y)
 
 	if v := s.Check(); v != z3.True {
 		fmt.Println("Unsolveable")

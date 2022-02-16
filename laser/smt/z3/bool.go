@@ -3,6 +3,7 @@ package z3
 // #include <stdlib.h>
 // #include "goZ3Config.h"
 import "C"
+import "unsafe"
 
 type Bool struct {
 	rawCtx C.Z3_context
@@ -31,4 +32,27 @@ func (b *Bool) IsTrue() bool {
 func (b *Bool) IsFalse() bool {
 	ast := b.AsAST().Simplify()
 	return ast.IsAppOf(OpFalse)
+}
+
+// Not tested !
+func (b *AST) Substitute(args ...*AST) *AST {
+	froms := make([]C.Z3_ast, len(args)/2)
+	tos := make([]C.Z3_ast, len(args)/2)
+	j := 0
+	for i, arg := range args {
+		if i%2 == 0 {
+			froms[j] = arg.rawAST
+		} else {
+			tos[j] = arg.rawAST
+			j++
+		}
+	}
+	return &AST{
+		rawCtx: b.rawCtx,
+		rawAST: C.Z3_substitute(b.rawCtx,
+			b.rawAST,
+			C.uint(len(args)/2),
+			(*C.Z3_ast)(unsafe.Pointer(&froms[0])),
+			(*C.Z3_ast)(unsafe.Pointer(&tos[0]))),
+	}
 }
