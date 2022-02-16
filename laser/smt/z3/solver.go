@@ -3,7 +3,9 @@ package z3
 // #include <stdlib.h>
 // #include "goZ3Config.h"
 import "C"
-import "unsafe"
+import (
+	"unsafe"
+)
 
 // Solver is a single solver tied to a specific Context within Z3.
 //

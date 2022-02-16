@@ -24,13 +24,17 @@ func main() {
 	zero := ctx.Int(0, ctx.IntSort())
 	s.Assert(x.Ge(zero), y.Ge(zero), x.Add(y).Eq(ten))
 
-	s.Maximize(y)
+	s.Maximize(x)
 
-	if v := s.Check(); v != z3.True {
+	if v := s.CheckWrapper(); v != z3.True {
 		fmt.Println("Unsolveable")
 		return
 	}
+
 	m := s.Model()
 	answer := m.Assignments()
 	fmt.Println(answer)
+
+	instance := z3.GetSolverStatistic()
+	fmt.Println(instance.SolverTime)
 }
