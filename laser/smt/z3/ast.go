@@ -107,3 +107,11 @@ func (a *AST) IsAppOf(k C.Z3_decl_kind) bool {
 
 	return res
 }
+
+// Translate is used to copy ast from one context to another.
+func (a *AST) Translate(c *Context) *AST {
+	return &AST{
+		rawCtx: c.raw,
+		rawAST: C.Z3_translate(a.rawCtx, a.rawAST, c.raw),
+	}
+}

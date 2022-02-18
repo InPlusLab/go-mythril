@@ -98,3 +98,11 @@ func (s *Solver) Push() {
 func (s *Solver) Pop(num uint) {
 	C.Z3_solver_pop(s.rawCtx, s.rawSolver, C.uint(num))
 }
+
+// Translate is used to copy solver from one context to another.
+func (s *Solver) Translate(c *Context) *Solver {
+	return &Solver{
+		rawCtx:    c.raw,
+		rawSolver: C.Z3_solver_translate(s.rawCtx, s.rawSolver, c.raw),
+	}
+}

@@ -126,3 +126,11 @@ func (m *Model) IncRef() {
 func (m *Model) DecRef() {
 	C.Z3_model_dec_ref(m.rawCtx, m.rawModel)
 }
+
+// Translate is used to copy model from one context to another.
+func (m *Model) Translate(c *Context) *Model {
+	return &Model{
+		rawCtx:   c.raw,
+		rawModel: C.Z3_model_translate(m.rawCtx, m.rawModel, c.raw),
+	}
+}

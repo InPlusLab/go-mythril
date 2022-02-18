@@ -15,26 +15,36 @@ func main() {
 	config.Close()
 	defer ctx.Close()
 
-	s := ctx.NewOptimize()
+	s := ctx.NewSolver()
 	defer s.Close()
+	s1 := ctx.NewSolver()
+	defer s1.Close()
 
 	x := ctx.Const(ctx.Symbol("X"), ctx.IntSort())
-	y := ctx.Const(ctx.Symbol("Y"), ctx.IntSort())
 	ten := ctx.Int(10, ctx.IntSort())
+	five := ctx.Int(5, ctx.IntSort())
 	zero := ctx.Int(0, ctx.IntSort())
-	s.Assert(x.Ge(zero), y.Ge(zero), x.Add(y).Eq(ten))
+	s.Assert(x.Ge(zero), x.Lt(five))
+	s1.Assert(x.Ge(five), x.Lt(ten))
 
-	s.Maximize(x)
+	if v := s.Check(); v != z3.True {
+		fmt.Println("Unsolveable")
+		return
+	}
 
-	if v := s.CheckWrapper(); v != z3.True {
+	if v := s1.Check(); v != z3.True {
 		fmt.Println("Unsolveable")
 		return
 	}
 
 	m := s.Model()
 	answer := m.Assignments()
+	fmt.Println("solver0's result:")
 	fmt.Println(answer)
 
-	instance := z3.GetSolverStatistic()
-	fmt.Println(instance.SolverTime)
+	m1 := s1.Model()
+	answer1 := m1.Assignments()
+	fmt.Println("solver1's result:")
+	fmt.Println(answer1)
+
 }
