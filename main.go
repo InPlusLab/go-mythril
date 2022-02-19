@@ -2,13 +2,16 @@ package main
 
 import (
 	"fmt"
+	"go-mythril/laser/ethereum"
 	"go-mythril/laser/smt/z3"
 )
 
 func main() {
-	/*	fmt.Println("go mythril")
-		evm := ethereum.NewLaserEVM(1, 1, 1)
-		evm.SymExec("0x6060")*/
+	fmt.Println("go mythril")
+	evm := ethereum.NewLaserEVM(1, 1, 1)
+	evm.SymExec("6060320032")
+	return
+
 	fmt.Println("go mythril-testForGoz3")
 	config := z3.NewConfig()
 	ctx := z3.NewContext(config)
@@ -46,5 +49,4 @@ func main() {
 	answer1 := m1.Assignments()
 	fmt.Println("solver1's result:")
 	fmt.Println(answer1)
-
 }
