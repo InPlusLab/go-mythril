@@ -33,3 +33,10 @@ func (globalState *GlobalState) GetCurrentInstruction() *disassembler.EvmInstruc
 	// TODO
 	return nil
 }
+
+func (globalState *GlobalState) NewBitvec(name string, size int) *z3.Bitvec {
+	// TODO: tx
+	// txId := globalState.currentTx.id
+	str := "0" + name
+	return globalState.Z3ctx.NewBitvec(str, size)
+}

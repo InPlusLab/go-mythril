@@ -34,6 +34,20 @@ func (b *Bool) IsFalse() bool {
 	return ast.IsAppOf(OpFalse)
 }
 
+func (b *Bool) Not() *Bool {
+	return &Bool{
+		rawCtx: b.rawCtx,
+		rawAST: C.Z3_mk_not(b.rawCtx, b.rawAST),
+	}
+}
+
+func (b *Bool) Simplify() *Bool {
+	return &Bool{
+		rawCtx: b.rawCtx,
+		rawAST: C.Z3_simplify(b.rawCtx, b.rawAST),
+	}
+}
+
 // Not tested !
 func (b *AST) Substitute(args ...*AST) *AST {
 	froms := make([]C.Z3_ast, len(args)/2)
@@ -54,5 +68,12 @@ func (b *AST) Substitute(args ...*AST) *AST {
 			C.uint(len(args)/2),
 			(*C.Z3_ast)(unsafe.Pointer(&froms[0])),
 			(*C.Z3_ast)(unsafe.Pointer(&tos[0]))),
+	}
+}
+
+// For debug
+func GetBoolCtx(b *Bool) *Context {
+	return &Context{
+		raw: b.rawCtx,
 	}
 }

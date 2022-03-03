@@ -35,6 +35,31 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int) 
 	return &evm
 }
 
+func (evm *LaserEVM) NormalSymExec(CreationCode string) {
+	fmt.Println("Symbolic Executing: ", CreationCode)
+	tx := transaction.NewBaseTransaction(CreationCode)
+	globalState := tx.InitialGlobalState()
+	evm.WorkList <- globalState
+	id := 0
+	for {
+		globalState := <-evm.WorkList
+		fmt.Println(id, globalState)
+		newStates, opcode := evm.ExecuteState(globalState)
+
+		evm.ManageCFG(opcode, newStates)
+
+		for _, newState := range newStates {
+			evm.WorkList <- newState
+		}
+		fmt.Println(id, "done", globalState, opcode)
+		fmt.Println("======================================================")
+		if opcode == "STOP" {
+			break
+		}
+		id++
+	}
+}
+
 func (evm *LaserEVM) SymExec(CreationCode string) {
 	fmt.Println("Symbolic Executing: ", CreationCode)
 
@@ -71,7 +96,9 @@ func (evm *LaserEVM) ExecuteState(globalState *state.GlobalState) ([]*state.Glob
 	instrs := globalState.Environment.Code.InstructionList
 	opcode := instrs[globalState.Mstate.Pc].OpCode.Name
 
-	instr := NewInstruction(opcode)
+	prehooks := []string{}
+	posthooks := []string{}
+	instr := NewInstruction(opcode, prehooks, posthooks)
 	newGlobalStates := instr.Evaluate(globalState)
 
 	return newGlobalStates, opcode

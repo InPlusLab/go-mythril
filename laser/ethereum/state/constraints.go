@@ -1,16 +1,16 @@
 package state
 
 import (
-	"go-mythril/laser/smt"
+	"go-mythril/laser/smt/z3"
 )
 
 type Constraints struct {
-	ConstraintList []*smt.Bool
+	ConstraintList []*z3.Bool
 }
 
 func NewConstraints() *Constraints {
 	return &Constraints{
-		ConstraintList: make([]*smt.Bool, 0),
+		ConstraintList: make([]*z3.Bool, 0),
 	}
 }
 
@@ -19,7 +19,7 @@ func (c *Constraints) IsPossible() bool {
 	return true
 }
 
-func (c *Constraints) Add(constraint *smt.Bool) bool {
+func (c *Constraints) Add(constraint *z3.Bool) bool {
 	c.ConstraintList = append(c.ConstraintList, constraint)
 	return true
 }

@@ -3,32 +3,56 @@ package z3
 // #include <stdlib.h>
 // #include "goZ3Config.h"
 import "C"
+import (
+	"fmt"
+	"math/big"
+	"strconv"
+)
 
 type Bitvec struct {
-	rawCtx  C.Z3_context
-	rawAST  C.Z3_ast
-	rawSort C.Z3_sort
+	rawCtx   C.Z3_context
+	rawAST   C.Z3_ast
+	rawSort  C.Z3_sort
+	symbolic bool
 }
 
 // NewBitvec corresponds to BitVec() in Python
 // It implements the class BitVecRef
-func (c *Context) NewBitvec(bvSymbol string, size uint) *Bitvec {
-	ast := C.Z3_mk_const(c.raw, c.Symbol(bvSymbol).rawSymbol, c.BvSort(size).rawSort)
+func (c *Context) NewBitvec(bvSymbol string, size int) *Bitvec {
+	ast := C.Z3_mk_const(c.raw, c.Symbol(bvSymbol).rawSymbol, c.BvSort(uint(size)).rawSort)
 	return &Bitvec{
-		rawCtx:  c.raw,
-		rawAST:  ast,
-		rawSort: c.BvSort(size).rawSort,
+		rawCtx:   c.raw,
+		rawAST:   ast,
+		rawSort:  c.BvSort(uint(size)).rawSort,
+		symbolic: true,
 	}
 }
 
 // NewBitvecVal corresponds to BitVecVal() in Python
 // It implements the class BitVecNumRef
-func (c *Context) NewBitvecVal(value uint, size uint) *Bitvec {
-	ast := C.Z3_mk_int(c.raw, C.int(value), c.BvSort(size).rawSort)
+// type int supports the normal usage, big.Int supports the big number usage.
+func (c *Context) NewBitvecVal(value interface{}, size int) *Bitvec {
+	var valueStr string
+
+	switch t := value.(type) {
+	case int:
+		valueStr = strconv.FormatInt(int64(value.(int)), 10)
+	case int64:
+		valueStr = strconv.FormatInt(value.(int64), 10)
+	case *big.Int:
+		b := value.(*big.Int)
+		valueStr = b.String()
+	default:
+		fmt.Println(t)
+		panic("type error for NewBitvecVal")
+	}
+	// Can't use mk_int API here.
+	ast := C.Z3_mk_numeral(c.raw, C.CString(valueStr), c.BvSort(uint(size)).rawSort)
 	return &Bitvec{
-		rawCtx:  c.raw,
-		rawAST:  ast,
-		rawSort: c.BvSort(size).rawSort,
+		rawCtx:   c.raw,
+		rawAST:   ast,
+		rawSort:  c.BvSort(uint(size)).rawSort,
+		symbolic: false,
 	}
 }
 
@@ -48,6 +72,37 @@ func (b *Bitvec) AsAST() *AST {
 	}
 }
 
+// Value returns the value of BitvecVal, 0 for Bitvec
+// should use get_numeral_string rather than get_numeral_int API
+func (b *Bitvec) Value() string {
+	value := C.GoString(C.Z3_get_numeral_string(b.rawCtx, b.rawAST))
+	return value
+}
+
+// Symbolic tells whether this bv is symbolic
+func (b *Bitvec) Symbolic() bool {
+	return b.symbolic
+}
+
+// String returns a human-friendly string version of the AST.
+func (b *Bitvec) String() string {
+	return C.GoString(C.Z3_ast_to_string(b.rawCtx, b.rawAST))
+}
+
+// GetAstKind returns the ast kind of bv.
+// For debug.
+func (b *Bitvec) GetAstKind() C.Z3_ast_kind {
+	return C.Z3_get_ast_kind(b.rawCtx, b.rawAST)
+}
+
+// Simplify equations
+func (b *Bitvec) Simplify() *Bitvec {
+	return &Bitvec{
+		rawCtx: b.rawCtx,
+		rawAST: C.Z3_simplify(b.rawCtx, b.rawAST),
+	}
+}
+
 // The arith op in Bitvec
 
 // BvAdd creates an "addition" for bitvector
@@ -58,7 +113,9 @@ func (a *Bitvec) BvAdd(t *Bitvec) *Bitvec {
 		rawAST: C.Z3_mk_bvadd(
 			a.rawCtx,
 			a.rawAST,
-			t.rawAST)}
+			t.rawAST),
+		rawSort: a.rawSort,
+	}
 }
 
 // BvSub creates a "subtraction" for bitvector
@@ -260,10 +317,10 @@ func (a *Bitvec) BvLShR(a2 *Bitvec) *Bitvec {
 
 // The logic op in Bitvec
 
-// BvAnd gets the and of bv a & bv a2
+// Eq gets the ast of bv a == bv a2
 // created by chz
-func (a *Bitvec) Eq(a2 *AST) *AST {
-	return &AST{
+func (a *Bitvec) Eq(a2 *Bitvec) *Bool {
+	return &Bool{
 		rawCtx: a.rawCtx,
 		rawAST: C.Z3_mk_eq(a.rawCtx, a.rawAST, a2.rawAST),
 	}
@@ -307,7 +364,7 @@ func (a *Bitvec) Concat(a2 *Bitvec) *Bitvec {
 
 // Extract extracts the bv bits from index high to low.
 // created by chz
-func (a *Bitvec) Extract(high uint, low uint) *Bitvec {
+func (a *Bitvec) Extract(high int, low int) *Bitvec {
 	return &Bitvec{
 		rawCtx: a.rawCtx,
 		rawAST: C.Z3_mk_extract(a.rawCtx, C.uint(high), C.uint(low), a.rawAST),
@@ -316,7 +373,7 @@ func (a *Bitvec) Extract(high uint, low uint) *Bitvec {
 
 // If creates an if(a) t2 then t3 structure. t1 is bool sort, t2 and t3 must be the same sort.
 // created by chz
-func (a *Bitvec) If(t2 *Bitvec, t3 *Bitvec) *Bitvec {
+func If(a *Bool, t2 *Bitvec, t3 *Bitvec) *Bitvec {
 	return &Bitvec{
 		rawCtx: a.rawCtx,
 		rawAST: C.Z3_mk_ite(a.rawCtx, a.rawAST, t2.rawAST, t3.rawAST),
