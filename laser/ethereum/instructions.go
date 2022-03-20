@@ -9,6 +9,22 @@ import (
 	"strings"
 )
 
+type StateTransition struct {
+}
+
+// TODO:
+func CheckGasUsageLimit(globalState *state.GlobalState) {
+	globalState.Mstate.CheckGas()
+	value := globalState.CurrentTransaction().GasLimit.Value()
+	if value == "" {
+		return
+	}
+	valueInt, _ := strconv.ParseInt(value, 10, 64)
+	if globalState.Mstate.MinGasUsed >= int(valueInt) {
+		panic("OutOfGasException")
+	}
+}
+
 type Instruction struct {
 	Opcode    string
 	PreHooks  []string
@@ -152,16 +168,6 @@ func (instr *Instruction) push_(globalState *state.GlobalState) []*state.GlobalS
 
 	pushInt, _ := strconv.ParseInt(pushValue, 16, 64)
 	mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(pushInt, 256))
-	ret = append(ret, globalState)
-	return ret
-}
-
-func (instr *Instruction) origin_(globalState *state.GlobalState) []*state.GlobalState {
-	mstate := globalState.Mstate
-
-	ret := make([]*state.GlobalState, 0)
-	// TODO: this append is not right, should be desinged as a trait of mstate
-	mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(10086, 256))
 	ret = append(ret, globalState)
 	return ret
 }
@@ -589,9 +595,262 @@ func (instr *Instruction) iszero_(globalState *state.GlobalState) []*state.Globa
 	return ret
 }
 
+// Call data
+func (instr *Instruction) callvalue_(globalState *state.GlobalState) []*state.GlobalState {
+	ret := make([]*state.GlobalState, 0)
+
+	mstate := globalState.Mstate
+	env := globalState.Environment
+	mstate.Stack.Append(env.CallValue)
+
+	ret = append(ret, globalState)
+	return ret
+}
+
+func (instr *Instruction) calldataload_(globalState *state.GlobalState) []*state.GlobalState {
+	ret := make([]*state.GlobalState, 0)
+
+	mstate := globalState.Mstate
+	env := globalState.Environment
+	op0 := mstate.Stack.Pop()
+	value := env.Calldata.GetWordAt(op0)
+	mstate.Stack.Append(value)
+
+	ret = append(ret, globalState)
+	return ret
+}
+
+func (instr *Instruction) calldatasize_(globalState *state.GlobalState) []*state.GlobalState {
+	ret := make([]*state.GlobalState, 0)
+
+	mstate := globalState.Mstate
+	env := globalState.Environment
+	mstate.Stack.Append(env.Calldata.Calldatasize())
+
+	ret = append(ret, globalState)
+	return ret
+}
+
+func (instr *Instruction) _calldata_copy_helper(globalState *state.GlobalState,
+	mstate *state.MachineState, mstart *z3.Bitvec, dstart *z3.Bitvec, size *z3.Bitvec) []*state.GlobalState {
+	ret := make([]*state.GlobalState, 0)
+
+	env := globalState.Environment
+	ctx := globalState.Z3ctx
+
+	if mstart.Symbolic() {
+		fmt.Println("Unsupported symbolic memory offset in CALLDATACOPY")
+		ret = append(ret, globalState)
+		return ret
+	}
+	vSize, _ := strconv.ParseInt(size.Value(), 10, 64)
+	if vSize > 0 {
+		mstate.MemExtend(mstart, 1)
+		// TypeError check
+		iData := dstart
+		newMemory := make([]*z3.Bitvec, 0)
+		for i := 0; i < int(vSize); i++ {
+			value := env.Calldata.GetWordAt(iData)
+			newMemory = append(newMemory, value)
+			idataValue, _ := strconv.ParseInt(iData.Value(), 10, 64)
+			iData = ctx.NewBitvecVal(idataValue+1, iData.BvSize())
+		}
+		for j := 0; j < len(newMemory); j++ {
+			mstartValue, _ := strconv.ParseInt(mstart.Value(), 10, 64)
+			mstate.Memory.WriteWordAt(j+int(mstartValue), newMemory[j])
+		}
+		// IndexError check
+	}
+	ret = append(ret, globalState)
+	return ret
+}
+
+func (instr *Instruction) calldatacopy_(globalState *state.GlobalState) []*state.GlobalState {
+	mstate := globalState.Mstate
+	op0 := mstate.Stack.Pop()
+	op1 := mstate.Stack.Pop()
+	op2 := mstate.Stack.Pop()
+	// TODO: tx warning
+	return instr._calldata_copy_helper(globalState, mstate, op0, op1, op2)
+}
+
+// Environment
+func (instr *Instruction) address_(globalState *state.GlobalState) []*state.GlobalState {
+	ret := make([]*state.GlobalState, 0)
+
+	mstate := globalState.Mstate
+	env := globalState.Environment
+	mstate.Stack.Append(env.Address)
+
+	ret = append(ret, globalState)
+	return ret
+}
+
+func (instr *Instruction) balance_(globalState *state.GlobalState) []*state.GlobalState {
+	ret := make([]*state.GlobalState, 0)
+
+	mstate := globalState.Mstate
+	ctx := globalState.Z3ctx
+	address := mstate.Stack.Pop()
+	var balance *z3.Bitvec
+	if !address.Symbolic() {
+		balance = globalState.WorldState.AccountsExistOrLoad(address.Value()).Balance()
+	} else {
+		balance = ctx.NewBitvecVal(0, 256)
+		for _, acc := range *globalState.WorldState.Accounts {
+			balance = z3.If(address.Eq(acc.Address), acc.Balance(), balance)
+		}
+	}
+	mstate.Stack.Append(balance)
+
+	ret = append(ret, globalState)
+	return ret
+}
+
+func (instr *Instruction) origin_(globalState *state.GlobalState) []*state.GlobalState {
+	ret := make([]*state.GlobalState, 0)
+
+	mstate := globalState.Mstate
+	env := globalState.Environment
+	mstate.Stack.Append(env.Origin)
+
+	ret = append(ret, globalState)
+	return ret
+}
+
+func (instr *Instruction) caller_(globalState *state.GlobalState) []*state.GlobalState {
+	ret := make([]*state.GlobalState, 0)
+
+	mstate := globalState.Mstate
+	env := globalState.Environment
+	mstate.Stack.Append(env.Sender)
+
+	ret = append(ret, globalState)
+	return ret
+}
+
+func (instr *Instruction) chainid_(globalState *state.GlobalState) []*state.GlobalState {
+	ret := make([]*state.GlobalState, 0)
+
+	mstate := globalState.Mstate
+	env := globalState.Environment
+	mstate.Stack.Append(env.ChainId)
+
+	ret = append(ret, globalState)
+	return ret
+}
+
+func (instr *Instruction) selfbalance_(globalState *state.GlobalState) []*state.GlobalState {
+	ret := make([]*state.GlobalState, 0)
+
+	mstate := globalState.Mstate
+	env := globalState.Environment
+	mstate.Stack.Append(env.ActiveAccount.Balance())
+
+	ret = append(ret, globalState)
+	return ret
+}
+
+// TODO
+func (instr *Instruction) codesize_(globalState *state.GlobalState) []*state.GlobalState {
+	ret := make([]*state.GlobalState, 0)
+
+	ret = append(ret, globalState)
+	return ret
+}
+
+func (instr *Instruction) _sha3_gas_helper(globalState *state.GlobalState, length int) *state.GlobalState {
+	minGas, maxGas := CalculateSha3Gas(length)
+	globalState.Mstate.MinGasUsed += minGas
+	globalState.Mstate.MaxGasUsed += maxGas
+	CheckGasUsageLimit(globalState)
+	return globalState
+}
+
+// TODO
+func (instr *Instruction) sha3_(globalState *state.GlobalState) []*state.GlobalState {
+	ret := make([]*state.GlobalState, 0)
+
+	mstate := globalState.Mstate
+	index := mstate.Stack.Pop()
+	op1 := mstate.Stack.Pop()
+
+	length, _ := strconv.ParseInt(op1.Value(), 10, 64)
+	if length == 0 {
+		// can't access symbolic memory offsets
+		length = 64
+		globalState.WorldState.Constraints.Add(op1.Eq(globalState.Z3ctx.NewBitvecVal(length, 256)))
+	}
+	instr._sha3_gas_helper(globalState, int(length))
+
+	mstate.MemExtend(index, int(length))
+	// TODO: Memory
+
+	ret = append(ret, globalState)
+	return ret
+}
+
+func (instr *Instruction) gasprice_(globalState *state.GlobalState) []*state.GlobalState {
+	ret := make([]*state.GlobalState, 0)
+
+	mstate := globalState.Mstate
+	env := globalState.Environment
+	mstate.Stack.Append(env.GasPrice)
+
+	ret = append(ret, globalState)
+	return ret
+}
+
+func (instr *Instruction) basefee_(globalState *state.GlobalState) []*state.GlobalState {
+	ret := make([]*state.GlobalState, 0)
+
+	mstate := globalState.Mstate
+	env := globalState.Environment
+	mstate.Stack.Append(env.Basefee)
+
+	ret = append(ret, globalState)
+	return ret
+}
+
+// TODO
+func (instr *Instruction) codecopy_(globalState *state.GlobalState) []*state.GlobalState {
+	ret := make([]*state.GlobalState, 0)
+
+	ret = append(ret, globalState)
+	return ret
+}
+
+// TODO
+func (instr *Instruction) _code_copy_helper(globalState *state.GlobalState) []*state.GlobalState {
+	ret := make([]*state.GlobalState, 0)
+
+	ret = append(ret, globalState)
+	return ret
+}
+
+func (instr *Instruction) extcodesize_(globalState *state.GlobalState) []*state.GlobalState {
+	ret := make([]*state.GlobalState, 0)
+
+	mstate := globalState.Mstate
+	addr := mstate.Stack.Pop()
+
+	if addr.Symbolic() {
+		// TypeError
+		fmt.Println("unsupported symbolic address for EXTCODESIZE")
+		mstate.Stack.Append(globalState.NewBitvec("extcodesize_"+addr.String(), 256))
+		ret = append(ret, globalState)
+		return ret
+	}
+	code := globalState.WorldState.AccountsExistOrLoad(addr.Value()).Code.Bytecode
+	mstate.Stack.Append(len(code) / 2)
+
+	ret = append(ret, globalState)
+	return ret
+}
+
 // Memory operations
 // TODO: NOT tested
-func (instr *Instruction) mload_(globalState *state.GlobalState) []*state.GlobalState {
+/*func (instr *Instruction) mload_(globalState *state.GlobalState) []*state.GlobalState {
 	ret := make([]*state.GlobalState, 0)
 
 	ctx := globalState.Z3ctx
@@ -620,4 +879,4 @@ func (instr *Instruction) mstore_(globalState *state.GlobalState) []*state.Globa
 
 	ret = append(ret, globalState)
 	return ret
-}
+}*/

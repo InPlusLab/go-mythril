@@ -97,7 +97,7 @@ func (m *MachineState) CalculateMemorySize(start int, size int) int {
 	}
 	// In python, we use // for floor division.
 	// In golang, / represents the floor division.
-	newSize := ceil32(start+size) / 32
+	newSize := Ceil32(start+size) / 32
 	oldSize := m.memorySize() / 32
 	return (newSize - oldSize) * 32
 }
@@ -106,7 +106,7 @@ func (m *MachineState) CalculateMemoryGas(start int, size int) int {
 	oldSize := m.memorySize() / 32
 	oldTotalFee := oldSize*GAS_MEMORY +
 		oldSize*oldSize/GAS_MEMORY_QUADRATIC_DENOMINATOR
-	newSize := ceil32(start+size) / 32
+	newSize := Ceil32(start+size) / 32
 	newTotalFee := newSize*GAS_MEMORY +
 		newSize*newSize/GAS_MEMORY_QUADRATIC_DENOMINATOR
 	return newTotalFee - oldTotalFee
@@ -138,9 +138,9 @@ func (m *MachineState) memorySize() int {
 	return m.Memory.length()
 }
 
-// ceil32 the implementation is in
+// Ceil32 the implementation is in
 // https://github.com/ethereum/py-evm/blob/master/eth/_utils/numeric.py
-func ceil32(value int) int {
+func Ceil32(value int) int {
 	remainder := value % 32
 	if remainder == 0 {
 		return value

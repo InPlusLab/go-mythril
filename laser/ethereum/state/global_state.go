@@ -10,16 +10,17 @@ type GlobalState struct {
 	Mstate      *MachineState
 	Z3ctx       *z3.Context
 	Environment *Environment
+	// TODO: tx is not baseTx
+	TxStack []*BaseTransaction
 }
 
-func NewGlobalState(env *Environment) *GlobalState {
-	config := z3.NewConfig()
-	ctx := z3.NewContext(config)
+func NewGlobalState(env *Environment, ctx *z3.Context) *GlobalState {
 	return &GlobalState{
 		WorldState:  NewWordState(),
 		Mstate:      NewMachineState(),
 		Z3ctx:       ctx,
 		Environment: env,
+		// TxStack:     make([]*transaction.BaseTransaction, 0),
 	}
 }
 
@@ -32,6 +33,15 @@ func (globalState *GlobalState) GetCurrentInstruction() *disassembler.EvmInstruc
 	}
 	// TODO
 	return nil
+}
+
+func (globalState *GlobalState) CurrentTransaction() *BaseTransaction {
+	length := len(globalState.TxStack)
+	if length != 0 {
+		return globalState.TxStack[length-1]
+	} else {
+		return nil
+	}
 }
 
 func (globalState *GlobalState) NewBitvec(name string, size int) *z3.Bitvec {

@@ -50,10 +50,10 @@ func NewOpcodes() *map[int]OpcodeTuple {
 	opcodes[0x35] = OpcodeTuple{"CALLDATALOAD", 1, 1, 3}
 	opcodes[0x36] = OpcodeTuple{"CALLDATASIZE", 0, 1, 2}
 	opcodes[0x37] = OpcodeTuple{"CALLDATACOPY", 3, 0, 2}
-	opcodes[0x38] = OpcodeTuple{"CALLDATASIZE", 0, 1, 2}
-	opcodes[0x39] = OpcodeTuple{"CALLDATASIZE", 0, 1, 2}
-	opcodes[0x3A] = OpcodeTuple{"CALLDATASIZE", 0, 1, 2}
-	opcodes[0x3B] = OpcodeTuple{"CALLDATASIZE", 0, 1, 2}
+	opcodes[0x38] = OpcodeTuple{"CODESIZE", 0, 1, 2}
+	opcodes[0x39] = OpcodeTuple{"CODECOPY", 0, 1, 2}
+	opcodes[0x3A] = OpcodeTuple{"GASPRICE", 0, 1, 2}
+	opcodes[0x3B] = OpcodeTuple{"EXTCODESIZE", 0, 1, 2}
 	opcodes[0x3C] = OpcodeTuple{"EXTCODECOPY", 4, 0, 700}
 	opcodes[0x3F] = OpcodeTuple{"EXTCODEHASH", 1, 1, 700}
 	opcodes[0x3D] = OpcodeTuple{"RETURNDATASIZE", 0, 1, 2}
@@ -106,10 +106,10 @@ func NewOpcodes() *map[int]OpcodeTuple {
 		opcodes[0x5F+i] = OpcodeTuple{"PUSH" + strconv.Itoa(i), 0, 1, 3}
 	}
 	for i := 1; i < 17; i++ {
-		opcodes[0x7F+i] = OpcodeTuple{"DUP" + strconv.Itoa(i), 0, 0, 0}
+		opcodes[0x7F+i] = OpcodeTuple{"DUP" + strconv.Itoa(i), 0, 0, 3}
 	}
 	for i := 1; i < 17; i++ {
-		opcodes[0x8F+i] = OpcodeTuple{"SWAP" + strconv.Itoa(i), 0, 0, 0}
+		opcodes[0x8F+i] = OpcodeTuple{"SWAP" + strconv.Itoa(i), 0, 1, 3}
 	}
 
 	return &opcodes

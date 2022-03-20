@@ -58,10 +58,14 @@ func (c *Context) NewBitvecVal(value interface{}, size int) *Bitvec {
 
 // The attribute of bitvec
 
+/*func (a *Bitvec) GetCtx() *Context {
+	return a.rawCtx
+}*/
+
 // BvSize returns the size of bitvector
 // created by chz
-func (a *Bitvec) BvSize() uint {
-	return uint(C.Z3_get_bv_sort_size(a.rawCtx, a.rawSort))
+func (a *Bitvec) BvSize() int {
+	return int(C.Z3_get_bv_sort_size(a.rawCtx, a.rawSort))
 }
 
 // AsAST returns the ast of bv
@@ -72,11 +76,15 @@ func (b *Bitvec) AsAST() *AST {
 	}
 }
 
-// Value returns the value of BitvecVal, 0 for Bitvec
+// Value returns the value of BitvecVal, "" for Bitvec
 // should use get_numeral_string rather than get_numeral_int API
 func (b *Bitvec) Value() string {
-	value := C.GoString(C.Z3_get_numeral_string(b.rawCtx, b.rawAST))
-	return value
+	if !b.symbolic {
+		value := C.GoString(C.Z3_get_numeral_string(b.rawCtx, b.rawAST))
+		return value
+	} else {
+		return ""
+	}
 }
 
 // Symbolic tells whether this bv is symbolic
@@ -85,6 +93,7 @@ func (b *Bitvec) Symbolic() bool {
 }
 
 // String returns a human-friendly string version of the AST.
+// eg: String(BitVec("x",256)) == "x"
 func (b *Bitvec) String() string {
 	return C.GoString(C.Z3_ast_to_string(b.rawCtx, b.rawAST))
 }
@@ -93,6 +102,13 @@ func (b *Bitvec) String() string {
 // For debug.
 func (b *Bitvec) GetAstKind() C.Z3_ast_kind {
 	return C.Z3_get_ast_kind(b.rawCtx, b.rawAST)
+}
+
+// GetCtx returns the context of bitvec b.
+func (b *Bitvec) GetCtx() *Context {
+	return &Context{
+		raw: b.rawCtx,
+	}
 }
 
 // Simplify equations

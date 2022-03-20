@@ -50,7 +50,7 @@ func (c *Context) NewK(dom uint, vRange uint, value int) *K {
 	}
 }
 
-func (a *BaseArray) SetItem(index *AST, value *AST) *Array {
+func (a *BaseArray) SetItem(index *Bitvec, value *Bitvec) *Array {
 	newBA := &BaseArray{
 		name:   a.name,
 		rawCtx: a.rawCtx,
@@ -61,8 +61,8 @@ func (a *BaseArray) SetItem(index *AST, value *AST) *Array {
 	}
 }
 
-func (a *BaseArray) GetItem(index *AST) *AST {
-	return &AST{
+func (a *BaseArray) GetItem(index *Bitvec) *Bitvec {
+	return &Bitvec{
 		rawCtx: a.rawCtx,
 		rawAST: C.Z3_mk_select(a.rawCtx, a.rawAST, index.rawAST),
 	}

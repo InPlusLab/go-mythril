@@ -26,12 +26,11 @@ func (m *Memory) Extend(size int) {
 	m.msize += size
 }
 
-func (m *Memory) GetWordAt(index *z3.Bitvec, ctx *z3.Context) *z3.Bitvec {
+func (m *Memory) GetWordAt(index *z3.Bitvec) *z3.Bitvec {
 	//TODO:
-	result := ctx.NewBitvecVal(0, 256)
-	return result
+	return nil
 }
 
-func (m *Memory) WriteWordAt(index *z3.Bitvec, ctx *z3.Context, value *z3.Bitvec) {
+func (m *Memory) WriteWordAt(index int, value *z3.Bitvec) {
 	//TODO:
 }

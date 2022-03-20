@@ -3,7 +3,6 @@ package ethereum
 import (
 	"fmt"
 	"go-mythril/laser/ethereum/state"
-	"go-mythril/laser/ethereum/transaction"
 	"time"
 	//"go-mythril/laser/smt"
 )
@@ -37,7 +36,11 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int) 
 
 func (evm *LaserEVM) NormalSymExec(CreationCode string) {
 	fmt.Println("Symbolic Executing: ", CreationCode)
-	tx := transaction.NewBaseTransaction(CreationCode)
+	tx := state.NewBaseTransaction(CreationCode)
+	fmt.Println("Disassemble opcode:")
+	for i, v := range tx.GetCode().InstructionList {
+		fmt.Println(i, " ", v)
+	}
 	globalState := tx.InitialGlobalState()
 	evm.WorkList <- globalState
 	id := 0
@@ -64,7 +67,7 @@ func (evm *LaserEVM) SymExec(CreationCode string) {
 	fmt.Println("Symbolic Executing: ", CreationCode)
 
 	// TOOD: actually creation code is not for base tx, but for creation tx, just for test here
-	tx := transaction.NewBaseTransaction(CreationCode)
+	tx := state.NewBaseTransaction(CreationCode)
 	globalState := tx.InitialGlobalState()
 	evm.WorkList <- globalState
 	for i := 0; i < evm.GofuncCount; i++ {
