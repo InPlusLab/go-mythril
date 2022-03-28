@@ -36,11 +36,8 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int) 
 
 func (evm *LaserEVM) NormalSymExec(CreationCode string) {
 	fmt.Println("Symbolic Executing: ", CreationCode)
-	tx := state.NewBaseTransaction(CreationCode)
-	fmt.Println("Disassemble opcode:")
-	for i, v := range tx.GetCode().InstructionList {
-		fmt.Println(i, " ", v)
-	}
+	fmt.Println("")
+	tx := state.NewContractCreationTransaction(CreationCode)
 	globalState := tx.InitialGlobalState()
 	evm.WorkList <- globalState
 	id := 0
@@ -48,7 +45,6 @@ func (evm *LaserEVM) NormalSymExec(CreationCode string) {
 		globalState := <-evm.WorkList
 		fmt.Println(id, globalState)
 		newStates, opcode := evm.ExecuteState(globalState)
-
 		evm.ManageCFG(opcode, newStates)
 
 		for _, newState := range newStates {
@@ -67,7 +63,7 @@ func (evm *LaserEVM) SymExec(CreationCode string) {
 	fmt.Println("Symbolic Executing: ", CreationCode)
 
 	// TOOD: actually creation code is not for base tx, but for creation tx, just for test here
-	tx := state.NewBaseTransaction(CreationCode)
+	tx := state.NewMessageCallTransaction(CreationCode)
 	globalState := tx.InitialGlobalState()
 	evm.WorkList <- globalState
 	for i := 0; i < evm.GofuncCount; i++ {

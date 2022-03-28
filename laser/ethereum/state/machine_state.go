@@ -31,12 +31,13 @@ func (m *MachineStack) Append(b interface{}) {
 	}
 	switch b.(type) {
 	case *z3.Bitvec:
-		// TODO: simplify this bitvec?
-		m.RawStack = append(m.RawStack, b.(*z3.Bitvec))
+		var tmp *z3.Bitvec
+		tmp = b.(*z3.Bitvec).Simplify()
+		m.RawStack = append(m.RawStack, tmp)
 	case *z3.Bool:
 		ctx := z3.GetBoolCtx(b.(*z3.Bool))
 		tmp := z3.If(b.(*z3.Bool), ctx.NewBitvecVal(1, 256), ctx.NewBitvecVal(0, 256))
-		m.RawStack = append(m.RawStack, tmp)
+		m.RawStack = append(m.RawStack, tmp.Simplify())
 	}
 }
 
@@ -58,7 +59,7 @@ func (m *MachineStack) Pop() *z3.Bitvec {
 // For debug
 func (m *MachineStack) PrintStack() {
 	if len(m.RawStack) == 0 {
-		fmt.Println("PrintStack: 0 instruction")
+		fmt.Println("PrintStack: null")
 	}
 	for _, item := range m.RawStack {
 		if item.GetAstKind() == z3.NumeralKindAST {
@@ -75,6 +76,7 @@ type MachineState struct {
 	Pc         int
 	Stack      *MachineStack
 	Memory     *Memory
+	Depth      int
 	MinGasUsed int
 	MaxGasUsed int
 }
@@ -82,28 +84,29 @@ type MachineState struct {
 func NewMachineState() *MachineState {
 	stack := NewMachineStack()
 	return &MachineState{
-		GasLimit:   0,
+		GasLimit:   100,
 		Pc:         0,
 		Stack:      stack,
 		Memory:     NewMemory(),
+		Depth:      0,
 		MinGasUsed: 0,
 		MaxGasUsed: 0,
 	}
 }
 
 func (m *MachineState) CalculateMemorySize(start int, size int) int {
-	if m.memorySize() > (start + size) {
+	if m.MemorySize() > (start + size) {
 		return 0
 	}
 	// In python, we use // for floor division.
 	// In golang, / represents the floor division.
 	newSize := Ceil32(start+size) / 32
-	oldSize := m.memorySize() / 32
+	oldSize := m.MemorySize() / 32
 	return (newSize - oldSize) * 32
 }
 
 func (m *MachineState) CalculateMemoryGas(start int, size int) int {
-	oldSize := m.memorySize() / 32
+	oldSize := m.MemorySize() / 32
 	oldTotalFee := oldSize*GAS_MEMORY +
 		oldSize*oldSize/GAS_MEMORY_QUADRATIC_DENOMINATOR
 	newSize := Ceil32(start+size) / 32
@@ -114,7 +117,7 @@ func (m *MachineState) CalculateMemoryGas(start int, size int) int {
 
 func (m *MachineState) CheckGas() {
 	if m.MinGasUsed > m.GasLimit {
-		panic("OutOfGasException")
+		panic("OutOfGasException-Mstate-CheckGas")
 	}
 }
 
@@ -134,7 +137,26 @@ func (m *MachineState) MemExtend(start *z3.Bitvec, size int) {
 	}
 }
 
-func (m *MachineState) memorySize() int {
+func (m *MachineState) DeepCopy() *MachineState {
+	// In mythril, memory and stack use shallow copy.
+	memory := &Memory{
+		Msize:     m.Memory.Msize,
+		RawMemory: m.Memory.RawMemory,
+	}
+	stack := &MachineStack{
+		RawStack: m.Stack.RawStack,
+	}
+	return &MachineState{
+		GasLimit:   m.GasLimit,
+		Pc:         m.Pc,
+		Memory:     memory,
+		Stack:      stack,
+		MinGasUsed: m.MinGasUsed,
+		MaxGasUsed: m.MaxGasUsed,
+	}
+}
+
+func (m *MachineState) MemorySize() int {
 	return m.Memory.length()
 }
 

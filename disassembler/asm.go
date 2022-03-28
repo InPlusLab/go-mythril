@@ -2,6 +2,7 @@ package disassembler
 
 import (
 	"encoding/hex"
+	"fmt"
 	"go-mythril/support"
 	"strconv"
 	"strings"
@@ -42,10 +43,12 @@ func disassemble(bytecode []byte) []*EvmInstruction {
 			currentInstr.Argument = "0x" + hex.EncodeToString(argumentBytes)
 			address += int(value)
 		}
-
+		// For debug
+		fmt.Println(currentInstr)
 		ret = append(ret, currentInstr)
 		address += 1
 	}
+
 	return ret
 
 	/*	if hex.EncodeToString(bytecode) == "6060320032" {

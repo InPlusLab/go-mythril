@@ -1,23 +1,34 @@
 package state
 
 import (
-	"go-mythril/laser/smt"
+	"go-mythril/laser/smt/z3"
 	"strconv"
 )
 
 type WorldState struct {
 	Accounts    *map[int64]*Account
-	Balances    *smt.Array
+	Balances    *z3.Array
 	Constraints *Constraints
 }
 
-func NewWordState() *WorldState {
+func NewWordState(ctx *z3.Context) *WorldState {
 	accounts := make(map[int64]*Account)
 	return &WorldState{
 		Accounts:    &accounts,
-		Balances:    &smt.Array{},
+		Balances:    ctx.NewArray("balance", 256, 256),
 		Constraints: NewConstraints(),
 	}
+}
+
+func (ws *WorldState) Copy() *WorldState {
+	var tmp *WorldState
+	for _, acc := range *ws.Accounts {
+		tmp.PutAccount(acc.Copy())
+	}
+	tmp.Balances = ws.Balances
+	tmp.Constraints = ws.Constraints.Copy()
+
+	return tmp
 }
 
 func (ws *WorldState) AccountsExistOrLoad(bvValue string) *Account {
@@ -31,4 +42,11 @@ func (ws *WorldState) AccountsExistOrLoad(bvValue string) *Account {
 		// TODO: find in dynamicLoader
 		return nil
 	}
+}
+
+func (ws *WorldState) PutAccount(acc *Account) {
+	addrV, _ := strconv.ParseInt(acc.Address.Value(), 10, 64)
+	accounts := *ws.Accounts
+	accounts[addrV] = acc
+	acc.Balances = ws.Balances
 }

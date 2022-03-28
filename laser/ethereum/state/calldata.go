@@ -33,7 +33,7 @@ type SymbolicCalldata struct {
 }
 type BasicSymbolicCalldata struct {
 	TxId    string
-	Reads   *map[*z3.Bitvec]*z3.Bitvec
+	Reads   *map[int64]*z3.Bitvec
 	SymSize *z3.Bitvec
 	Ctx     *z3.Context
 }
@@ -42,8 +42,8 @@ func NewConcreteCalldata(id string, calldata []*z3.Bitvec) *ConcreteCalldata {
 	item := calldata[0]
 	ctx := item.GetCtx()
 	k := ctx.NewK(256, 8, 0)
-	for i, element := range calldata {
-		k.SetItem(ctx.NewBitvecVal(i, 256), element)
+	for i := 0; i < len(calldata); i++ {
+		k = k.SetItem(ctx.NewBitvecVal(i, 256), calldata[i]).(*z3.K)
 	}
 	return &ConcreteCalldata{
 		TxId:             id,
@@ -66,7 +66,7 @@ func NewSymbolicCalldata(id string, ctx *z3.Context) *SymbolicCalldata {
 	}
 }
 func NewBasicymbolicCalldata(id string, ctx *z3.Context) *BasicSymbolicCalldata {
-	r := make(map[*z3.Bitvec]*z3.Bitvec)
+	r := make(map[int64]*z3.Bitvec)
 	return &BasicSymbolicCalldata{
 		TxId:    id,
 		Reads:   &r,
@@ -83,7 +83,7 @@ func (ccd *ConcreteCalldata) GetWordAt(offset *z3.Bitvec) *z3.Bitvec {
 	// OutofIndex check
 	index, _ := strconv.ParseInt(offset.Value(), 10, 64)
 	for i := index + 1; i < index+32; i++ {
-		tmp = tmp.Concat(ccd.ConcreteCalldata[i])
+		tmp = tmp.Concat(ccd.Calldata.GetItem(tmp.GetCtx().NewBitvecVal(i, 256)))
 	}
 	return tmp.Simplify()
 }
@@ -169,11 +169,14 @@ func (bsd *BasicSymbolicCalldata) Load(item *z3.Bitvec) *z3.Bitvec {
 		bsd.Ctx.NewBitvec(bsd.TxId+"_calldata_"+item.String(), 8))
 	returnValue := symbolicBaseValue
 	reads := *bsd.Reads
+
 	for i, v := range reads {
-		returnValue = z3.If(i.Eq(item), v, returnValue)
+		iBv := bsd.Ctx.NewBitvecVal(i, 256)
+		returnValue = z3.If(iBv.Eq(item), v, returnValue)
 	}
 	// default clean==false
-	reads[item] = symbolicBaseValue
+	itemIndex, _ := strconv.ParseInt(item.Value(), 10, 64)
+	reads[itemIndex] = symbolicBaseValue
 	return returnValue.Simplify()
 }
 

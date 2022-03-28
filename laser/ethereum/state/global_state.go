@@ -11,16 +11,37 @@ type GlobalState struct {
 	Z3ctx       *z3.Context
 	Environment *Environment
 	// TODO: tx is not baseTx
-	TxStack []*BaseTransaction
+	TxStack        []BaseTransaction
+	LastReturnData *map[int64]*z3.Bitvec
 }
 
-func NewGlobalState(env *Environment, ctx *z3.Context) *GlobalState {
+func NewGlobalState(env *Environment, ctx *z3.Context, txStack []BaseTransaction) *GlobalState {
+
 	return &GlobalState{
-		WorldState:  NewWordState(),
-		Mstate:      NewMachineState(),
-		Z3ctx:       ctx,
-		Environment: env,
-		// TxStack:     make([]*transaction.BaseTransaction, 0),
+		WorldState:     NewWordState(ctx),
+		Mstate:         NewMachineState(),
+		Z3ctx:          ctx,
+		Environment:    env,
+		TxStack:        txStack,
+		LastReturnData: nil,
+	}
+}
+
+// TODO: test
+func (globalState *GlobalState) Copy() *GlobalState {
+	//worldState := globalState.WorldState.Copy()
+	//environment := globalState.Environment.Copy()
+	//mstate := globalState.Mstate.DeepCopy()
+	//var txStack []*BaseTransaction
+	// shallow copy seems to be different in python and golang?
+	//copy(txStack, globalState.TxStack)
+	return &GlobalState{
+		WorldState:     globalState.WorldState,
+		Environment:    globalState.Environment,
+		Mstate:         globalState.Mstate,
+		TxStack:        globalState.TxStack,
+		Z3ctx:          globalState.Z3ctx,
+		LastReturnData: globalState.LastReturnData,
 	}
 }
 
@@ -35,7 +56,7 @@ func (globalState *GlobalState) GetCurrentInstruction() *disassembler.EvmInstruc
 	return nil
 }
 
-func (globalState *GlobalState) CurrentTransaction() *BaseTransaction {
+func (globalState *GlobalState) CurrentTransaction() BaseTransaction {
 	length := len(globalState.TxStack)
 	if length != 0 {
 		return globalState.TxStack[length-1]
@@ -45,8 +66,7 @@ func (globalState *GlobalState) CurrentTransaction() *BaseTransaction {
 }
 
 func (globalState *GlobalState) NewBitvec(name string, size int) *z3.Bitvec {
-	// TODO: tx
-	// txId := globalState.currentTx.id
-	str := "0" + name
+	txId := globalState.CurrentTransaction().GetId()
+	str := txId + name
 	return globalState.Z3ctx.NewBitvec(str, size)
 }

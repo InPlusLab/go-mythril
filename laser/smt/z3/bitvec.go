@@ -79,6 +79,9 @@ func (b *Bitvec) AsAST() *AST {
 // Value returns the value of BitvecVal, "" for Bitvec
 // should use get_numeral_string rather than get_numeral_int API
 func (b *Bitvec) Value() string {
+	if b == nil {
+		return ""
+	}
 	if !b.symbolic {
 		value := C.GoString(C.Z3_get_numeral_string(b.rawCtx, b.rawAST))
 		return value
@@ -116,6 +119,8 @@ func (b *Bitvec) Simplify() *Bitvec {
 	return &Bitvec{
 		rawCtx: b.rawCtx,
 		rawAST: C.Z3_simplify(b.rawCtx, b.rawAST),
+		// TODO: wrong use
+		rawSort: b.rawSort,
 	}
 }
 
@@ -382,8 +387,9 @@ func (a *Bitvec) Concat(a2 *Bitvec) *Bitvec {
 // created by chz
 func (a *Bitvec) Extract(high int, low int) *Bitvec {
 	return &Bitvec{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_extract(a.rawCtx, C.uint(high), C.uint(low), a.rawAST),
+		rawCtx:   a.rawCtx,
+		rawAST:   C.Z3_mk_extract(a.rawCtx, C.uint(high), C.uint(low), a.rawAST),
+		symbolic: a.symbolic,
 	}
 }
 

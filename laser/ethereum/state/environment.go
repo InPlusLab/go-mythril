@@ -6,25 +6,27 @@ import (
 )
 
 type Environment struct {
-	Code          *disassembler.Disasembly
-	ActiveAccount *Account
-	Address       *z3.Bitvec
-	Sender        *z3.Bitvec
-	Calldata      BaseCalldata
-	GasPrice      *z3.Bitvec
-	CallValue     *z3.Bitvec
-	Origin        *z3.Bitvec
-	Basefee       *z3.Bitvec
-	ChainId       *z3.Bitvec
-	Stack         []*z3.Bitvec
+	Code           *disassembler.Disasembly
+	ActiveAccount  *Account
+	Address        *z3.Bitvec
+	Sender         *z3.Bitvec
+	Calldata       BaseCalldata
+	GasPrice       int
+	CallValue      int
+	Origin         *z3.Bitvec
+	Basefee        *z3.Bitvec
+	ChainId        *z3.Bitvec
+	BlockNumber    *z3.Bitvec
+	ActiveFuncName string
+	Stack          []*z3.Bitvec
 }
 
 func NewEnvironment(code *disassembler.Disasembly,
 	account *Account,
 	sender *z3.Bitvec,
 	calldata BaseCalldata,
-	gasprice *z3.Bitvec,
-	callvalue *z3.Bitvec,
+	gasprice int,
+	callvalue int,
 	origin *z3.Bitvec,
 	basefee *z3.Bitvec) *Environment {
 	stack := make([]*z3.Bitvec, 0)
@@ -39,6 +41,24 @@ func NewEnvironment(code *disassembler.Disasembly,
 		Origin:        origin,
 		Basefee:       basefee,
 		ChainId:       sender.GetCtx().NewBitvec("chain_id", 256),
+		BlockNumber:   sender.GetCtx().NewBitvec("block_number", 256),
 		Stack:         stack,
+	}
+}
+
+// shallow copy
+func (env *Environment) Copy() *Environment {
+	return &Environment{
+		Code:          env.Code,
+		ActiveAccount: env.ActiveAccount,
+		Address:       env.Address,
+		Sender:        env.Sender,
+		Calldata:      env.Calldata,
+		GasPrice:      env.GasPrice,
+		CallValue:     env.CallValue,
+		Origin:        env.Origin,
+		Basefee:       env.Basefee,
+		ChainId:       env.ChainId,
+		Stack:         env.Stack,
 	}
 }

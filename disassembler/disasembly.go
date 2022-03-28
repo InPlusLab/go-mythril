@@ -2,7 +2,6 @@ package disassembler
 
 import (
 	"encoding/hex"
-	"fmt"
 )
 
 type Disasembly struct {
@@ -13,12 +12,16 @@ type Disasembly struct {
 func NewDisasembly(code string) *Disasembly {
 	// TODO: bytecode not creation code
 	// 6060320032 just for test
-	fmt.Println("NewDisasembly", code)
 
-	bytecode, err := hex.DecodeString(code)
-	fmt.Println("bytecode", bytecode, err)
+	bytecode, _ := hex.DecodeString(code)
 	return &Disasembly{
 		Bytecode:        bytecode,
 		InstructionList: disassemble(bytecode),
 	}
+}
+
+// TODO
+func (d *Disasembly) AssignBytecode(bytecode []byte) {
+	d.Bytecode = bytecode
+	//d.InstructionList = disassemble(bytecode)
 }

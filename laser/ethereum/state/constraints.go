@@ -14,6 +14,13 @@ func NewConstraints() *Constraints {
 	}
 }
 
+// In python Mythril, constrains List'copy is shallow copy.
+func (c *Constraints) Copy() *Constraints {
+	var tmp *Constraints
+	tmp = c
+	return tmp
+}
+
 func (c *Constraints) IsPossible() bool {
 	// TODO: z3 solve
 	return true
