@@ -77,7 +77,7 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 		}
 		// For debug
 		state.Mstate.Stack.PrintStack()
-		//state.Mstate.Memory.PrintMemory()
+		state.Mstate.Memory.PrintMemory()
 	}
 	return result
 }
@@ -757,8 +757,8 @@ func (instr *Instruction) calldatasize_(globalState *state.GlobalState) []*state
 
 func (instr *Instruction) _calldata_copy_helper(globalState *state.GlobalState,
 	mstate *state.MachineState, mstart *z3.Bitvec, dstart *z3.Bitvec, size *z3.Bitvec) []*state.GlobalState {
-	ret := make([]*state.GlobalState, 0)
 
+	ret := make([]*state.GlobalState, 0)
 	env := globalState.Environment
 	ctx := globalState.Z3ctx
 
@@ -767,24 +767,46 @@ func (instr *Instruction) _calldata_copy_helper(globalState *state.GlobalState,
 		ret = append(ret, globalState)
 		return ret
 	}
-	vSize, _ := strconv.ParseInt(size.Value(), 10, 64)
-	if vSize > 0 {
-		mstate.MemExtend(mstart, 1)
-		// TypeError check
+	//mstartV, _ := strconv.Atoi(mstart.Value())
+
+	if dstart.Symbolic() {
+		fmt.Println("Unsupported symbolic calldata offset in CALLDATACOPY")
+		dstart = dstart.Simplify()
+	}
+	//dstartV, _ := strconv.Atoi(dstart.Value())
+
+	var sizeV int
+	if size.Symbolic() {
+		fmt.Println("Unsupported symbolic size in CALLDATACOPY")
+		sizeV = 320
+	} else {
+		sizeValue, _ := strconv.Atoi(size.Value())
+		sizeV = sizeValue
+	}
+	fmt.Println("calldatacopy!")
+
+	if sizeV > 0 {
+		mstate.MemExtend(mstart, sizeV)
+		// TODO: TypeError check for memExtend()
+
 		iData := dstart
 		newMemory := make([]*z3.Bitvec, 0)
-		for i := 0; i < int(vSize); i++ {
-			value := env.Calldata.GetWordAt(iData)
+		for i := 0; i < sizeV; i++ {
+			value := env.Calldata.Load(iData)
 			newMemory = append(newMemory, value)
-			idataValue, _ := strconv.ParseInt(iData.Value(), 10, 64)
+			idataValue, _ := strconv.Atoi(iData.Value())
 			iData = ctx.NewBitvecVal(idataValue+1, iData.BvSize())
 		}
+
+		mstartValue, _ := strconv.ParseInt(mstart.Value(), 10, 64)
+		fmt.Println(mstartValue, "-mstartOffset ", len(newMemory), "-length")
+
 		for j := 0; j < len(newMemory); j++ {
-			mstartValue, _ := strconv.ParseInt(mstart.Value(), 10, 64)
-			mstate.Memory.WriteWordAt(mstartValue+int64(j), newMemory[j])
+			mstate.Memory.SetItem(mstartValue+int64(j), newMemory[j])
 		}
 		// IndexError check
 	}
+
 	ret = append(ret, globalState)
 	return ret
 }
@@ -987,7 +1009,8 @@ func (instr *Instruction) codecopy_(globalState *state.GlobalState) []*state.Glo
 		mstate := globalState.Mstate
 		codeOffsetV, _ := strconv.Atoi(codeOffset.Value())
 		offset := codeOffsetV - codeSize
-		fmt.Println("Copying from code offset:" + strconv.Itoa(offset) + "with size: " + strconv.Itoa(codeSize))
+		fmt.Println("codeOffset-", codeOffsetV, " codesize-", codeSize)
+		fmt.Println("Copying from code offset:", offset, " with size: ", codeSize)
 
 		switch globalState.Environment.Calldata.(type) {
 		case *state.SymbolicCalldata:
@@ -997,15 +1020,55 @@ func (instr *Instruction) codecopy_(globalState *state.GlobalState) []*state.Glo
 			}
 		default:
 			// Copy from both code and calldata appropriately.
-			fmt.Println("todo! codecopy_()")
-		}
-	}
+			concreteCodeOffset, _ := strconv.Atoi(codeOffset.Value())
+			concreteSize, _ := strconv.Atoi(size.Value())
 
+			codeCopyOffset := codeOffset
+			var codeCopySize int
+			if concreteCodeOffset+concreteSize <= codeSize {
+				codeCopySize = concreteSize
+			} else {
+				codeCopySize = codeSize - concreteCodeOffset
+			}
+			if codeCopySize < 0 {
+				codeCopySize = 0
+			}
+
+			var calldataCopyOffset int
+
+			if concreteCodeOffset-codeSize > 0 {
+				calldataCopyOffset = concreteCodeOffset - codeSize
+			} else {
+				// TODO:0?
+				//calldataCopyOffset = 0
+				calldataCopyOffset = 101
+			}
+
+			calldataCopySize := concreteCodeOffset + concreteSize - codeSize
+			if calldataCopySize < 0 {
+				calldataCopySize = 0
+			}
+			codeCopySizeBv := globalState.Z3ctx.NewBitvecVal(codeCopySize, 256)
+			calldataCopyOffsetBv := globalState.Z3ctx.NewBitvecVal(calldataCopyOffset, 256)
+			calldataCopySizeBv := globalState.Z3ctx.NewBitvecVal(calldataCopySize, 256)
+			// code_copy_helper has no problem
+			globalStateArr := instr._code_copy_helper(globalState.Environment.Code.Bytecode,
+				memoryOffset, codeCopyOffset, codeCopySizeBv, "CODECOPY", globalState)
+			fmt.Println(memoryOffset.BvAdd(codeCopySizeBv).Simplify().Value())
+			fmt.Println(calldataCopyOffsetBv.Value())
+			fmt.Println(calldataCopySizeBv.Value())
+			return instr._calldata_copy_helper(globalStateArr[0], mstate,
+				memoryOffset.BvAdd(codeCopySizeBv).Simplify(), calldataCopyOffsetBv, calldataCopySizeBv)
+		}
+	default:
+		return instr._code_copy_helper(code, memoryOffset, codeOffset, size, "CODECOPY", globalState)
+	}
 	return instr._code_copy_helper(code, memoryOffset, codeOffset, size, "CODECOPY", globalState)
 }
 
 func (instr *Instruction) _code_copy_helper(code []byte, memoryOffset *z3.Bitvec, codeOffset *z3.Bitvec,
 	size *z3.Bitvec, op string, globalState *state.GlobalState) []*state.GlobalState {
+
 	ret := make([]*state.GlobalState, 0)
 
 	if memoryOffset.Symbolic() {
@@ -1036,14 +1099,14 @@ func (instr *Instruction) _code_copy_helper(code []byte, memoryOffset *z3.Bitvec
 		ret = append(ret, globalState)
 		return ret
 	}
-	cOffsetV, _ := strconv.ParseInt(codeOffset.Value(), 10, 64)
+	cOffsetV, _ := strconv.Atoi(codeOffset.Value())
 
 	for i := 0; i < int(sizeV); i++ {
-		if (int(cOffsetV) + i + 1) > len(code) {
+		if (cOffsetV + i + 1) > len(code) {
 			break
 		}
 		globalState.Mstate.Memory.SetItem(mOffsetV+int64(i),
-			globalState.Z3ctx.NewBitvecVal(int(code[int(mOffsetV)+i]), 8))
+			globalState.Z3ctx.NewBitvecVal(int(code[cOffsetV+i]), 8))
 	}
 
 	ret = append(ret, globalState)

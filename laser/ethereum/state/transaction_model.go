@@ -5,6 +5,7 @@ import (
 	"go-mythril/disassembler"
 	"go-mythril/laser/smt/z3"
 	"math/big"
+	"strconv"
 )
 
 var nextTransactionId int
@@ -48,13 +49,15 @@ func NewMessageCallTransaction(code string) *MessageCallTransaction {
 	calldataList = append(calldataList, ctx.NewBitvecVal(253, 8))
 	calldataList = append(calldataList, ctx.NewBitvecVal(109, 8))
 	// Parameters
-	calldataList = append(calldataList, ctx.NewBitvecVal(0, 8))
+	// calldataList = append(calldataList, ctx.NewBitvecVal(0, 8))
+	// For test
+	caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
 	return &MessageCallTransaction{
 		Code: txcode,
 		// TODO: For test here.
 		CalleeAccount: NewAccount(ctx.NewBitvecVal(123, 256),
 			ctx.NewArray("balances", 256, 256), true, txcode),
-		Caller:    ctx.NewBitvec("sender", 256),
+		Caller:    ctx.NewBitvecVal(caller, 256),
 		Calldata:  NewConcreteCalldata("txid123", calldataList),
 		GasPrice:  10,
 		GasLimit:  100,
@@ -124,24 +127,28 @@ func NewContractCreationTransaction(code string) *ContractCreationTransaction {
 	txcode := disassembler.NewDisasembly(code)
 	calldataList := make([]*z3.Bitvec, 0)
 	// TODO: For test here
-	// Function hash: 0xf8a8fd6d, which is the hash of test() in origin.sol
-	calldataList = append(calldataList, ctx.NewBitvecVal(0xf8, 8))
-	calldataList = append(calldataList, ctx.NewBitvecVal(0xa8, 8))
-	calldataList = append(calldataList, ctx.NewBitvecVal(0xfd, 8))
-	calldataList = append(calldataList, ctx.NewBitvecVal(0x6d, 8))
+	// Remix input here
+	//
+	inputStr := "6080604052348015600f57600080fd5b5060ad8061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063f8a8fd6d14602d575b600080fd5b60336035565b005b336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555056fea2646970667358221220cc40cae2e419544393419c7a7ea32f42d341094e9dc31099df83cbe79983591164736f6c63430008070033"
+	for i := 0; i < len(inputStr); i = i + 2 {
+		tmp := string(inputStr[i]) + string(inputStr[i+1])
+		tmpV, _ := strconv.ParseInt(tmp, 16, 64)
+		calldataList = append(calldataList, ctx.NewBitvecVal(tmpV, 8))
+	}
 	// set your callerValue in remix to test
-	callerV, _ := new(big.Int).SetString("0000000000000000000000005b38da6a701c568545dcfcb03fcb875f56beddc4", 16)
+	// For test
+	caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
 	return &ContractCreationTransaction{
 		Code: txcode,
 		// TODO: For test here.
 		CalleeAccount: NewAccount(ctx.NewBitvecVal(123, 256),
 			ctx.NewArray("balances", 256, 256), true, txcode),
-		Caller:    ctx.NewBitvecVal(callerV, 256),
+		Caller:    ctx.NewBitvecVal(caller, 256),
 		Calldata:  NewConcreteCalldata("txid123", calldataList),
 		GasPrice:  10,
-		GasLimit:  100,
+		GasLimit:  100000,
 		CallValue: 0,
-		Origin:    ctx.NewBitvec("origin", 256),
+		Origin:    ctx.NewBitvecVal(caller, 256),
 		Basefee:   ctx.NewBitvecVal(1000, 256),
 		Ctx:       ctx,
 		Id:        GetNextTransactionId(),

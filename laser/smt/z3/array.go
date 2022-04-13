@@ -10,47 +10,59 @@ type BaseArray interface {
 	DeepCopy() BaseArray
 }
 type Array struct {
-	name   string
-	rawCtx C.Z3_context
-	rawAST C.Z3_ast
+	name      string
+	rawCtx    C.Z3_context
+	rawAST    C.Z3_ast
+	domSize   int
+	rangeSize int
 }
 type K struct {
-	rawCtx C.Z3_context
-	rawAST C.Z3_ast
+	rawCtx    C.Z3_context
+	rawAST    C.Z3_ast
+	domSize   int
+	rangeSize int
 }
 
-func (c *Context) NewArray(n string, dom uint, vRange uint) *Array {
+func (c *Context) NewArray(n string, dom int, vRange int) *Array {
 	// In mythril, domain and range of array are bv type.
-	ast := C.Z3_mk_const(c.raw, c.Symbol(n).rawSymbol, c.ArraySort(c.BvSort(dom), c.BvSort(vRange)).rawSort)
+	ast := C.Z3_mk_const(c.raw, c.Symbol(n).rawSymbol, c.ArraySort(c.BvSort(uint(dom)), c.BvSort(uint(vRange))).rawSort)
 	return &Array{
-		name:   n,
-		rawAST: ast,
-		rawCtx: c.raw,
+		name:      n,
+		rawAST:    ast,
+		rawCtx:    c.raw,
+		domSize:   dom,
+		rangeSize: vRange,
 	}
 }
 
-// K is an array whose values are all a constant value.
-func (c *Context) NewK(dom uint, vRange uint, value int) *K {
+// K is an array whose values are all constant.
+func (c *Context) NewK(dom int, vRange int, value int) *K {
 	// In mythril, domain and range of array are bv type.
-	ast := C.Z3_mk_const_array(c.raw, c.BvSort(dom).rawSort, c.Int(value, c.BvSort(vRange)).rawAST)
+	// ast := C.Z3_mk_const_array(c.raw, c.BvSort(dom).rawSort, c.Int(value, c.BvSort(vRange)).rawAST)
+	ast := C.Z3_mk_const_array(c.raw, c.BvSort(uint(dom)).rawSort, c.NewBitvecVal(value, vRange).rawAST)
 	return &K{
-		rawAST: ast,
-		rawCtx: c.raw,
+		rawAST:    ast,
+		rawCtx:    c.raw,
+		domSize:   dom,
+		rangeSize: vRange,
 	}
 }
 
 func (a *Array) SetItem(index *Bitvec, value *Bitvec) BaseArray {
 	return &Array{
-		name:   a.name,
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_store(a.rawCtx, a.rawAST, index.rawAST, value.rawAST),
+		name:      a.name,
+		rawCtx:    a.rawCtx,
+		rawAST:    C.Z3_mk_store(a.rawCtx, a.rawAST, index.rawAST, value.rawAST),
+		domSize:   a.domSize,
+		rangeSize: a.rangeSize,
 	}
 }
 
 func (a *Array) GetItem(index *Bitvec) *Bitvec {
 	return &Bitvec{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_select(a.rawCtx, a.rawAST, index.rawAST),
+		rawCtx:  a.rawCtx,
+		rawAST:  C.Z3_mk_select(a.rawCtx, a.rawAST, index.rawAST),
+		rawSort: C.Z3_mk_bv_sort(a.rawCtx, C.uint(a.rangeSize)),
 	}
 }
 func (a *Array) GetCtx() *Context {
@@ -68,15 +80,18 @@ func (a *Array) DeepCopy() BaseArray {
 
 func (a *K) SetItem(index *Bitvec, value *Bitvec) BaseArray {
 	return &K{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_store(a.rawCtx, a.rawAST, index.rawAST, value.rawAST),
+		rawCtx:    a.rawCtx,
+		rawAST:    C.Z3_mk_store(a.rawCtx, a.rawAST, index.rawAST, value.rawAST),
+		domSize:   a.domSize,
+		rangeSize: a.rangeSize,
 	}
 }
 
 func (a *K) GetItem(index *Bitvec) *Bitvec {
 	return &Bitvec{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_select(a.rawCtx, a.rawAST, index.rawAST),
+		rawCtx:  a.rawCtx,
+		rawAST:  C.Z3_mk_select(a.rawCtx, a.rawAST, index.rawAST),
+		rawSort: C.Z3_mk_bv_sort(a.rawCtx, C.uint(a.rangeSize)),
 	}
 }
 

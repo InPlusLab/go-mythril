@@ -35,11 +35,28 @@ func (m *Memory) PrintMemory() {
 			keyArr = append(keyArr, int(i))
 		}
 		sort.Ints(keyArr)
-		for _, v := range keyArr {
+		tmpStr := "0x"
+		count := 0
+		lastIndex := 0
+		for i, v := range keyArr {
 			value, ok := mem[int64(v)]
 			if ok {
-				fmt.Println("PrintMem:", v, "-", value.String())
+				tmpStr += value.String()[2:]
+				count++
 			}
+			if count == 16 {
+				fmt.Println("PrintMem:", v-15, "-", tmpStr)
+				tmpStr = "0x"
+				count = 0
+				lastIndex = i
+			}
+		}
+		if lastIndex < len(keyArr) {
+			str := "0x"
+			for k := lastIndex + 1; k < len(keyArr); k++ {
+				str += mem[int64(keyArr[k])].String()[2:]
+			}
+			fmt.Println("PrintMem:", lastIndex+1, "-", tmpStr)
 		}
 	}
 }
@@ -71,7 +88,7 @@ func (m *Memory) WriteWordAt(index int64, value *z3.Bitvec) {
 	}
 	mem := *m.RawMemory
 	for i := 0; i < 256; i = i + 8 {
-		mem[index+31-int64(i/8)] = value.Extract(i+7, i)
+		mem[index+31-int64(i/8)] = value.Extract(i+7, i).Simplify()
 	}
 }
 
@@ -105,11 +122,14 @@ func (m *Memory) GetItems2Bytes(start int64, stop int64) []byte {
 
 func (m *Memory) SetItem(key int64, value *z3.Bitvec) {
 	memory := *m.RawMemory
-	if int(key) >= len(memory) {
-		return
-	}
+	//if int(key) >= len(memory) {
+	//	fmt.Println("lenm")
+	//	return
+	//}
 	if value.BvSize() != 8 {
+		fmt.Println("bvsize")
 		return
 	}
+
 	memory[key] = value
 }

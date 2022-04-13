@@ -127,6 +127,7 @@ func (m *MachineState) MemExtend(start *z3.Bitvec, size int) {
 	} else {
 		startValue, _ := strconv.ParseInt(start.Value(), 10, 64)
 		mExtend := m.CalculateMemorySize(int(startValue), size)
+		fmt.Println("memextend", mExtend)
 		if mExtend != 0 {
 			extendGas := m.CalculateMemoryGas(int(startValue), size)
 			m.MinGasUsed += extendGas
