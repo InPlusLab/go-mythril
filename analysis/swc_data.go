@@ -1,0 +1,76 @@
+package analysis
+
+func NewSWCData() map[string]string {
+	swc := make(map[string]string)
+	swc["DEFAULT_FUNCTION_VISIBILITY"] = "100"
+	swc["INTEGER_OVERFLOW_AND_UNDERFLOW"] = "101"
+	swc["OUTDATED_COMPILER_VERSION"] = "102"
+	swc["FLOATING_PRAGMA"] = "103"
+	swc["UNCHECKED_RET_VAL"] = "104"
+	swc["UNPROTECTED_ETHER_WITHDRAWAL"] = "105"
+	swc["UNPROTECTED_SELFDESTRUCT"] = "106"
+	swc["REENTRANCY"] = "107"
+	swc["DEFAULT_STATE_VARIABLE_VISIBILITY"] = "108"
+	swc["UNINITIALIZED_STORAGE_POINTER"] = "109"
+	swc["ASSERT_VIOLATION"] = "110"
+	swc["DEPRECATED_FUNCTIONS_USAGE"] = "111"
+	swc["DELEGATECALL_TO_UNTRUSTED_CONTRACT"] = "112"
+	swc["MULTIPLE_SENDS"] = "113"
+	swc["TX_ORDER_DEPENDENCE"] = "114"
+	swc["TX_ORIGIN_USAGE"] = "115"
+	swc["TIMESTAMP_DEPENDENCE"] = "116"
+	swc["SIGNATURE_MALLEABILITY"] = "117"
+	swc["INCORRECT_CONSTRUCTOR_NAME"] = "118"
+	swc["SHADOWING_STATE_VARIABLES"] = "119"
+	swc["WEAK_RANDOMNESS"] = "120"
+	swc["SIGNATURE_REPLAY"] = "121"
+	swc["IMPROPER_VERIFICATION_BASED_ON_MSG_SENDER"] = "122"
+	swc["REQUIREMENT_VIOLATION"] = "123"
+	swc["WRITE_TO_ARBITRARY_STORAGE"] = "124"
+	swc["INCORRECT_INHERITANCE_ORDER"] = "125"
+	swc["ARBITRARY_JUMP"] = "127"
+	swc["DOS_WITH_BLOCK_GAS_LIMIT"] = "128"
+	swc["TYPOGRAPHICAL_ERROR"] = "129"
+	swc["UNEXPECTED_ETHER_BALANCE"] = "132"
+	swc["EFFECT_FREE_CODE"] = "135"
+
+	return swc
+}
+
+func NewSWC2Title() *map[string]string {
+	title := make(map[string]string)
+
+	title["100"] = "Function Default Visibility"
+	title["101"] = "Integer Overflow and Underflow"
+	title["102"] = "Outdated Compiler Version"
+	title["103"] = "Floating Pragma"
+	title["104"] = "Unchecked Call Return Value"
+	title["105"] = "Unprotected Ether Withdrawal"
+	title["106"] = "Unprotected SELFDESTRUCT Instruction"
+	title["107"] = "Reentrancy"
+	title["108"] = "State Variable Default Visibility"
+	title["109"] = "Uninitialized Storage Pointer"
+	title["110"] = "Assert Violation"
+	title["111"] = "Use of Deprecated Solidity Functions"
+	title["112"] = "Delegatecall to Untrusted Callee"
+	title["113"] = "DoS with Failed Call"
+	title["114"] = "Transaction Order Dependence"
+	title["115"] = "Authorization through tx.origin"
+	title["116"] = "Timestamp Dependence"
+	title["117"] = "Signature Malleability"
+	title["118"] = "Incorrect Constructor Name"
+	title["119"] = "Shadowing State Variables"
+	title["120"] = "Weak Sources of Randomness from Chain Attributes"
+	title["121"] = "Missing Protection against Signature Replay Attacks"
+	title["122"] = "Lack of Proper Signature Verification"
+	title["123"] = "Requirement Violation"
+	title["124"] = "Write to Arbitrary Storage Location"
+	title["125"] = "Incorrect Inheritance Order"
+	title["127"] = "Arbitrary Jump with Function Type Variable"
+	title["128"] = "DoS With Block Gas Limit"
+	title["129"] = "Typographical Error"
+	title["132"] = "Unexpected Ether Balance"
+	title["135"] = "Effect Free Code"
+
+	return &title
+}

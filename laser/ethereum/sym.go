@@ -2,10 +2,14 @@ package ethereum
 
 import (
 	"fmt"
+	"go-mythril/analysis"
+	"go-mythril/analysis/module/modules"
 	"go-mythril/laser/ethereum/state"
+	"go-mythril/support"
 	"time"
-	//"go-mythril/laser/smt"
 )
+
+type moduleExecFunc func(globalState *state.GlobalState) []*analysis.Issue
 
 type LaserEVM struct {
 	ExecutionTimeout int
@@ -13,7 +17,8 @@ type LaserEVM struct {
 	TransactionCount int
 	WorkList         chan *state.GlobalState
 	// FinalState       chan *state.GlobalState
-
+	InstrPreHook  *map[string][]moduleExecFunc
+	InstrPostHook *map[string][]moduleExecFunc
 	// Parallal
 	BeginCh     chan int
 	EndCh       chan int
@@ -21,12 +26,29 @@ type LaserEVM struct {
 }
 
 func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int) *LaserEVM {
+
+	preHook := make(map[string][]moduleExecFunc)
+	postHook := make(map[string][]moduleExecFunc)
+	opcodes := *support.NewOpcodes()
+	for _, v := range opcodes {
+		preHook[v.Name] = make([]moduleExecFunc, 0)
+		postHook[v.Name] = make([]moduleExecFunc, 0)
+	}
+	// For hook test here~
+	// TODO: svm.py - register_instr_hooks
+	integerDetectionModule := modules.NewIntegerArithmetics()
+	preHook["PUSH1"] = []moduleExecFunc{integerDetectionModule.Execute}
+	postHook["PUSH1"] = []moduleExecFunc{integerDetectionModule.Execute}
+
 	evm := LaserEVM{
 		ExecutionTimeout: ExecutionTimeout,
 		CreateTimeout:    CreateTimeout,
 		TransactionCount: TransactionCount,
 		WorkList:         make(chan *state.GlobalState, 1000),
 		// FinalState:       make(chan *state.GlobalState),
+		InstrPreHook:  &preHook,
+		InstrPostHook: &postHook,
+
 		BeginCh:     make(chan int),
 		EndCh:       make(chan int),
 		GofuncCount: 4,
@@ -95,9 +117,10 @@ func (evm *LaserEVM) ExecuteState(globalState *state.GlobalState) ([]*state.Glob
 	instrs := globalState.Environment.Code.InstructionList
 	opcode := instrs[globalState.Mstate.Pc].OpCode.Name
 
-	prehooks := []string{}
-	posthooks := []string{}
-	instr := NewInstruction(opcode, prehooks, posthooks)
+	preHooks := *evm.InstrPreHook
+	postHooks := *evm.InstrPostHook
+
+	instr := NewInstruction(opcode, preHooks[opcode], postHooks[opcode])
 	newGlobalStates := instr.Evaluate(globalState)
 
 	return newGlobalStates, opcode

@@ -3,6 +3,7 @@ package state
 import (
 	"go-mythril/disassembler"
 	"go-mythril/laser/smt/z3"
+	"reflect"
 )
 
 type GlobalState struct {
@@ -13,6 +14,7 @@ type GlobalState struct {
 	// TODO: tx is not baseTx
 	TxStack        []BaseTransaction
 	LastReturnData *map[int64]*z3.Bitvec
+	Annotations    []StateAnnotation
 }
 
 func NewGlobalState(env *Environment, ctx *z3.Context, txStack []BaseTransaction) *GlobalState {
@@ -24,6 +26,7 @@ func NewGlobalState(env *Environment, ctx *z3.Context, txStack []BaseTransaction
 		Environment:    env,
 		TxStack:        txStack,
 		LastReturnData: nil,
+		Annotations:    make([]StateAnnotation, 0),
 	}
 }
 
@@ -69,4 +72,22 @@ func (globalState *GlobalState) NewBitvec(name string, size int) *z3.Bitvec {
 	txId := globalState.CurrentTransaction().GetId()
 	str := txId + name
 	return globalState.Z3ctx.NewBitvec(str, size)
+}
+
+func (globalState *GlobalState) Annotate(annotation StateAnnotation) {
+	globalState.Annotations = append(globalState.Annotations, annotation)
+	// TODO:
+	//if annotation.PersistToWorldState(){
+	//
+	//}
+}
+
+func (globalState *GlobalState) GetAnnotations(annoType reflect.Type) []StateAnnotation {
+	annoList := make([]StateAnnotation, 0)
+	for _, v := range globalState.Annotations {
+		if annoType == reflect.TypeOf(v) {
+			annoList = append(annoList, v)
+		}
+	}
+	return annoList
 }

@@ -27,12 +27,12 @@ func CheckGasUsageLimit(globalState *state.GlobalState) {
 
 type Instruction struct {
 	Opcode    string
-	PreHooks  []string
-	PostHooks []string
+	PreHooks  []moduleExecFunc
+	PostHooks []moduleExecFunc
 }
 
 // NewInstruction Golang don't support default parameters.
-func NewInstruction(opcode string, prehooks []string, posthooks []string) *Instruction {
+func NewInstruction(opcode string, prehooks []moduleExecFunc, posthooks []moduleExecFunc) *Instruction {
 	return &Instruction{
 		Opcode:    opcode,
 		PreHooks:  prehooks,
@@ -41,24 +41,16 @@ func NewInstruction(opcode string, prehooks []string, posthooks []string) *Instr
 }
 
 func (instr *Instruction) ExePreHooks(globalState *state.GlobalState) {
-	for _, funcName := range instr.PreHooks {
-		tmpInstr := &Instruction{
-			Opcode: funcName,
-		}
-		// execute the hook
-		tmpInstr.Mutator(globalState)
-		fmt.Println("exe prehooks!")
+	for _, hook := range instr.PreHooks {
+		fmt.Println(instr.Opcode, ": preHook execute!")
+		hook(globalState)
 	}
 }
 
 func (instr *Instruction) ExePostHooks(globalState *state.GlobalState) {
-	for _, funcName := range instr.PostHooks {
-		tmpInstr := &Instruction{
-			Opcode: funcName,
-		}
-		// execute the hook
-		tmpInstr.Mutator(globalState)
-		fmt.Println("exe posthooks!")
+	for _, hook := range instr.PostHooks {
+		fmt.Println(instr.Opcode, ": postHook execute!")
+		hook(globalState)
 	}
 }
 
@@ -997,6 +989,7 @@ func (instr *Instruction) basefee_(globalState *state.GlobalState) []*state.Glob
 	return ret
 }
 
+// TODO: test
 func (instr *Instruction) codecopy_(globalState *state.GlobalState) []*state.GlobalState {
 
 	memoryOffset := globalState.Mstate.Stack.Pop()

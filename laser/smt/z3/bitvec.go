@@ -5,26 +5,30 @@ package z3
 import "C"
 import (
 	"fmt"
+	"go-mythril/utils"
 	"math/big"
 	"strconv"
 )
 
 type Bitvec struct {
-	rawCtx   C.Z3_context
-	rawAST   C.Z3_ast
-	rawSort  C.Z3_sort
-	symbolic bool
+	rawCtx      C.Z3_context
+	rawAST      C.Z3_ast
+	rawSort     C.Z3_sort
+	symbolic    bool
+	annotations *utils.Set
 }
 
 // NewBitvec corresponds to BitVec() in Python
 // It implements the class BitVecRef
 func (c *Context) NewBitvec(bvSymbol string, size int) *Bitvec {
 	ast := C.Z3_mk_const(c.raw, c.Symbol(bvSymbol).rawSymbol, c.BvSort(uint(size)).rawSort)
+	annotations := utils.NewSet()
 	return &Bitvec{
-		rawCtx:   c.raw,
-		rawAST:   ast,
-		rawSort:  c.BvSort(uint(size)).rawSort,
-		symbolic: true,
+		rawCtx:      c.raw,
+		rawAST:      ast,
+		rawSort:     c.BvSort(uint(size)).rawSort,
+		symbolic:    true,
+		annotations: annotations,
 	}
 }
 
@@ -48,19 +52,25 @@ func (c *Context) NewBitvecVal(value interface{}, size int) *Bitvec {
 	}
 	// Can't use mk_int API here.
 	ast := C.Z3_mk_numeral(c.raw, C.CString(valueStr), c.BvSort(uint(size)).rawSort)
+	annotations := utils.NewSet()
 	return &Bitvec{
-		rawCtx:   c.raw,
-		rawAST:   ast,
-		rawSort:  c.BvSort(uint(size)).rawSort,
-		symbolic: false,
+		rawCtx:      c.raw,
+		rawAST:      ast,
+		rawSort:     c.BvSort(uint(size)).rawSort,
+		symbolic:    false,
+		annotations: annotations,
 	}
 }
 
 // The attribute of bitvec
 
-/*func (a *Bitvec) GetCtx() *Context {
-	return a.rawCtx
-}*/
+func (b *Bitvec) Annotations() *utils.Set {
+	return b.annotations
+}
+
+func (b *Bitvec) Annotate(item interface{}) {
+	b.annotations.Add(item)
+}
 
 // BvSize returns the size of bitvector
 // created by chz
@@ -185,8 +195,8 @@ func (a *Bitvec) BvUDiv(t *Bitvec) *Bitvec {
 
 // BvAddNoOverflow checks the addition of Node a & t doesn't overflow
 // created by chz
-func (a *Bitvec) BvAddNoOverflow(t *Bitvec, isSigned bool) *Bitvec {
-	return &Bitvec{
+func (a *Bitvec) BvAddNoOverflow(t *Bitvec, isSigned bool) *Bool {
+	return &Bool{
 		rawCtx: a.rawCtx,
 		rawAST: C.Z3_mk_bvadd_no_overflow(
 			a.rawCtx,
@@ -197,8 +207,8 @@ func (a *Bitvec) BvAddNoOverflow(t *Bitvec, isSigned bool) *Bitvec {
 
 // BvSubNoUnderflow checks the subtraction of Node a & t doesn't underflow
 // created by chz
-func (a *Bitvec) BvSubNoUnderflow(t *Bitvec, isSigned bool) *Bitvec {
-	return &Bitvec{
+func (a *Bitvec) BvSubNoUnderflow(t *Bitvec, isSigned bool) *Bool {
+	return &Bool{
 		rawCtx: a.rawCtx,
 		rawAST: C.Z3_mk_bvsub_no_underflow(
 			a.rawCtx,
@@ -209,8 +219,8 @@ func (a *Bitvec) BvSubNoUnderflow(t *Bitvec, isSigned bool) *Bitvec {
 
 // BvMulNoOverflow checks the multiplication of Node a & t doesn't overflow
 // created by chz
-func (a *Bitvec) BvMulNoOverflow(t *Bitvec, isSigned bool) *Bitvec {
-	return &Bitvec{
+func (a *Bitvec) BvMulNoOverflow(t *Bitvec, isSigned bool) *Bool {
+	return &Bool{
 		rawCtx: a.rawCtx,
 		rawAST: C.Z3_mk_bvmul_no_overflow(
 			a.rawCtx,
