@@ -16,8 +16,10 @@ func NewConstraints() *Constraints {
 
 // In python Mythril, constrains List'copy is shallow copy.
 func (c *Constraints) Copy() *Constraints {
-	var tmp *Constraints
-	tmp = c
+	tmp := NewConstraints()
+	for _, item := range c.ConstraintList {
+		tmp.Add(item)
+	}
 	return tmp
 }
 
@@ -26,7 +28,9 @@ func (c *Constraints) IsPossible() bool {
 	return true
 }
 
-func (c *Constraints) Add(constraint *z3.Bool) bool {
-	c.ConstraintList = append(c.ConstraintList, constraint)
+func (c *Constraints) Add(constraints ...*z3.Bool) bool {
+	for _, constraint := range constraints {
+		c.ConstraintList = append(c.ConstraintList, constraint)
+	}
 	return true
 }

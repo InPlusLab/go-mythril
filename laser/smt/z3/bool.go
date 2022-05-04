@@ -86,6 +86,21 @@ func (a *Bool) And(args ...*Bool) *Bool {
 	}
 }
 
+func (a *Bool) Or(args ...*Bool) *Bool {
+	raws := make([]C.Z3_ast, len(args)+1)
+	raws[0] = a.rawAST
+	for i, arg := range args {
+		raws[i+1] = arg.rawAST
+	}
+	return &Bool{
+		rawCtx: a.rawCtx,
+		rawAST: C.Z3_mk_or(
+			a.rawCtx,
+			C.uint(len(raws)),
+			(*C.Z3_ast)(unsafe.Pointer(&raws[0]))),
+	}
+}
+
 // For debug
 func GetBoolCtx(b *Bool) *Context {
 	return &Context{

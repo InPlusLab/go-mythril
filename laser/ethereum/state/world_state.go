@@ -6,17 +6,21 @@ import (
 )
 
 type WorldState struct {
-	Accounts    *map[int64]*Account
-	Balances    *z3.Array
-	Constraints *Constraints
+	Accounts            *map[int64]*Account
+	Balances            *z3.Array
+	StartingBalances    *z3.Array
+	Constraints         *Constraints
+	TransactionSequence []BaseTransaction
 }
 
 func NewWordState(ctx *z3.Context) *WorldState {
 	accounts := make(map[int64]*Account)
 	return &WorldState{
-		Accounts:    &accounts,
-		Balances:    ctx.NewArray("balance", 256, 256),
-		Constraints: NewConstraints(),
+		Accounts:            &accounts,
+		Balances:            ctx.NewArray("balance", 256, 256),
+		StartingBalances:    ctx.NewArray("balance", 256, 256),
+		Constraints:         NewConstraints(),
+		TransactionSequence: make([]BaseTransaction, 0),
 	}
 }
 

@@ -21,6 +21,8 @@ type BaseTransaction interface {
 	GetId() string
 	GetGasLimit() int
 	End(state *GlobalState, returnData []byte)
+	GetCaller() *z3.Bitvec
+	GetOrigin() *z3.Bitvec
 }
 
 type MessageCallTransaction struct {
@@ -39,6 +41,7 @@ type MessageCallTransaction struct {
 }
 
 func NewMessageCallTransaction(code string) *MessageCallTransaction {
+
 	config := z3.NewConfig()
 	ctx := z3.NewContext(config)
 	txcode := disassembler.NewDisasembly(code)
@@ -100,6 +103,14 @@ func (tx *MessageCallTransaction) End(state *GlobalState, data []byte) {
 
 func (tx *MessageCallTransaction) GetId() string {
 	return tx.Id
+}
+
+func (tx *MessageCallTransaction) GetCaller() *z3.Bitvec {
+	return tx.Caller
+}
+
+func (tx *MessageCallTransaction) GetOrigin() *z3.Bitvec {
+	return tx.Origin
 }
 
 func (tx *MessageCallTransaction) GetGasLimit() int {
@@ -198,6 +209,14 @@ func (tx *ContractCreationTransaction) End(globalState *GlobalState, data []byte
 
 func (tx *ContractCreationTransaction) GetId() string {
 	return tx.Id
+}
+
+func (tx *ContractCreationTransaction) GetCaller() *z3.Bitvec {
+	return tx.Caller
+}
+
+func (tx *ContractCreationTransaction) GetOrigin() *z3.Bitvec {
+	return tx.Origin
 }
 
 func (tx *ContractCreationTransaction) GetGasLimit() int {

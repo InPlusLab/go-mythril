@@ -1,0 +1,42 @@
+package transaction
+
+import (
+	"go-mythril/laser/smt/z3"
+	"math/big"
+)
+
+// In python-mythril, Actors is singleton. But here we think it as a normal class.
+type Actors struct {
+	Creator   string
+	Attacker  string
+	Someguy   string
+	Addresses map[string]*z3.Bitvec
+}
+
+func NewActors(ctx *z3.Context) *Actors {
+	creator := "AFFEAFFEAFFEAFFEAFFEAFFEAFFEAFFEAFFEAFFE"
+	attacker := "DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF"
+	someguy := "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+	creatorBv, _ := new(big.Int).SetString(creator, 16)
+	attackerBv, _ := new(big.Int).SetString(attacker, 16)
+	someguyBv, _ := new(big.Int).SetString(someguy, 16)
+
+	addrMap := make(map[string]*z3.Bitvec)
+	addrMap["CREATOR"] = ctx.NewBitvecVal(creatorBv, 256)
+	addrMap["ATTACKER"] = ctx.NewBitvecVal(attackerBv, 256)
+	addrMap["SOMEGUY"] = ctx.NewBitvecVal(someguyBv, 256)
+
+	return &Actors{
+		Creator:   creator,
+		Attacker:  attacker,
+		Someguy:   someguy,
+		Addresses: addrMap,
+	}
+}
+
+func (a *Actors) GetCreator() *z3.Bitvec {
+	return a.Addresses["CREATOR"]
+}
+func (a *Actors) GetAttacker() *z3.Bitvec {
+	return a.Addresses["ATTACKER"]
+}
