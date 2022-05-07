@@ -88,6 +88,12 @@ func (a *AST) Int() int {
 	return int(dst)
 }
 
+// GetNumeralString is similar to the Value() of bitvec.
+func (a *AST) GetNumeralString() string {
+	value := C.GoString(C.Z3_get_numeral_string(a.rawCtx, a.rawAST))
+	return value
+}
+
 // Simplify
 // created by chz
 func (a *AST) Simplify() *AST {

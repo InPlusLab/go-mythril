@@ -17,10 +17,10 @@ type GlobalState struct {
 	Annotations    []StateAnnotation
 }
 
-func NewGlobalState(env *Environment, ctx *z3.Context, txStack []BaseTransaction) *GlobalState {
+func NewGlobalState(worldState *WorldState, env *Environment, ctx *z3.Context, txStack []BaseTransaction) *GlobalState {
 
 	return &GlobalState{
-		WorldState:     NewWordState(ctx),
+		WorldState:     worldState,
 		Mstate:         NewMachineState(),
 		Z3ctx:          ctx,
 		Environment:    env,

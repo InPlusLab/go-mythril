@@ -16,16 +16,21 @@ func GetNextTransactionId() string {
 }
 
 type BaseTransaction interface {
-	InitialGlobalStateFromEnvironment(environment *Environment, activeFunc string) *GlobalState
+	InitialGlobalStateFromEnvironment(worldState *WorldState, environment *Environment, activeFunc string) *GlobalState
 	InitialGlobalState() *GlobalState
 	GetId() string
 	GetGasLimit() int
 	End(state *GlobalState, returnData []byte)
 	GetCaller() *z3.Bitvec
 	GetOrigin() *z3.Bitvec
+	GetCalldata() BaseCalldata
+	GetCallValue() *z3.Bitvec
+	GetWorldState() *WorldState
+	GetCalleeAccount() *Account
 }
 
 type MessageCallTransaction struct {
+	WorldState    *WorldState
 	Code          *disassembler.Disasembly
 	CalleeAccount *Account
 	Caller        *z3.Bitvec
@@ -56,7 +61,8 @@ func NewMessageCallTransaction(code string) *MessageCallTransaction {
 	// For test
 	caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
 	return &MessageCallTransaction{
-		Code: txcode,
+		WorldState: NewWordState(ctx),
+		Code:       txcode,
 		// TODO: For test here.
 		CalleeAccount: NewAccount(ctx.NewBitvecVal(123, 256),
 			ctx.NewArray("balances", 256, 256), true, txcode),
@@ -72,9 +78,9 @@ func NewMessageCallTransaction(code string) *MessageCallTransaction {
 	}
 }
 
-func (tx *MessageCallTransaction) InitialGlobalStateFromEnvironment(env *Environment, activeFunc string) *GlobalState {
+func (tx *MessageCallTransaction) InitialGlobalStateFromEnvironment(worldState *WorldState, env *Environment, activeFunc string) *GlobalState {
 	txStack := make([]BaseTransaction, 0)
-	globalState := NewGlobalState(env, tx.Ctx, append(txStack, tx))
+	globalState := NewGlobalState(worldState, env, tx.Ctx, append(txStack, tx))
 	globalState.Environment.ActiveFuncName = activeFunc
 	sender := env.Sender
 	receiver := env.ActiveAccount.Address
@@ -93,7 +99,7 @@ func (tx *MessageCallTransaction) InitialGlobalStateFromEnvironment(env *Environ
 func (tx *MessageCallTransaction) InitialGlobalState() *GlobalState {
 	environment := NewEnvironment(tx.Code, tx.CalleeAccount,
 		tx.Caller, tx.Calldata, tx.GasPrice, tx.CallValue, tx.Origin, tx.Basefee)
-	return tx.InitialGlobalStateFromEnvironment(environment, "fallback")
+	return tx.InitialGlobalStateFromEnvironment(tx.WorldState, environment, "fallback")
 }
 
 func (tx *MessageCallTransaction) End(state *GlobalState, data []byte) {
@@ -113,11 +119,28 @@ func (tx *MessageCallTransaction) GetOrigin() *z3.Bitvec {
 	return tx.Origin
 }
 
+func (tx *MessageCallTransaction) GetCalldata() BaseCalldata {
+	return tx.Calldata
+}
+
+func (tx *MessageCallTransaction) GetCallValue() *z3.Bitvec {
+	return tx.Ctx.NewBitvecVal(tx.CallValue, 256)
+}
+
+func (tx *MessageCallTransaction) GetWorldState() *WorldState {
+	return tx.WorldState
+}
+
+func (tx *MessageCallTransaction) GetCalleeAccount() *Account {
+	return tx.CalleeAccount
+}
+
 func (tx *MessageCallTransaction) GetGasLimit() int {
 	return tx.GasLimit
 }
 
 type ContractCreationTransaction struct {
+	WorldState    *WorldState
 	Code          *disassembler.Disasembly
 	CalleeAccount *Account
 	Caller        *z3.Bitvec
@@ -150,7 +173,8 @@ func NewContractCreationTransaction(code string) *ContractCreationTransaction {
 	// For test
 	caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
 	return &ContractCreationTransaction{
-		Code: txcode,
+		WorldState: NewWordState(ctx),
+		Code:       txcode,
 		// TODO: For test here.
 		CalleeAccount: NewAccount(ctx.NewBitvecVal(123, 256),
 			ctx.NewArray("balances", 256, 256), true, txcode),
@@ -166,9 +190,9 @@ func NewContractCreationTransaction(code string) *ContractCreationTransaction {
 	}
 }
 
-func (tx *ContractCreationTransaction) InitialGlobalStateFromEnvironment(env *Environment, activeFunc string) *GlobalState {
+func (tx *ContractCreationTransaction) InitialGlobalStateFromEnvironment(worldState *WorldState, env *Environment, activeFunc string) *GlobalState {
 	txStack := make([]BaseTransaction, 0)
-	globalState := NewGlobalState(env, tx.Ctx, append(txStack, tx))
+	globalState := NewGlobalState(worldState, env, tx.Ctx, append(txStack, tx))
 	globalState.Environment.ActiveFuncName = activeFunc
 	sender := env.Sender
 	receiver := env.ActiveAccount.Address
@@ -187,7 +211,7 @@ func (tx *ContractCreationTransaction) InitialGlobalStateFromEnvironment(env *En
 func (tx *ContractCreationTransaction) InitialGlobalState() *GlobalState {
 	environment := NewEnvironment(tx.Code, tx.CalleeAccount,
 		tx.Caller, tx.Calldata, tx.GasPrice, tx.CallValue, tx.Origin, tx.Basefee)
-	return tx.InitialGlobalStateFromEnvironment(environment, "constructor")
+	return tx.InitialGlobalStateFromEnvironment(tx.WorldState, environment, "constructor")
 }
 
 func (tx *ContractCreationTransaction) End(globalState *GlobalState, data []byte) {
@@ -217,6 +241,22 @@ func (tx *ContractCreationTransaction) GetCaller() *z3.Bitvec {
 
 func (tx *ContractCreationTransaction) GetOrigin() *z3.Bitvec {
 	return tx.Origin
+}
+
+func (tx *ContractCreationTransaction) GetCalldata() BaseCalldata {
+	return tx.Calldata
+}
+
+func (tx *ContractCreationTransaction) GetCallValue() *z3.Bitvec {
+	return tx.Ctx.NewBitvecVal(tx.CallValue, 256)
+}
+
+func (tx *ContractCreationTransaction) GetWorldState() *WorldState {
+	return tx.WorldState
+}
+
+func (tx *ContractCreationTransaction) GetCalleeAccount() *Account {
+	return tx.CalleeAccount
 }
 
 func (tx *ContractCreationTransaction) GetGasLimit() int {

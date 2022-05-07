@@ -39,9 +39,16 @@ func (m *Model) String() string {
 //   m.Eval(x) => x's value
 //
 // Maps: Z3_model_eval
-func (m *Model) Eval(c *AST) *AST {
+// default parameter: modelCompletion = false
+func (m *Model) Eval(c *AST, modelCompletion bool) *AST {
 	var result C.Z3_ast
-	if C._Z3_model_eval(m.rawCtx, m.rawModel, c.rawAST, 1, &result) == 0 {
+	var flag int
+	if modelCompletion {
+		flag = 1
+	} else {
+		flag = 0
+	}
+	if C._Z3_model_eval(m.rawCtx, m.rawModel, c.rawAST, C.int(flag), &result) == 0 {
 		return nil
 	}
 

@@ -12,3 +12,15 @@ func In(target string, strArray []string) bool {
 	}
 	return false
 }
+
+// Zfill
+func Zfill(str string, size int) string {
+	res := str
+	strLen := len(str)
+	if strLen < size {
+		for i := 0; i < size-strLen; i++ {
+			res = "0" + res
+		}
+	}
+	return res
+}

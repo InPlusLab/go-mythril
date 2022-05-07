@@ -86,8 +86,19 @@ func (b *Bitvec) AsAST() *AST {
 	}
 }
 
+// AsBool returns the BOOL of bv
+// used in /solver  _set_minimisation_constraints
+func (b *Bitvec) AsBool() *Bool {
+	return &Bool{
+		rawCtx: b.rawCtx,
+		rawAST: b.rawAST,
+	}
+}
+
 // Value returns the value of BitvecVal, "" for Bitvec
 // should use get_numeral_string rather than get_numeral_int API
+// why? 2022.05.06
+// Because it only succeeds if the value can fit in a machine int.
 func (b *Bitvec) Value() string {
 	if b == nil {
 		return ""

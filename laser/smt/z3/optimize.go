@@ -22,7 +22,7 @@ func (c *Context) NewOptimize() *Optimize {
 }
 
 // SetTimeout sets the timeout of the optimize, timeout is in milliseconds.
-func (s *Optimize) SetTimeout(time uint) {
+func (s *Optimize) SetTimeout(time int) {
 	ctx := s.rawCtx
 	params := C.Z3_mk_params(ctx)
 
