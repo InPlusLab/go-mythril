@@ -1,8 +1,8 @@
 package support
 
-// The implementation of model is in /laser/ethereum
-// Because of the circle import problem in Golang.
-// TODO: implementation of LRU cache
+//The implementation of model is in /laser/ethereum/state
+//Because of the circle import problem in Golang.
+//TODO: implementation of LRU cache
 //func GetModel(constraints *state.Constraints, minimize []*z3.Bool, maximize []*z3.Bool,
 //	enforceExecutionTime bool, ctx *z3.Context) (*z3.Model, bool) {
 //	s := ctx.NewOptimize()

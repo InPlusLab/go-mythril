@@ -1,14 +1,13 @@
-package ethereum
+package state
 
 import (
 	"fmt"
-	"go-mythril/laser/ethereum/state"
 	"go-mythril/laser/smt/z3"
 	"go-mythril/support"
 )
 
 // TODO: implementation of LRU cache
-func GetModel(constraints *state.Constraints, minimize []*z3.Bool, maximize []*z3.Bool,
+func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool,
 	enforceExecutionTime bool, ctx *z3.Context) (*z3.Model, bool) {
 	s := ctx.NewOptimize()
 	timeout := support.NewArgs().SolverTimeout
@@ -51,3 +50,4 @@ func min(a int, b int) int {
 		return b
 	}
 }
+

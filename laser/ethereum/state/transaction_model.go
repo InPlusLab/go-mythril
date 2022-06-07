@@ -27,6 +27,7 @@ type BaseTransaction interface {
 	GetCallValue() *z3.Bitvec
 	GetWorldState() *WorldState
 	GetCalleeAccount() *Account
+	GetCode() *disassembler.Disasembly
 }
 
 type MessageCallTransaction struct {
@@ -137,6 +138,10 @@ func (tx *MessageCallTransaction) GetCalleeAccount() *Account {
 
 func (tx *MessageCallTransaction) GetGasLimit() int {
 	return tx.GasLimit
+}
+
+func (tx *MessageCallTransaction) GetCode() *disassembler.Disasembly {
+	return tx.Code
 }
 
 type ContractCreationTransaction struct {
@@ -261,4 +266,13 @@ func (tx *ContractCreationTransaction) GetCalleeAccount() *Account {
 
 func (tx *ContractCreationTransaction) GetGasLimit() int {
 	return tx.GasLimit
+}
+
+func (tx *ContractCreationTransaction) GetPreWorldState() *WorldState{
+	// TODO: Deepcopy ?
+	return tx.WorldState.Copy()
+}
+
+func (tx *ContractCreationTransaction) GetCode() *disassembler.Disasembly {
+	return tx.Code
 }

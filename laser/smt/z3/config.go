@@ -5,13 +5,13 @@ import (
 )
 
 // #include <stdlib.h>
-// #cgo LDFLAGS: -L/usr/local/z3/build -lz3
+// #cgo LDFLAGS: -LC:/Z3/build -llibz3
 // #include "goZ3Config.h"
 import "C"
 
 // Config is used to set configuration for Z3. This should be created with
 // NewConfig and closed with Close when you're done using it.
-//
+// -LC:/Z3/build -llibz3   -L/usr/local/z3/build -lz3
 // Config structures are used to set parameters for Z3 behavior. See the
 // Z3 docs for information on available parameters. They can be set with
 // SetParamValue.
