@@ -5,7 +5,9 @@ import (
 	"go-mythril/analysis"
 	"go-mythril/analysis/module/modules"
 	"go-mythril/laser/ethereum/state"
+	"go-mythril/laser/smt/z3"
 	"go-mythril/support"
+	"go-mythril/utils"
 	"time"
 )
 
@@ -127,8 +129,41 @@ func (evm *LaserEVM) ExecuteState(globalState *state.GlobalState) ([]*state.Glob
 }
 
 func (evm *LaserEVM) ManageCFG(opcode string, newStates []*state.GlobalState) {
-	// TODO
+	statesLen := len(newStates)
+	if opcode == "JUMP" {
+		if statesLen <= 1 {
+			return
+		}
+		for _, state := range newStates {
+			evm.newNodeState(state, UNCONDITIONAL, nil)
+		}
+	} else if opcode == "JUMPI" {
+		if statesLen <= 2 {
+			return
+		}
+		for _, state := range newStates {
+			evm.newNodeState(state, CONDITIONAL, state.WorldState.Constraints.ConstraintList[state.WorldState.Constraints.Length()-1])
+		}
+	} else if utils.In(opcode, []string{"SLOAD", "SSTORE"}) && len(newStates) > 1 {
+		for _, state := range newStates {
+			evm.newNodeState(state, CONDITIONAL, state.WorldState.Constraints.ConstraintList[state.WorldState.Constraints.Length()-1])
+		}
+	} else if opcode == "RETURN" {
+		for _, state := range newStates {
+			evm.newNodeState(state, RETURN, nil)
+		}
+	}
+	for _, state := range newStates {
+		// TODO: globalState.node
+		fmt.Println(state)
+	}
 }
+
+// TODO:
+func (evm *LaserEVM) newNodeState(state *state.GlobalState, edgeType JumpType, condition *z3.Bool) {
+	// default: edge_type=JumpType.UNCONDITIONAL, condition=None
+}
+
 
 func (evm *LaserEVM) Run(id int) {
 	fmt.Println("Run")

@@ -88,5 +88,4 @@ func (dm *ArbitraryDelegateCall) _analyze_state(globalState *state.GlobalState) 
 	}
 	issueArr = append(issueArr, potentialIssue)
 	return issueArr
-	// UnsatError
 }

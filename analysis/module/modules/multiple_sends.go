@@ -75,7 +75,11 @@ func (dm *MultipleSends) _analyze_state(globalState *state.GlobalState) []*analy
 	} else {
 		// RETURN OR STOP
 		for i := 1; i < len(callOffsets); i++ {
-			//TODO: get_transaction_sequence   unsatError
+			transactionSequence := analysis.GetTransactionSequence(globalState,globalState.WorldState.Constraints)
+			if transactionSequence == nil{
+				// UnsatError
+				continue
+			}
 			descriptionTail := "This call is executed following another call within the same transaction. It is possible " +
 				"that the call never gets executed if a prior call fails permanently. This might be caused " +
 				"intentionally by a malicious callee. If possible, refactor the code such that each transaction " +
@@ -91,7 +95,7 @@ func (dm *MultipleSends) _analyze_state(globalState *state.GlobalState) []*analy
 				DescriptionHead: "Multiple calls are executed in the same transaction.",
 				DescriptionTail: descriptionTail,
 				GasUsed:         []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
-				// TxSeq
+				TransactionSequence: transactionSequence,
 			}
 			return []*analysis.Issue{issue}
 		}

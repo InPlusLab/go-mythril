@@ -12,6 +12,7 @@ type Issue struct {
 	DescriptionTail string
 	GasUsed         []int
 	SourceLocation  int
+	TransactionSequence map[string]interface{}
 }
 
 func NewIssue(contract string, funcName string, addr int, swcId string,

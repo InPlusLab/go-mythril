@@ -228,12 +228,13 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 			continue
 		}
 		if !dm.OstatesSatisfiable.Contains(ostate) {
-			// TODO: support/model
-			// constraints SAT
-			if true {
+			constraints := ostate.WorldState.Constraints.Copy()
+			constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
+			_, sat := state.GetModel(constraints,nil,nil,true,ostate.Z3ctx)
+			if sat {
 				dm.OstatesSatisfiable.Add(ostate)
 			} else {
-				// constrains UNSAT
+				// UnsatError
 				dm.OstatesUnsatisfiable.Add(ostate)
 				continue
 			}
@@ -241,17 +242,39 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 		fmt.Println("Checking overflow in", globalState.GetCurrentInstruction().OpCode.Name,
 			"at transaction end address", globalState.GetCurrentInstruction().Address, "ostate address",
 			ostate.GetCurrentInstruction().Address)
-		// TODO: analysis/model
 
-		issue := analysis.NewIssue(
-			ostate.Environment.ActiveAccount.ContractName,
-			ostate.Environment.ActiveFuncName,
-			ostate.GetCurrentInstruction().Address,
-			analysis.NewSWCData()["INTEGER_OVERFLOW_AND_UNDERFLOW"],
-			"Integer Arithmetic Bugs",
-			ostate.Environment.Code.Bytecode,
-			"High",
-		)
+		constraints := globalState.WorldState.Constraints.Copy()
+		constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
+		transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
+		if transactionSequence == nil{
+			// UnsatError
+			continue
+		}
+		var flowStr string
+		if annotation.(OverUnderflowAnnotation).Operator == "subtraction"{
+			flowStr = "underflow"
+		}else{
+			flowStr = "overflow"
+		}
+		descriptionHead := "The arithmetic operator can " + flowStr
+		descriptionTail := "It is possible to cause an integer overflow or underflow in the arithmetic operation. " +
+			"Prevent this by constraining inputs using the require() statement or use the OpenZeppelin SafeMath library for integer arithmetic operations. " +
+			"Refer to the transaction trace generated for this issue to reproduce the issue."
+
+		issue := &analysis.Issue{
+			Contract: ostate.Environment.ActiveAccount.ContractName,
+			FunctionName: ostate.Environment.ActiveFuncName,
+			Address: ostate.GetCurrentInstruction().Address,
+			SWCID: analysis.NewSWCData()["INTEGER_OVERFLOW_AND_UNDERFLOW"],
+			Bytecode: ostate.Environment.Code.Bytecode,
+			Title: "Integer Arithmetic Bugs",
+			Severity: "High",
+			DescriptionHead: descriptionHead,
+			DescriptionTail: descriptionTail,
+			GasUsed: []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
+			TransactionSequence: transactionSequence,
+		}
+
 		address := getAddressFromState(ostate)
 		dm.Cache.Add(address)
 		dm.Issues = append(dm.Issues, issue)

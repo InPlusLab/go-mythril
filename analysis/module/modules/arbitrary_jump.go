@@ -54,17 +54,26 @@ func (dm *ArbitraryJump) _analyze_state(globalState *state.GlobalState) []*analy
 	if !jumpDest.Symbolic() {
 		return issueArr
 	}
-	// TODO: getTxSequence()
-
-	issue := analysis.NewIssue(
-		globalState.Environment.ActiveAccount.ContractName,
-		globalState.Environment.ActiveFuncName,
-		globalState.GetCurrentInstruction().Address,
-		analysis.NewSWCData()["ARBITRARY_JUMP"],
-		"Jump to an arbitrary instruction",
-		globalState.Environment.Code.Bytecode,
-		"High",
-	)
+	transactionSequence := analysis.GetTransactionSequence(globalState, globalState.WorldState.Constraints)
+	if transactionSequence == nil{
+		// UnsatError
+		return issueArr
+	}
+	issue := &analysis.Issue{
+		Contract: globalState.Environment.ActiveAccount.ContractName,
+		FunctionName: globalState.Environment.ActiveFuncName,
+		Address: globalState.GetCurrentInstruction().Address,
+		Bytecode: globalState.Environment.Code.Bytecode,
+		Title: "Jump to an arbitrary instruction",
+		SWCID: analysis.NewSWCData()["ARBITRARY_JUMP"],
+		Severity: "High",
+		DescriptionHead: "The caller can redirect execution to arbitrary bytecode locations.",
+		DescriptionTail: "It is possible to redirect the control flow to arbitrary locations in the code. " +
+			"This may allow an attacker to bypass security controls or manipulate the business logic of the " +
+			"smart contract. Avoid using low-level-operations and assembly to prevent this issue.",
+		GasUsed: []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
+		TransactionSequence: transactionSequence,
+	}
 	issueArr = append(issueArr, issue)
 	return issueArr
 }

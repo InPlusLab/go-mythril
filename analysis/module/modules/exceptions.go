@@ -92,7 +92,12 @@ func (dm *Exceptions) _analyze_state(globalState *state.GlobalState) []*analysis
 		"either make sure your program logic is correct, or use require() instead of assert() if your goal " +
 		"is to constrain user inputs or enforce preconditions. Remember to validate inputs from both callers " +
 		"(for instance, via passed arguments) and callees (for instance, via return values)."
-	// TODO: TxSeq solver.getTxSeq
+	transactionSequence := analysis.GetTransactionSequence(globalState, globalState.WorldState.Constraints)
+	if transactionSequence == nil{
+		// UnsatError
+		fmt.Println("no model found")
+		return make([]*analysis.Issue,0)
+	}
 	issue := &analysis.Issue{
 		Contract:        globalState.Environment.ActiveAccount.ContractName,
 		FunctionName:    globalState.Environment.ActiveFuncName,
@@ -103,12 +108,11 @@ func (dm *Exceptions) _analyze_state(globalState *state.GlobalState) []*analysis
 		DescriptionHead: "An assertion violation was triggered.",
 		DescriptionTail: descriptionTail,
 		Bytecode:        globalState.Environment.Code.Bytecode,
-		// TxSeq
+		TransactionSequence: transactionSequence,
 		GasUsed:        []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
 		SourceLocation: annotations[0].(LastJumpAnnotation).LastJump,
 	}
 	return []*analysis.Issue{issue}
-	// TODO: unsatError RETURN []
 }
 
 func is_assertion_failure(globalState *state.GlobalState) bool {

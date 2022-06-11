@@ -25,6 +25,15 @@ type StateChangeCallsAnnotation struct {
 	UserDefinedAddress bool
 }
 
+func NewStateChangeCallsAnnotation( globalState *state.GlobalState, userDefinedAddress bool) StateChangeCallsAnnotation{
+	stateList := make([]*state.GlobalState, 0)
+	return StateChangeCallsAnnotation{
+		CallState: globalState,
+		StateChangeStates: stateList,
+		UserDefinedAddress: userDefinedAddress,
+	}
+}
+
 func (anno StateChangeCallsAnnotation) PersistToWorldState() bool {
 	return false
 }
@@ -57,8 +66,12 @@ func (anno StateChangeCallsAnnotation) GetIssue(globalState *state.GlobalState) 
 		severity = "Low"
 		addressType = "fixed"
 	}
-	// TODO: solver.getTxSeq
-	// TODO: unsatError
+	constraints.Add(globalState.WorldState.Constraints.ConstraintList...)
+	transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
+	if transactionSequence == nil{
+		// UnsatError
+		return nil
+	}
 	address := globalState.GetCurrentInstruction().Address
 	fmt.Println("[EXTERNAL_CALLS] Detected state changes at addresses: ", address)
 	readOrWrite := "Write to"
@@ -158,20 +171,43 @@ func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) [
 	return vulnerabilities
 }
 
-// TODO:
 func (dm *StateChangeAfterCall) _add_external_call(globalState *state.GlobalState) {
+	stackLen := globalState.Mstate.Stack.Length()
+	gas := globalState.Mstate.Stack.RawStack[stackLen-1]
+	to := globalState.Mstate.Stack.RawStack[stackLen-2]
+	ctx := globalState.Z3ctx
 
+	constraints := globalState.WorldState.Constraints.Copy()
+	tmpCon := globalState.WorldState.Constraints.Copy()
+	tmpCon.Add( gas.BvUGt(ctx.NewBitvecVal(2300,256)),
+		(to.BvSGt(ctx.NewBitvecVal(16,256))).Or(to.Eq(ctx.NewBitvecVal(0,256))))
+	_, sat := state.GetModel(tmpCon, make([]*z3.Bool,0), make([]*z3.Bool,0), true, ctx)
+	if !sat{
+		return
+	}
+	// Check whether we can also set the callee address
+	tmpVal, _ := new(big.Int).SetString("DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF", 16)
+	constraints.Add(to.Eq(ctx.NewBitvecVal(tmpVal, 256)))
+	_, sat2 := state.GetModel(constraints,make([]*z3.Bool,0), make([]*z3.Bool,0),true, ctx )
+	if sat2 {
+		globalState.Annotate(NewStateChangeCallsAnnotation(globalState, true))
+	}else{
+		globalState.Annotate(NewStateChangeCallsAnnotation(globalState, false))
+	}
 }
 
 func (dm *StateChangeAfterCall) _balance_change(value *z3.Bitvec, globalState *state.GlobalState) bool {
-	// ctx := globalState.Z3ctx
 	if !value.Symbolic() {
 		v, _ := strconv.Atoi(value.Value())
 		return v > 0
 	} else {
-		//constraints := globalState.WorldState.Constraints.Copy()
-		// TODO: solver.getModel
-		return true
-		// TODO: unsatError RETURN false
+		constraints := globalState.WorldState.Constraints.Copy()
+		constraints.Add( value.BvSGt(globalState.Z3ctx.NewBitvecVal(0, 256)) )
+		_, sat := state.GetModel(constraints, make([]*z3.Bool,0), make([]*z3.Bool,0),true, globalState.Z3ctx)
+		if sat{
+			return true
+		}else{
+			return false
+		}
 	}
 }

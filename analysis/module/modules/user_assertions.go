@@ -6,6 +6,8 @@ import (
 	"go-mythril/laser/ethereum/state"
 	"go-mythril/utils"
 	"math/big"
+	"strconv"
+	"strings"
 )
 
 type UserAssertions struct {
@@ -56,8 +58,12 @@ func (dm *UserAssertions) _analyze_state(globalState *state.GlobalState) []*anal
 		if value.Symbolic() {
 			return make([]*analysis.Issue, 0)
 		}
-		// mstore_pattern := new(big.Int).SetString("cafecafecafecafecafecafecafecafecafecafecafecafecafecafecafe",16)
-		// TODO:
+		mstorePattern := "cafecafecafecafecafecafecafecafecafecafecafecafecafecafecafe"
+		// TODO: value may be big
+		valueInt, _ := strconv.Atoi(value.Value())
+		if !(strings.Contains(utils.ToHexStr(valueInt)[:126], mstorePattern)) {
+			return make([]*analysis.Issue, 0)
+		}
 		message = "Failed property id" + value.Extract(15, 0).Value()
 	} else {
 		topic := globalState.Mstate.Stack.RawStack[stackLen-3]
@@ -73,7 +79,12 @@ func (dm *UserAssertions) _analyze_state(globalState *state.GlobalState) []*anal
 			message = "eth_abi"
 		}
 	}
-	// TODO: solver.getTxSeq
+	transactionSequence := analysis.GetTransactionSequence(globalState, globalState.WorldState.Constraints)
+	if transactionSequence == nil{
+		// UnsatError
+		fmt.Println("no model found")
+		return make([]*analysis.Issue, 0)
+	}
 	var descriptionTail string
 	if message != "" {
 		descriptionTail = "A user-provided assertion failed with the message " + message
@@ -92,9 +103,8 @@ func (dm *UserAssertions) _analyze_state(globalState *state.GlobalState) []*anal
 		DescriptionHead: "A user-provided assertion failed.",
 		DescriptionTail: descriptionTail,
 		Bytecode:        globalState.Environment.Code.Bytecode,
-		// TxSeq
+		TransactionSequence: transactionSequence,
 		GasUsed: []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
 	}
 	return []*analysis.Issue{issue}
-	// TODO: unsatError RETURN []
 }

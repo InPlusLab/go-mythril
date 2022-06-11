@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"go-mythril/analysis"
 	"go-mythril/laser/ethereum/state"
+	"go-mythril/laser/smt/z3"
 	"go-mythril/utils"
+	"math/big"
 	"reflect"
 	"strings"
 )
@@ -79,8 +81,12 @@ func (dm *PredictableVariables) _analyze_state(globalState *state.GlobalState) [
 			// Look for predictable state variables in jump condition
 			for _, annotation := range globalState.Mstate.Stack.RawStack[length-2].Annotations().Elements() {
 				if reflect.TypeOf(annotation).String() == "PredictableValueAnnotation" {
-					// constraints := globalState.WorldState.Constraints
-					// TODO: solver.getTxSeq
+					 constraints := globalState.WorldState.Constraints
+
+					transactionSequence := analysis.GetTransactionSequence(globalState,constraints)
+					if transactionSequence == nil{
+						continue
+					}
 					description := annotation.(PredictableValueAnnotation).Operation + " is used to determine a control flow decision." +
 						"Note that the values of variables like coinbase, gaslimit, block number and timestamp are " +
 						"predictable and can be manipulated by a malicious miner. Also keep in mind that " +
@@ -104,14 +110,27 @@ func (dm *PredictableVariables) _analyze_state(globalState *state.GlobalState) [
 						DescriptionHead: "A control flow decision is made based on " + annotation.(PredictableValueAnnotation).Operation,
 						DescriptionTail: description,
 						GasUsed:         []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
-						// txSeq
+						TransactionSequence: transactionSequence,
 					}
 					issues = append(issues, issue)
 				}
 			}
 		} else if opcode.Name == "BLOCKHASH" {
-			// TODO: solver.get_model
-			globalState.Annotate(OldBlockNumberUsedAnnotation{})
+			param := globalState.Mstate.Stack.RawStack[globalState.Mstate.Stack.Length()-1]
+			constraint := state.NewConstraints()
+			tmpVal := new(big.Int).Exp(big.NewInt(2), big.NewInt(255), nil)
+			constraint.Add( param.BvULt(globalState.Environment.BlockNumber),
+				globalState.Environment.BlockNumber.BvULt(globalState.Z3ctx.NewBitvecVal(
+					tmpVal, 256)))
+			tmpCon := globalState.WorldState.Constraints.Copy()
+			tmpCon.Add(constraint.ConstraintList...)
+			_, sat := state.GetModel( tmpCon, make([]*z3.Bool,0), make([]*z3.Bool,0), true, globalState.Z3ctx )
+			if sat {
+				globalState.Annotate(OldBlockNumberUsedAnnotation{})
+			}else{
+				// UnsatError
+				return make([]*analysis.Issue, 0)
+			}
 		}
 	} else {
 		opcode := globalState.Environment.Code.InstructionList[globalState.Mstate.Pc-1].OpCode

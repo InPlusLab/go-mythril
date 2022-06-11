@@ -34,3 +34,7 @@ func (c *Constraints) Add(constraints ...*z3.Bool) bool {
 	}
 	return true
 }
+
+func (c *Constraints) Length() int{
+	return len(c.ConstraintList)
+}

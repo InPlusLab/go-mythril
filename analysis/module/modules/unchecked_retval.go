@@ -87,8 +87,17 @@ func (dm *UncheckedRetval) _analyze_state(globalState *state.GlobalState) []*ana
 		issues := make([]*analysis.Issue, 0)
 
 		for _, retval := range retvals {
-			// TODO: solver.getTxSeq
-			// TODO: unsatError continue
+			txCon := globalState.WorldState.Constraints.Copy()
+			txCon.Add( retval.Retval.Eq(globalState.Z3ctx.NewBitvecVal(1,256)) )
+			tx := analysis.GetTransactionSequence(globalState, txCon)
+			tmpCon := globalState.WorldState.Constraints.Copy()
+			tmpCon.Add( retval.Retval.Eq(globalState.Z3ctx.NewBitvecVal(0,256)) )
+			transactionSequence := analysis.GetTransactionSequence(globalState, tmpCon)
+			if tx == nil || transactionSequence == nil{
+				// UnsatError
+				continue
+			}
+
 			descriptionTail := "External calls return a boolean value. If the callee halts with an exception, 'false' is " +
 				"returned and execution continues in the caller. " +
 				"The caller should check whether an exception happened and react accordingly to avoid unexpected behavior. " +
@@ -104,7 +113,7 @@ func (dm *UncheckedRetval) _analyze_state(globalState *state.GlobalState) []*ana
 				DescriptionHead: "The return value of a message call is not checked.",
 				DescriptionTail: descriptionTail,
 				GasUsed:         []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
-				// TxSeq
+				TransactionSequence: transactionSequence,
 			}
 			issues = append(issues, issue)
 		}

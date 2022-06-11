@@ -34,6 +34,20 @@ func (s *Optimize) SetTimeout(time int) {
 	C.Z3_optimize_set_params(ctx, s.rawOptimize, params)
 }
 
+// RLimit set
+// TODO: to be tested
+func (s *Optimize) RLimit(time int) {
+	ctx := s.rawCtx
+	params := C.Z3_mk_params(ctx)
+
+	ns := C.CString("rlimit")
+	defer C.free(unsafe.Pointer(ns))
+	timeOutSymbol := C.Z3_mk_string_symbol(ctx, ns)
+
+	C.Z3_params_set_uint(ctx, params, timeOutSymbol, C.uint(time))
+	C.Z3_optimize_set_params(ctx, s.rawOptimize, params)
+}
+
 // Close frees the memory associated with this.
 func (s *Optimize) Close() error {
 	C.Z3_optimize_dec_ref(s.rawCtx, s.rawOptimize)

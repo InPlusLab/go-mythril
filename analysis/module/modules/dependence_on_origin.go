@@ -63,8 +63,12 @@ func (dm *TxOrigin) _analyze_state(globalState *state.GlobalState) []*analysis.I
 		length := globalState.Mstate.Stack.Length()
 		for _, annotation := range globalState.Mstate.Stack.RawStack[length-2].Annotations().Elements() {
 			if reflect.TypeOf(annotation).String() == "TxOriginAnnotation" {
-				// constraints := globalState.WorldState.Constraints.Copy()
-				// TODO: solver.getTxSeq
+				constraints := globalState.WorldState.Constraints.Copy()
+
+				transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
+				if transactionSequence == nil{
+					continue
+				}
 				description := "The tx.origin environment variable has been found to influence a control flow decision. " +
 					"Note that using tx.origin as a security control might cause a situation where a user " +
 					"inadvertently authorizes a smart contract to perform an action on their behalf. It is " +
@@ -81,7 +85,7 @@ func (dm *TxOrigin) _analyze_state(globalState *state.GlobalState) []*analysis.I
 					DescriptionHead: "Use of tx.origin as a part of authorization control.",
 					DescriptionTail: description,
 					GasUsed:         []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
-					// TxSeq
+					TransactionSequence: transactionSequence,
 				}
 				issues = append(issues, issue)
 			}

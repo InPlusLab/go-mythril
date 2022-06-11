@@ -51,7 +51,15 @@ func (dm *ExternalCalls) _analyze_state(globalState *state.GlobalState) []*analy
 
 	constraints := state.NewConstraints()
 	constraints.Add(gas.BvUGt(globalState.Z3ctx.NewBitvecVal(2300, 256)), to.Eq(ACTORS.GetAttacker()))
-	// TODO: solver.getTxSeq
+
+	tmpCon := constraints.Copy()
+	tmpCon.Add(globalState.WorldState.Constraints.ConstraintList...)
+	transactionSequence := analysis.GetTransactionSequence(globalState, tmpCon)
+	if transactionSequence == nil{
+		// UnsatError
+		fmt.Println("[EXTERNAL_CALLS] No model found.")
+		return make([]*analysis.PotentialIssue,0)
+	}
 	descriptionHead := "A call to a user-supplied address is executed."
 	descriptionTail := "An external message call to an address specified by the caller is executed. Note that " +
 		"the callee account might contain arbitrary code and could re-enter any function " +
@@ -70,5 +78,4 @@ func (dm *ExternalCalls) _analyze_state(globalState *state.GlobalState) []*analy
 		Constraints:     constraints,
 	}
 	return []*analysis.PotentialIssue{issue}
-	// TODO: unsatError RETURN []
 }

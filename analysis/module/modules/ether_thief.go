@@ -60,7 +60,7 @@ func (dm *EtherThief) _analyze_state(globalState *state.GlobalState) []*analysis
 		Gstate.Environment.Sender.Eq(ACTORS.GetAttacker()),
 		Gstate.CurrentTransaction().GetCaller().Eq(Gstate.CurrentTransaction().GetOrigin()))
 	// Pre-solve so we only add potential issues if the attacker's balance is increased.
-	// TODO: solver.get_model
+	_, sat := state.GetModel(constraints, nil,nil, true, globalState.Z3ctx)
 	potentialIssue := &analysis.PotentialIssue{
 		Contract:     Gstate.Environment.ActiveAccount.ContractName,
 		FunctionName: Gstate.Environment.ActiveFuncName,
@@ -76,7 +76,10 @@ func (dm *EtherThief) _analyze_state(globalState *state.GlobalState) []*analysis
 			"security controls are in place to prevent unexpected loss of funds.",
 		Constraints: constraints,
 	}
-	return []*analysis.PotentialIssue{potentialIssue}
-	// TODO: unsatError: RETURN []
-
+	if sat{
+		return []*analysis.PotentialIssue{potentialIssue}
+	}else{
+		// UnsatError
+		return make([]*analysis.PotentialIssue, 0)
+	}
 }

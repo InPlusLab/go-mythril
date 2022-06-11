@@ -7,6 +7,7 @@ import (
 )
 
 // TODO: implementation of LRU cache
+// default: enforceExecutionTime = true, minimize=maximize=[]
 func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool,
 	enforceExecutionTime bool, ctx *z3.Context) (*z3.Model, bool) {
 	s := ctx.NewOptimize()

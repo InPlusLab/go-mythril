@@ -8,6 +8,7 @@ type Args struct {
 	CallDepthLimit       int
 	Iprof                bool
 	SolverLog            string
+	UseIntegerModule bool
 }
 
 func NewArgs() *Args {
@@ -19,5 +20,6 @@ func NewArgs() *Args {
 		CallDepthLimit:       3,
 		Iprof:                true,
 		SolverLog:            "",
+		UseIntegerModule: true,
 	}
 }
