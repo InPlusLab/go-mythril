@@ -61,12 +61,12 @@ func (dm *TxOrigin) _analyze_state(globalState *state.GlobalState) []*analysis.I
 	if globalState.GetCurrentInstruction().OpCode.Name == "JUMPI" {
 		// In JUMPI prehook
 		length := globalState.Mstate.Stack.Length()
-		for _, annotation := range globalState.Mstate.Stack.RawStack[length-2].Annotations().Elements() {
+		for _, annotation := range globalState.Mstate.Stack.RawStack[length-2].Annotations.Elements() {
 			if reflect.TypeOf(annotation).String() == "TxOriginAnnotation" {
 				constraints := globalState.WorldState.Constraints.Copy()
 
 				transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
-				if transactionSequence == nil{
+				if transactionSequence == nil {
 					continue
 				}
 				description := "The tx.origin environment variable has been found to influence a control flow decision. " +
@@ -75,16 +75,16 @@ func (dm *TxOrigin) _analyze_state(globalState *state.GlobalState) []*analysis.I
 					"recommended to use msg.sender instead."
 				severity := "Low"
 				issue := &analysis.Issue{
-					Contract:        globalState.Environment.ActiveAccount.ContractName,
-					FunctionName:    globalState.Environment.ActiveFuncName,
-					Address:         globalState.GetCurrentInstruction().Address,
-					SWCID:           analysis.NewSWCData()["TX_ORIGIN_USAGE"],
-					Bytecode:        globalState.Environment.Code.Bytecode,
-					Title:           "Dependence on tx.origin",
-					Severity:        severity,
-					DescriptionHead: "Use of tx.origin as a part of authorization control.",
-					DescriptionTail: description,
-					GasUsed:         []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
+					Contract:            globalState.Environment.ActiveAccount.ContractName,
+					FunctionName:        globalState.Environment.ActiveFuncName,
+					Address:             globalState.GetCurrentInstruction().Address,
+					SWCID:               analysis.NewSWCData()["TX_ORIGIN_USAGE"],
+					Bytecode:            globalState.Environment.Code.Bytecode,
+					Title:               "Dependence on tx.origin",
+					Severity:            severity,
+					DescriptionHead:     "Use of tx.origin as a part of authorization control.",
+					DescriptionTail:     description,
+					GasUsed:             []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
 					TransactionSequence: transactionSequence,
 				}
 				issues = append(issues, issue)

@@ -56,10 +56,8 @@ func (instr *Instruction) ExePostHooks(globalState *state.GlobalState) {
 
 func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.GlobalState {
 
-	// TODO: Pre hook
 	instr.ExePreHooks(globalState)
 	result := instr.Mutator(globalState)
-	// TODO: Post hook
 	instr.ExePostHooks(globalState)
 
 	// TODO
@@ -1614,10 +1612,20 @@ func (instr *Instruction) revert_(globalState *state.GlobalState) {
 }
 
 func (instr *Instruction) assert_fail_(globalState *state.GlobalState) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Catch-InvalidInstruction-assertFail")
+		}
+	}()
 	panic("InvalidInstruction-assertFail")
 }
 
 func (instr *Instruction) invalid_(globalState *state.GlobalState) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Catch-InvalidInstruction-invalid")
+		}
+	}()
 	panic("InvalidInstruction-invalid")
 }
 

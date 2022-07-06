@@ -4,6 +4,7 @@ import "C"
 import (
 	"fmt"
 	"go-mythril/laser/smt/z3"
+	"go-mythril/utils"
 	"strconv"
 )
 
@@ -36,7 +37,13 @@ func (m *MachineStack) Append(b interface{}) {
 		m.RawStack = append(m.RawStack, tmp)
 	case *z3.Bool:
 		ctx := z3.GetBoolCtx(b.(*z3.Bool))
-		tmp := z3.If(b.(*z3.Bool), ctx.NewBitvecVal(1, 256), ctx.NewBitvecVal(0, 256))
+		trueBv := ctx.NewBitvecVal(1, 256)
+		falseBv := ctx.NewBitvecVal(0, 256)
+		for _, v := range b.(*z3.Bool).Annotations.Elements() {
+			trueBv.Annotate(v)
+			falseBv.Annotate(v)
+		}
+		tmp := z3.If(b.(*z3.Bool), trueBv, falseBv)
 		m.RawStack = append(m.RawStack, tmp.Simplify())
 	}
 }
@@ -56,16 +63,44 @@ func (m *MachineStack) Pop() *z3.Bitvec {
 	}
 }
 
+func decimalStr2HexStr(num string) string {
+	val, _ := strconv.Atoi(num)
+	return utils.ToHexStr(val)
+}
+
 // For debug
 func (m *MachineStack) PrintStack() {
 	if len(m.RawStack) == 0 {
 		fmt.Println("PrintStack: null")
 	}
-	for _, item := range m.RawStack {
-		if item.GetAstKind() == z3.NumeralKindAST {
-			fmt.Println("PrintStack: ", item.Value())
+	//for _, item := range m.RawStack {
+	//	if item.GetAstKind() == z3.NumeralKindAST {
+	//		if item.Annotations.Len()!=0{
+	//			fmt.Println("PrintStack: ", item.Value(), ' ', item.Annotations)
+	//		}else{
+	//			fmt.Println("PrintStack: ", item.Value())
+	//		}
+	//	} else {
+	//		if item.Annotations.Len()!=0{
+	//			fmt.Println("PrintStack: ", item.String(), ' ', item.Annotations)
+	//		}else{
+	//			fmt.Println("PrintStack: ", item.String())
+	//		}
+	//	}
+	//}
+	for i := m.Length() - 1; i >= 0; i-- {
+		if m.RawStack[i].GetAstKind() == z3.NumeralKindAST {
+			if m.RawStack[i].Annotations.Len() != 0 {
+				fmt.Println("PrintStack: ", decimalStr2HexStr(m.RawStack[i].Value()), ' ', m.RawStack[i].Annotations)
+			} else {
+				fmt.Println("PrintStack: ", decimalStr2HexStr(m.RawStack[i].Value()))
+			}
 		} else {
-			fmt.Println("PrintStack: ", item.String())
+			if m.RawStack[i].Annotations.Len() != 0 {
+				fmt.Println("PrintStack: ", decimalStr2HexStr(m.RawStack[i].String()), ' ', m.RawStack[i].Annotations)
+			} else {
+				fmt.Println("PrintStack: ", decimalStr2HexStr(m.RawStack[i].String()))
+			}
 		}
 	}
 }

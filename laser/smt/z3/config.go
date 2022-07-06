@@ -5,7 +5,7 @@ import (
 )
 
 // #include <stdlib.h>
-// #cgo LDFLAGS: -LC:/Z3/build -llibz3
+// #cgo LDFLAGS: -L/usr/local/z3/build -lz3
 // #include "goZ3Config.h"
 import "C"
 

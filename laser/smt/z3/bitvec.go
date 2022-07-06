@@ -15,20 +15,20 @@ type Bitvec struct {
 	rawAST      C.Z3_ast
 	rawSort     C.Z3_sort
 	symbolic    bool
-	annotations *utils.Set
+	Annotations *utils.Set
 }
 
 // NewBitvec corresponds to BitVec() in Python
 // It implements the class BitVecRef
 func (c *Context) NewBitvec(bvSymbol string, size int) *Bitvec {
 	ast := C.Z3_mk_const(c.raw, c.Symbol(bvSymbol).rawSymbol, c.BvSort(uint(size)).rawSort)
-	annotations := utils.NewSet()
+	Annotations := utils.NewSet()
 	return &Bitvec{
 		rawCtx:      c.raw,
 		rawAST:      ast,
 		rawSort:     c.BvSort(uint(size)).rawSort,
 		symbolic:    true,
-		annotations: annotations,
+		Annotations: Annotations,
 	}
 }
 
@@ -52,24 +52,24 @@ func (c *Context) NewBitvecVal(value interface{}, size int) *Bitvec {
 	}
 	// Can't use mk_int API here.
 	ast := C.Z3_mk_numeral(c.raw, C.CString(valueStr), c.BvSort(uint(size)).rawSort)
-	annotations := utils.NewSet()
+	Annotations := utils.NewSet()
 	return &Bitvec{
 		rawCtx:      c.raw,
 		rawAST:      ast,
 		rawSort:     c.BvSort(uint(size)).rawSort,
 		symbolic:    false,
-		annotations: annotations,
+		Annotations: Annotations,
 	}
 }
 
 // The attribute of bitvec
 
-func (b *Bitvec) Annotations() *utils.Set {
-	return b.annotations
-}
+//func (b *Bitvec) Annotations() *utils.Set {
+//	return b.Annotations
+//}
 
 func (b *Bitvec) Annotate(item interface{}) {
-	b.annotations.Add(item)
+	b.Annotations.Add(item)
 }
 
 // BvSize returns the size of bitvector
@@ -90,8 +90,9 @@ func (b *Bitvec) AsAST() *AST {
 // used in /solver  _set_minimisation_constraints
 func (b *Bitvec) AsBool() *Bool {
 	return &Bool{
-		rawCtx: b.rawCtx,
-		rawAST: b.rawAST,
+		rawCtx:      b.rawCtx,
+		rawAST:      b.rawAST,
+		Annotations: b.Annotations,
 	}
 }
 
@@ -141,7 +142,9 @@ func (b *Bitvec) Simplify() *Bitvec {
 		rawCtx: b.rawCtx,
 		rawAST: C.Z3_simplify(b.rawCtx, b.rawAST),
 		// TODO: wrong use
-		rawSort: b.rawSort,
+		rawSort:     b.rawSort,
+		symbolic:    b.symbolic,
+		Annotations: b.Annotations,
 	}
 }
 
@@ -156,7 +159,9 @@ func (a *Bitvec) BvAdd(t *Bitvec) *Bitvec {
 			a.rawCtx,
 			a.rawAST,
 			t.rawAST),
-		rawSort: a.rawSort,
+		rawSort:     a.rawSort,
+		symbolic:    a.symbolic || t.symbolic,
+		Annotations: a.Annotations.Union(t.Annotations),
 	}
 }
 
@@ -168,7 +173,11 @@ func (a *Bitvec) BvSub(t *Bitvec) *Bitvec {
 		rawAST: C.Z3_mk_bvsub(
 			a.rawCtx,
 			a.rawAST,
-			t.rawAST)}
+			t.rawAST),
+		rawSort:     a.rawSort,
+		symbolic:    a.symbolic || t.symbolic,
+		Annotations: a.Annotations.Union(t.Annotations),
+	}
 }
 
 // BvMul creates a "multiplication" for bitvector
@@ -179,7 +188,11 @@ func (a *Bitvec) BvMul(t *Bitvec) *Bitvec {
 		rawAST: C.Z3_mk_bvmul(
 			a.rawCtx,
 			a.rawAST,
-			t.rawAST)}
+			t.rawAST),
+		rawSort:     a.rawSort,
+		symbolic:    a.symbolic || t.symbolic,
+		Annotations: a.Annotations.Union(t.Annotations),
+	}
 }
 
 // BvSDiv creates a "signed division" for bitvector
@@ -190,7 +203,11 @@ func (a *Bitvec) BvSDiv(t *Bitvec) *Bitvec {
 		rawAST: C.Z3_mk_bvsdiv(
 			a.rawCtx,
 			a.rawAST,
-			t.rawAST)}
+			t.rawAST),
+		rawSort:     a.rawSort,
+		symbolic:    a.symbolic || t.symbolic,
+		Annotations: a.Annotations.Union(t.Annotations),
+	}
 }
 
 // BvUDiv creates an "unsigned division" for bitvector
@@ -201,7 +218,11 @@ func (a *Bitvec) BvUDiv(t *Bitvec) *Bitvec {
 		rawAST: C.Z3_mk_bvudiv(
 			a.rawCtx,
 			a.rawAST,
-			t.rawAST)}
+			t.rawAST),
+		rawSort:     a.rawSort,
+		symbolic:    a.symbolic || t.symbolic,
+		Annotations: a.Annotations.Union(t.Annotations),
+	}
 }
 
 // BvAddNoOverflow checks the addition of Node a & t doesn't overflow
@@ -213,7 +234,9 @@ func (a *Bitvec) BvAddNoOverflow(t *Bitvec, isSigned bool) *Bool {
 			a.rawCtx,
 			a.rawAST,
 			t.rawAST,
-			C.bool(isSigned))}
+			C.bool(isSigned)),
+		Annotations: a.Annotations.Union(t.Annotations),
+	}
 }
 
 // BvSubNoUnderflow checks the subtraction of Node a & t doesn't underflow
@@ -225,7 +248,9 @@ func (a *Bitvec) BvSubNoUnderflow(t *Bitvec, isSigned bool) *Bool {
 			a.rawCtx,
 			a.rawAST,
 			t.rawAST,
-			C.bool(isSigned))}
+			C.bool(isSigned)),
+		Annotations: a.Annotations.Union(t.Annotations),
+	}
 }
 
 // BvMulNoOverflow checks the multiplication of Node a & t doesn't overflow
@@ -237,15 +262,18 @@ func (a *Bitvec) BvMulNoOverflow(t *Bitvec, isSigned bool) *Bool {
 			a.rawCtx,
 			a.rawAST,
 			t.rawAST,
-			C.bool(isSigned))}
+			C.bool(isSigned)),
+		Annotations: a.Annotations.Union(t.Annotations),
+	}
 }
 
 // BvSLt creates a "signed <" for bitvector
 // created by chz
 func (a *Bitvec) BvSLt(a2 *Bitvec) *Bool {
 	return &Bool{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_bvslt(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_bvslt(a.rawCtx, a.rawAST, a2.rawAST),
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -253,8 +281,9 @@ func (a *Bitvec) BvSLt(a2 *Bitvec) *Bool {
 // created by chz
 func (a *Bitvec) BvSLe(a2 *Bitvec) *Bool {
 	return &Bool{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_bvsle(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_bvsle(a.rawCtx, a.rawAST, a2.rawAST),
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -262,8 +291,9 @@ func (a *Bitvec) BvSLe(a2 *Bitvec) *Bool {
 // created by chz
 func (a *Bitvec) BvSGt(a2 *Bitvec) *Bool {
 	return &Bool{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_bvsgt(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_bvsgt(a.rawCtx, a.rawAST, a2.rawAST),
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -271,8 +301,9 @@ func (a *Bitvec) BvSGt(a2 *Bitvec) *Bool {
 // created by chz
 func (a *Bitvec) BvSGe(a2 *Bitvec) *Bool {
 	return &Bool{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_bvsge(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_bvsge(a.rawCtx, a.rawAST, a2.rawAST),
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -280,8 +311,9 @@ func (a *Bitvec) BvSGe(a2 *Bitvec) *Bool {
 // created by chz
 func (a *Bitvec) BvULt(a2 *Bitvec) *Bool {
 	return &Bool{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_bvult(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_bvult(a.rawCtx, a.rawAST, a2.rawAST),
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -289,8 +321,9 @@ func (a *Bitvec) BvULt(a2 *Bitvec) *Bool {
 // created by chz
 func (a *Bitvec) BvULe(a2 *Bitvec) *Bool {
 	return &Bool{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_bvule(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_bvule(a.rawCtx, a.rawAST, a2.rawAST),
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -298,8 +331,9 @@ func (a *Bitvec) BvULe(a2 *Bitvec) *Bool {
 // created by chz
 func (a *Bitvec) BvUGt(a2 *Bitvec) *Bool {
 	return &Bool{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_bvugt(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_bvugt(a.rawCtx, a.rawAST, a2.rawAST),
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -307,8 +341,9 @@ func (a *Bitvec) BvUGt(a2 *Bitvec) *Bool {
 // created by chz
 func (a *Bitvec) BvUGe(a2 *Bitvec) *Bool {
 	return &Bool{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_bvuge(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_bvuge(a.rawCtx, a.rawAST, a2.rawAST),
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -316,8 +351,9 @@ func (a *Bitvec) BvUGe(a2 *Bitvec) *Bool {
 // created by chz
 func (a *Bitvec) BvURem(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_bvurem(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_bvurem(a.rawCtx, a.rawAST, a2.rawAST),
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -325,8 +361,9 @@ func (a *Bitvec) BvURem(a2 *Bitvec) *Bitvec {
 // created by chz
 func (a *Bitvec) BvSRem(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_bvsrem(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_bvsrem(a.rawCtx, a.rawAST, a2.rawAST),
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -334,8 +371,9 @@ func (a *Bitvec) BvSRem(a2 *Bitvec) *Bitvec {
 // created by chz
 func (a *Bitvec) BvShL(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_bvshl(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_bvshl(a.rawCtx, a.rawAST, a2.rawAST),
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -343,8 +381,9 @@ func (a *Bitvec) BvShL(a2 *Bitvec) *Bitvec {
 // created by chz
 func (a *Bitvec) BvShR(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_bvashr(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_bvashr(a.rawCtx, a.rawAST, a2.rawAST),
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -352,8 +391,9 @@ func (a *Bitvec) BvShR(a2 *Bitvec) *Bitvec {
 // created by chz
 func (a *Bitvec) BvLShR(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_bvlshr(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_bvlshr(a.rawCtx, a.rawAST, a2.rawAST),
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -363,8 +403,9 @@ func (a *Bitvec) BvLShR(a2 *Bitvec) *Bitvec {
 // created by chz
 func (a *Bitvec) Eq(a2 *Bitvec) *Bool {
 	return &Bool{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_eq(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_eq(a.rawCtx, a.rawAST, a2.rawAST),
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -372,8 +413,11 @@ func (a *Bitvec) Eq(a2 *Bitvec) *Bool {
 // created by chz
 func (a *Bitvec) BvAnd(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_bvand(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_bvand(a.rawCtx, a.rawAST, a2.rawAST),
+		rawSort:     a.rawSort,
+		symbolic:    a.symbolic || a2.symbolic,
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -381,8 +425,11 @@ func (a *Bitvec) BvAnd(a2 *Bitvec) *Bitvec {
 // created by chz
 func (a *Bitvec) BvOr(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_bvor(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_bvor(a.rawCtx, a.rawAST, a2.rawAST),
+		rawSort:     a.rawSort,
+		symbolic:    a.symbolic || a2.symbolic,
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -390,8 +437,11 @@ func (a *Bitvec) BvOr(a2 *Bitvec) *Bitvec {
 // created by chz
 func (a *Bitvec) BvXOr(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_bvxor(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_bvxor(a.rawCtx, a.rawAST, a2.rawAST),
+		rawSort:     a.rawSort,
+		symbolic:    a.symbolic || a2.symbolic,
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -399,8 +449,11 @@ func (a *Bitvec) BvXOr(a2 *Bitvec) *Bitvec {
 // created by chz
 func (a *Bitvec) Concat(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_concat(a.rawCtx, a.rawAST, a2.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_concat(a.rawCtx, a.rawAST, a2.rawAST),
+		rawSort:     a.rawSort,
+		symbolic:    a.symbolic || a2.symbolic,
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
@@ -408,9 +461,11 @@ func (a *Bitvec) Concat(a2 *Bitvec) *Bitvec {
 // created by chz
 func (a *Bitvec) Extract(high int, low int) *Bitvec {
 	return &Bitvec{
-		rawCtx:   a.rawCtx,
-		rawAST:   C.Z3_mk_extract(a.rawCtx, C.uint(high), C.uint(low), a.rawAST),
-		symbolic: a.symbolic,
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_extract(a.rawCtx, C.uint(high), C.uint(low), a.rawAST),
+		rawSort:     a.rawSort,
+		symbolic:    a.symbolic,
+		Annotations: a.Annotations,
 	}
 }
 
@@ -418,8 +473,11 @@ func (a *Bitvec) Extract(high int, low int) *Bitvec {
 // created by chz
 func If(a *Bool, t2 *Bitvec, t3 *Bitvec) *Bitvec {
 	return &Bitvec{
-		rawCtx: a.rawCtx,
-		rawAST: C.Z3_mk_ite(a.rawCtx, a.rawAST, t2.rawAST, t3.rawAST),
+		rawCtx:      a.rawCtx,
+		rawAST:      C.Z3_mk_ite(a.rawCtx, a.rawAST, t2.rawAST, t3.rawAST),
+		rawSort:     t2.rawSort,
+		symbolic:    t2.symbolic || t3.symbolic,
+		Annotations: t2.Annotations.Union(t3.Annotations),
 	}
 }
 

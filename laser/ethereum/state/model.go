@@ -16,12 +16,14 @@ func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool
 		// GetTimeHandlerInstance().TimeRemaining()-500
 		timeout = min(timeout, GetTimeHandlerInstance().TimeRemaining()-500)
 		if timeout <= 0 {
+			fmt.Println("timeout")
 			return nil, false
 		}
 	}
 	s.SetTimeout(timeout)
 	for _, constraint := range constraints.ConstraintList {
 		if constraint == nil {
+			fmt.Println("constraint nil")
 			return nil, false
 		}
 	}
@@ -51,4 +53,3 @@ func min(a int, b int) int {
 		return b
 	}
 }
-

@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"encoding/hex"
+	"fmt"
 	"go-mythril/disassembler"
 	"go-mythril/laser/ethereum/function_managers"
 	"go-mythril/laser/ethereum/state"
@@ -17,9 +18,10 @@ func GetTransactionSequence(globalState *state.GlobalState, constraints *state.C
 	concreteTransactions := make([]*map[string]string, 0)
 	txConstraints, minimize := _set_minimisation_constraints(transactionSequence, constraints.Copy(),
 		make([]*z3.Bool, 0), 5000, globalState.WorldState, globalState.Z3ctx)
-	model, ok := state.GetModel(txConstraints, minimize, make([]*z3.Bool, 0), true, globalState.Z3ctx)
+	model, ok := state.GetModel(txConstraints, minimize, make([]*z3.Bool, 0), false, globalState.Z3ctx)
 	if !ok {
 		// UnsatError
+		fmt.Println("unsat in getTxSeq")
 		return nil
 	}
 
@@ -33,8 +35,8 @@ func GetTransactionSequence(globalState *state.GlobalState, constraints *state.C
 	ctx := globalState.Z3ctx
 
 	for address, _ := range *initialAccounts {
-		minPriceDict[strconv.FormatInt(address,10)] = model.Eval(
-			initialWorldState.StartingBalances.GetItem(ctx.NewBitvecVal(address,256)).AsAST(),true).Int()
+		minPriceDict[strconv.FormatInt(address, 10)] = model.Eval(
+			initialWorldState.StartingBalances.GetItem(ctx.NewBitvecVal(address, 256)).AsAST(), true).Int()
 	}
 	concreteInitialState := _get_concrete_state(initialAccounts, &minPriceDict)
 	switch transactionSequence[0].(type) {
@@ -109,37 +111,37 @@ func _set_minimisation_constraints(txSeq []state.BaseTransaction, constraints *s
 	return constraints, minimize
 }
 
-func _replace_with_actual_sha(concreteTransactions []*map[string]string, model *z3.Model, code *disassembler.Disasembly, ctx *z3.Context)  {
+func _replace_with_actual_sha(concreteTransactions []*map[string]string, model *z3.Model, code *disassembler.Disasembly, ctx *z3.Context) {
 	keccakFunctionManager := function_managers.NewKeccakFunctionManager(ctx)
 	concreteHashes := keccakFunctionManager.GetConcreteHashData(model)
-	for _, tx := range concreteTransactions{
+	for _, tx := range concreteTransactions {
 		realTx := *tx
-		if !( strings.Contains(realTx["input"], keccakFunctionManager.HashMatcher) ) {
+		if !(strings.Contains(realTx["input"], keccakFunctionManager.HashMatcher)) {
 			continue
 		}
 		var sIndex int
 		codeStr := hex.EncodeToString(code.Bytecode)
-		if code!=nil && strings.Contains(realTx["input"], codeStr){
+		if code != nil && strings.Contains(realTx["input"], codeStr) {
 			// TODO: len(codeStr) or len(code.Bytecode) here ?
 			sIndex = len(codeStr) + 2
-		}else{
+		} else {
 			sIndex = 10
 		}
-		for i:= sIndex; i<len(realTx["input"]); i++ {
-			dataSlice := realTx["input"][i:i+64]
+		for i := sIndex; i < len(realTx["input"]); i++ {
+			dataSlice := realTx["input"][i : i+64]
 			if !(strings.Contains(dataSlice, keccakFunctionManager.HashMatcher)) || len(dataSlice) != 64 {
 				continue
 			}
-			dataSliceInt, _ := strconv.ParseInt(dataSlice,16,10)
-			findInput := ctx.NewBitvecVal(dataSliceInt,256)
+			dataSliceInt, _ := strconv.ParseInt(dataSlice, 16, 10)
+			findInput := ctx.NewBitvecVal(dataSliceInt, 256)
 			var input_ *z3.Bitvec
 			concreteHashesContent := *concreteHashes
-			for size, _ := range concreteHashesContent{
+			for size, _ := range concreteHashesContent {
 				// TODO: keccakFunctionManager.storeFunction
 				findInputValue, _ := strconv.Atoi(findInput.Value())
 				findInputInFlag := false
-				for _, item := range concreteHashesContent[size]{
-					if findInputValue == item{
+				for _, item := range concreteHashesContent[size] {
+					if findInputValue == item {
 						findInputInFlag = true
 					}
 				}
@@ -147,9 +149,9 @@ func _replace_with_actual_sha(concreteTransactions []*map[string]string, model *
 					continue
 				}
 				// TODO: keccakFunctionManager.storeFunction
-				input_ = ctx.NewBitvecVal(model.Eval(findInput.AsAST(),false),size)
+				input_ = ctx.NewBitvecVal(model.Eval(findInput.AsAST(), false), size)
 			}
-			if input_ == nil{
+			if input_ == nil {
 				continue
 			}
 			keccak := keccakFunctionManager.FindConcreteKeccak(input_)
@@ -164,13 +166,13 @@ func _replace_with_actual_sha(concreteTransactions []*map[string]string, model *
 }
 
 func _add_calldata_placeholder(concreteTransactions []*map[string]string, transactionSequence []state.BaseTransaction) {
-	for _, tx := range concreteTransactions{
+	for _, tx := range concreteTransactions {
 		realTx := *tx
 		realTx["calldata"] = realTx["input"]
 	}
 	switch transactionSequence[0].(type) {
-		case *state.MessageCallTransaction:
-			return
+	case *state.MessageCallTransaction:
+		return
 	}
 	codeLen := len(transactionSequence[0].GetCode().Bytecode)
 	realTx0 := *concreteTransactions[0]

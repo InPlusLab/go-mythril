@@ -18,7 +18,7 @@ func GetTimeHandlerInstance() *TimeHandler {
 	once.Do(func() {
 		timeHandler = &TimeHandler{
 			StartTime:     0,
-			ExecutionTime: 0,
+			ExecutionTime: 1000000,
 		}
 	})
 	return timeHandler
@@ -32,4 +32,3 @@ func (handler *TimeHandler) StartExecution(executionTime int) {
 func (handler *TimeHandler) TimeRemaining() int {
 	return handler.ExecutionTime - (int(time.Now().Unix()*1000) - handler.StartTime)
 }
-

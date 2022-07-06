@@ -3,6 +3,7 @@ package ethereum
 import (
 	"fmt"
 	"go-mythril/analysis"
+	"go-mythril/analysis/module"
 	"go-mythril/analysis/module/modules"
 	"go-mythril/laser/ethereum/state"
 	"go-mythril/laser/smt/z3"
@@ -27,7 +28,7 @@ type LaserEVM struct {
 	GofuncCount int
 }
 
-func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int) *LaserEVM {
+func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, moduleLoader *module.ModuleLoader) *LaserEVM {
 
 	preHook := make(map[string][]moduleExecFunc)
 	postHook := make(map[string][]moduleExecFunc)
@@ -36,11 +37,14 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int) 
 		preHook[v.Name] = make([]moduleExecFunc, 0)
 		postHook[v.Name] = make([]moduleExecFunc, 0)
 	}
-	// For hook test here~
 	// TODO: svm.py - register_instr_hooks
-	integerDetectionModule := modules.NewIntegerArithmetics()
-	preHook["PUSH1"] = []moduleExecFunc{integerDetectionModule.Execute}
-	postHook["PUSH1"] = []moduleExecFunc{integerDetectionModule.Execute}
+	integerDetectionModule := moduleLoader.Modules[0]
+	preHooksDM := integerDetectionModule.(*modules.IntegerArithmetics).PreHooks
+	for _, op := range preHooksDM {
+		preHook[op] = []moduleExecFunc{integerDetectionModule.Execute}
+	}
+	//preHook["PUSH1"] = []moduleExecFunc{integerDetectionModule.Execute}
+	//postHook["PUSH1"] = []moduleExecFunc{integerDetectionModule.Execute}
 
 	evm := LaserEVM{
 		ExecutionTimeout: ExecutionTimeout,
@@ -61,13 +65,15 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int) 
 func (evm *LaserEVM) NormalSymExec(CreationCode string) {
 	fmt.Println("Symbolic Executing: ", CreationCode)
 	fmt.Println("")
-	tx := state.NewContractCreationTransaction(CreationCode)
+	//tx := state.NewContractCreationTransaction(CreationCode)
+	tx := state.NewMessageCallTransaction(CreationCode)
 	globalState := tx.InitialGlobalState()
 	evm.WorkList <- globalState
 	id := 0
 	for {
 		globalState := <-evm.WorkList
 		fmt.Println(id, globalState)
+		fmt.Println(id, "constraints:", globalState.WorldState.Constraints)
 		newStates, opcode := evm.ExecuteState(globalState)
 		evm.ManageCFG(opcode, newStates)
 
@@ -76,7 +82,7 @@ func (evm *LaserEVM) NormalSymExec(CreationCode string) {
 		}
 		fmt.Println(id, "done", globalState, opcode)
 		fmt.Println("======================================================")
-		if opcode == "STOP" {
+		if opcode == "STOP" || opcode == "RETURN" {
 			break
 		}
 		id++
@@ -163,7 +169,6 @@ func (evm *LaserEVM) ManageCFG(opcode string, newStates []*state.GlobalState) {
 func (evm *LaserEVM) newNodeState(state *state.GlobalState, edgeType JumpType, condition *z3.Bool) {
 	// default: edge_type=JumpType.UNCONDITIONAL, condition=None
 }
-
 
 func (evm *LaserEVM) Run(id int) {
 	fmt.Println("Run")

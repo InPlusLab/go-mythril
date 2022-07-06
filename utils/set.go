@@ -68,7 +68,7 @@ func (set *Set) Elements() []interface{} {
 		fmt.Println("TODO: bv annotation")
 	}
 	initlen := len(set.m)
-	fmt.Println("test1")
+
 	snaphot := make([]interface{}, initlen)
 
 	actuallen := 0
@@ -112,4 +112,15 @@ func (set *Set) String() string {
 	buf.WriteString("}")
 
 	return buf.String()
+}
+
+func (set *Set) Union(other *Set) *Set {
+	res := NewSet()
+	for _, item := range set.Elements() {
+		res.Add(item)
+	}
+	for _, item := range other.Elements() {
+		res.Add(item)
+	}
+	return res
 }

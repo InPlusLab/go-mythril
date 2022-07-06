@@ -79,12 +79,12 @@ func (dm *PredictableVariables) _analyze_state(globalState *state.GlobalState) [
 		length := globalState.Mstate.Stack.Length()
 		if opcode.Name == "JUMPI" {
 			// Look for predictable state variables in jump condition
-			for _, annotation := range globalState.Mstate.Stack.RawStack[length-2].Annotations().Elements() {
+			for _, annotation := range globalState.Mstate.Stack.RawStack[length-2].Annotations.Elements() {
 				if reflect.TypeOf(annotation).String() == "PredictableValueAnnotation" {
-					 constraints := globalState.WorldState.Constraints
+					constraints := globalState.WorldState.Constraints
 
-					transactionSequence := analysis.GetTransactionSequence(globalState,constraints)
-					if transactionSequence == nil{
+					transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
+					if transactionSequence == nil {
 						continue
 					}
 					description := annotation.(PredictableValueAnnotation).Operation + " is used to determine a control flow decision." +
@@ -100,16 +100,16 @@ func (dm *PredictableVariables) _analyze_state(globalState *state.GlobalState) [
 						swcId = analysis.NewSWCData()["WEAK_RANDOMNESS"]
 					}
 					issue := &analysis.Issue{
-						Contract:        globalState.Environment.ActiveAccount.ContractName,
-						FunctionName:    globalState.Environment.ActiveFuncName,
-						Address:         globalState.GetCurrentInstruction().Address,
-						SWCID:           swcId,
-						Bytecode:        globalState.Environment.Code.Bytecode,
-						Title:           "Dependence on predictable environment variable",
-						Severity:        severity,
-						DescriptionHead: "A control flow decision is made based on " + annotation.(PredictableValueAnnotation).Operation,
-						DescriptionTail: description,
-						GasUsed:         []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
+						Contract:            globalState.Environment.ActiveAccount.ContractName,
+						FunctionName:        globalState.Environment.ActiveFuncName,
+						Address:             globalState.GetCurrentInstruction().Address,
+						SWCID:               swcId,
+						Bytecode:            globalState.Environment.Code.Bytecode,
+						Title:               "Dependence on predictable environment variable",
+						Severity:            severity,
+						DescriptionHead:     "A control flow decision is made based on " + annotation.(PredictableValueAnnotation).Operation,
+						DescriptionTail:     description,
+						GasUsed:             []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
 						TransactionSequence: transactionSequence,
 					}
 					issues = append(issues, issue)
@@ -119,15 +119,15 @@ func (dm *PredictableVariables) _analyze_state(globalState *state.GlobalState) [
 			param := globalState.Mstate.Stack.RawStack[globalState.Mstate.Stack.Length()-1]
 			constraint := state.NewConstraints()
 			tmpVal := new(big.Int).Exp(big.NewInt(2), big.NewInt(255), nil)
-			constraint.Add( param.BvULt(globalState.Environment.BlockNumber),
+			constraint.Add(param.BvULt(globalState.Environment.BlockNumber),
 				globalState.Environment.BlockNumber.BvULt(globalState.Z3ctx.NewBitvecVal(
 					tmpVal, 256)))
 			tmpCon := globalState.WorldState.Constraints.Copy()
 			tmpCon.Add(constraint.ConstraintList...)
-			_, sat := state.GetModel( tmpCon, make([]*z3.Bool,0), make([]*z3.Bool,0), true, globalState.Z3ctx )
+			_, sat := state.GetModel(tmpCon, make([]*z3.Bool, 0), make([]*z3.Bool, 0), true, globalState.Z3ctx)
 			if sat {
 				globalState.Annotate(OldBlockNumberUsedAnnotation{})
-			}else{
+			} else {
 				// UnsatError
 				return make([]*analysis.Issue, 0)
 			}

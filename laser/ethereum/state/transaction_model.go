@@ -2,6 +2,7 @@ package state
 
 import (
 	"encoding/hex"
+	"fmt"
 	"go-mythril/disassembler"
 	"go-mythril/laser/smt/z3"
 	"math/big"
@@ -53,15 +54,20 @@ func NewMessageCallTransaction(code string) *MessageCallTransaction {
 	txcode := disassembler.NewDisasembly(code)
 	calldataList := make([]*z3.Bitvec, 0)
 	// Function hash: 0xf8a8fd6d, which is the hash of test() in origin.sol
-	calldataList = append(calldataList, ctx.NewBitvecVal(248, 8))
-	calldataList = append(calldataList, ctx.NewBitvecVal(168, 8))
-	calldataList = append(calldataList, ctx.NewBitvecVal(253, 8))
-	calldataList = append(calldataList, ctx.NewBitvecVal(109, 8))
-	// Parameters
-	// calldataList = append(calldataList, ctx.NewBitvecVal(0, 8))
-	// For test
+	//calldataList = append(calldataList, ctx.NewBitvecVal(248, 8))
+	//calldataList = append(calldataList, ctx.NewBitvecVal(168, 8))
+	//calldataList = append(calldataList, ctx.NewBitvecVal(253, 8))
+	//calldataList = append(calldataList, ctx.NewBitvecVal(109, 8))
+
+	// Input: 0x1003e2d2000000000000000000000000000000000000000000000000000000000000000a: add(10)
+	inputStrForOverflow := "1003e2d2000000000000000000000000000000000000000000000000000000000000000a"
+	for i := 0; i < len(inputStrForOverflow); i = i + 2 {
+		val, _ := strconv.ParseInt(inputStrForOverflow[i:i+2], 16, 10)
+		calldataList = append(calldataList, ctx.NewBitvecVal(val, 8))
+	}
+
 	caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
-	return &MessageCallTransaction{
+	tx := &MessageCallTransaction{
 		WorldState: NewWordState(ctx),
 		Code:       txcode,
 		// TODO: For test here.
@@ -77,22 +83,28 @@ func NewMessageCallTransaction(code string) *MessageCallTransaction {
 		Ctx:       ctx,
 		Id:        GetNextTransactionId(),
 	}
+	// TODO: maybe wrong?
+	tx.WorldState.TransactionSequence = append(tx.WorldState.TransactionSequence, tx)
+	return tx
 }
 
 func (tx *MessageCallTransaction) InitialGlobalStateFromEnvironment(worldState *WorldState, env *Environment, activeFunc string) *GlobalState {
 	txStack := make([]BaseTransaction, 0)
 	globalState := NewGlobalState(worldState, env, tx.Ctx, append(txStack, tx))
 	globalState.Environment.ActiveFuncName = activeFunc
-	sender := env.Sender
-	receiver := env.ActiveAccount.Address
-	value := tx.Ctx.NewBitvecVal(env.CallValue, 256)
-	constrain := globalState.WorldState.Balances.GetItem(sender).BvUGe(value)
-	globalState.WorldState.Constraints.Add(constrain)
 
-	receiverV := globalState.WorldState.Balances.GetItem(receiver)
-	senderV := globalState.WorldState.Balances.GetItem(sender)
-	globalState.WorldState.Balances.SetItem(receiver, receiverV.BvAdd(value).Simplify())
-	globalState.WorldState.Balances.SetItem(sender, senderV.BvSub(value).Simplify())
+	// make sure the value of sender is enough
+	//sender := env.Sender
+	//receiver := env.ActiveAccount.Address
+	//value := tx.Ctx.NewBitvecVal(env.CallValue, 256)
+	//
+	//constrain := globalState.WorldState.Balances.GetItem(sender).BvUGe(value)
+	//globalState.WorldState.Constraints.Add(constrain)
+	//
+	//receiverV := globalState.WorldState.Balances.GetItem(receiver)
+	//senderV := globalState.WorldState.Balances.GetItem(sender)
+	//globalState.WorldState.Balances.SetItem(receiver, receiverV.BvAdd(value).Simplify())
+	//globalState.WorldState.Balances.SetItem(sender, senderV.BvSub(value).Simplify())
 
 	return globalState
 }
@@ -105,6 +117,11 @@ func (tx *MessageCallTransaction) InitialGlobalState() *GlobalState {
 
 func (tx *MessageCallTransaction) End(state *GlobalState, data []byte) {
 	tx.ReturnData = data
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Catch-TransactionEndSignal")
+		}
+	}()
 	panic("TransactionEndSignal")
 }
 
@@ -168,7 +185,7 @@ func NewContractCreationTransaction(code string) *ContractCreationTransaction {
 	// TODO: For test here
 	// Remix input here
 	//
-	inputStr := "6080604052348015600f57600080fd5b5060ad8061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063f8a8fd6d14602d575b600080fd5b60336035565b005b336000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555056fea2646970667358221220cc40cae2e419544393419c7a7ea32f42d341094e9dc31099df83cbe79983591164736f6c63430008070033"
+	inputStr := "6080604052600160005534801561001557600080fd5b506101e3806100256000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80631003e2d21461003b578063b69ef8a814610057575b600080fd5b610055600480360381019061005091906100ab565b610075565b005b61005f610090565b60405161006c91906100e7565b60405180910390f35b806000808282546100869190610102565b9250508190555050565b60005481565b6000813590506100a581610196565b92915050565b6000602082840312156100c1576100c0610191565b5b60006100cf84828501610096565b91505092915050565b6100e181610158565b82525050565b60006020820190506100fc60008301846100d8565b92915050565b600061010d82610158565b915061011883610158565b9250827fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0382111561014d5761014c610162565b5b828201905092915050565b6000819050919050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b600080fd5b61019f81610158565b81146101aa57600080fd5b5056fea264697066735822122087b595ab091f2f063af4481cbf3f5906249a224c0b0e343c050f64821d66d84864736f6c63430008070033"
 	for i := 0; i < len(inputStr); i = i + 2 {
 		tmp := string(inputStr[i]) + string(inputStr[i+1])
 		tmpV, _ := strconv.ParseInt(tmp, 16, 64)
@@ -177,7 +194,7 @@ func NewContractCreationTransaction(code string) *ContractCreationTransaction {
 	// set your callerValue in remix to test
 	// For test
 	caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
-	return &ContractCreationTransaction{
+	tx := &ContractCreationTransaction{
 		WorldState: NewWordState(ctx),
 		Code:       txcode,
 		// TODO: For test here.
@@ -186,13 +203,16 @@ func NewContractCreationTransaction(code string) *ContractCreationTransaction {
 		Caller:    ctx.NewBitvecVal(caller, 256),
 		Calldata:  NewConcreteCalldata("txid123", calldataList),
 		GasPrice:  10,
-		GasLimit:  100000,
+		GasLimit:  3000000,
 		CallValue: 0,
 		Origin:    ctx.NewBitvecVal(caller, 256),
 		Basefee:   ctx.NewBitvecVal(1000, 256),
 		Ctx:       ctx,
 		Id:        GetNextTransactionId(),
 	}
+	// TODO: maybe wrong?
+	tx.WorldState.TransactionSequence = append(tx.WorldState.TransactionSequence, tx)
+	return tx
 }
 
 func (tx *ContractCreationTransaction) InitialGlobalStateFromEnvironment(worldState *WorldState, env *Environment, activeFunc string) *GlobalState {
@@ -220,6 +240,12 @@ func (tx *ContractCreationTransaction) InitialGlobalState() *GlobalState {
 }
 
 func (tx *ContractCreationTransaction) End(globalState *GlobalState, data []byte) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Catch-TransactionEndSignal")
+		}
+	}()
+
 	if len(data) == 0 {
 		tx.ReturnData = nil
 		panic("TransactionEndSignal")
@@ -268,7 +294,7 @@ func (tx *ContractCreationTransaction) GetGasLimit() int {
 	return tx.GasLimit
 }
 
-func (tx *ContractCreationTransaction) GetPreWorldState() *WorldState{
+func (tx *ContractCreationTransaction) GetPreWorldState() *WorldState {
 	// TODO: Deepcopy ?
 	return tx.WorldState.Copy()
 }

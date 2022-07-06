@@ -3,6 +3,7 @@ package z3
 // #include <stdlib.h>
 // #include "goZ3Config.h"
 import "C"
+import "go-mythril/utils"
 
 type BaseArray interface {
 	GetItem(bitvec *Bitvec) *Bitvec
@@ -63,6 +64,9 @@ func (a *Array) GetItem(index *Bitvec) *Bitvec {
 		rawCtx:  a.rawCtx,
 		rawAST:  C.Z3_mk_select(a.rawCtx, a.rawAST, index.rawAST),
 		rawSort: C.Z3_mk_bv_sort(a.rawCtx, C.uint(a.rangeSize)),
+		// TODO: maybe wrong
+		symbolic:    index.symbolic,
+		Annotations: utils.NewSet(),
 	}
 }
 func (a *Array) GetCtx() *Context {
@@ -92,6 +96,9 @@ func (a *K) GetItem(index *Bitvec) *Bitvec {
 		rawCtx:  a.rawCtx,
 		rawAST:  C.Z3_mk_select(a.rawCtx, a.rawAST, index.rawAST),
 		rawSort: C.Z3_mk_bv_sort(a.rawCtx, C.uint(a.rangeSize)),
+		// TODO: maybe wrong
+		symbolic:    index.symbolic,
+		Annotations: utils.NewSet(),
 	}
 }
 

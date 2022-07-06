@@ -3,17 +3,23 @@ package z3
 // #include <stdlib.h>
 // #include "goZ3Config.h"
 import "C"
-import "unsafe"
+import (
+	"go-mythril/utils"
+	"unsafe"
+)
 
 type Bool struct {
-	rawCtx C.Z3_context
-	rawAST C.Z3_ast
+	rawCtx      C.Z3_context
+	rawAST      C.Z3_ast
+	Annotations *utils.Set
 }
 
 func (c *Context) NewBool(ast *AST) *Bool {
+	annotations := utils.NewSet()
 	return &Bool{
-		rawCtx: c.raw,
-		rawAST: ast.rawAST,
+		rawCtx:      c.raw,
+		rawAST:      ast.rawAST,
+		Annotations: annotations,
 	}
 }
 
@@ -36,15 +42,17 @@ func (b *Bool) IsFalse() bool {
 
 func (b *Bool) Not() *Bool {
 	return &Bool{
-		rawCtx: b.rawCtx,
-		rawAST: C.Z3_mk_not(b.rawCtx, b.rawAST),
+		rawCtx:      b.rawCtx,
+		rawAST:      C.Z3_mk_not(b.rawCtx, b.rawAST),
+		Annotations: b.Annotations,
 	}
 }
 
 func (b *Bool) Simplify() *Bool {
 	return &Bool{
-		rawCtx: b.rawCtx,
-		rawAST: C.Z3_simplify(b.rawCtx, b.rawAST),
+		rawCtx:      b.rawCtx,
+		rawAST:      C.Z3_simplify(b.rawCtx, b.rawAST),
+		Annotations: b.Annotations,
 	}
 }
 
@@ -74,23 +82,29 @@ func (b *AST) Substitute(args ...*AST) *AST {
 func (a *Bool) And(args ...*Bool) *Bool {
 	raws := make([]C.Z3_ast, len(args)+1)
 	raws[0] = a.rawAST
+	annotations := a.Annotations
 	for i, arg := range args {
 		raws[i+1] = arg.rawAST
+		annotations.Union(arg.Annotations)
 	}
+
 	return &Bool{
 		rawCtx: a.rawCtx,
 		rawAST: C.Z3_mk_and(
 			a.rawCtx,
 			C.uint(len(raws)),
 			(*C.Z3_ast)(unsafe.Pointer(&raws[0]))),
+		Annotations: annotations,
 	}
 }
 
 func (a *Bool) Or(args ...*Bool) *Bool {
 	raws := make([]C.Z3_ast, len(args)+1)
 	raws[0] = a.rawAST
+	annotations := a.Annotations
 	for i, arg := range args {
 		raws[i+1] = arg.rawAST
+		annotations.Union(arg.Annotations)
 	}
 	return &Bool{
 		rawCtx: a.rawCtx,
@@ -98,6 +112,7 @@ func (a *Bool) Or(args ...*Bool) *Bool {
 			a.rawCtx,
 			C.uint(len(raws)),
 			(*C.Z3_ast)(unsafe.Pointer(&raws[0]))),
+		Annotations: annotations,
 	}
 }
 

@@ -45,6 +45,7 @@ func (globalState *GlobalState) Copy() *GlobalState {
 		TxStack:        globalState.TxStack,
 		Z3ctx:          globalState.Z3ctx,
 		LastReturnData: globalState.LastReturnData,
+		Annotations:    globalState.Annotations,
 	}
 }
 

@@ -24,8 +24,8 @@ type OverUnderflowStateAnnotation struct {
 	OverflowingStateAnnotations *utils.Set
 }
 
-func NewOverUnderflowStateAnnotation() OverUnderflowStateAnnotation {
-	return OverUnderflowStateAnnotation{
+func NewOverUnderflowStateAnnotation() *OverUnderflowStateAnnotation {
+	return &OverUnderflowStateAnnotation{
 		OverflowingStateAnnotations: utils.NewSet(),
 	}
 }
@@ -55,7 +55,7 @@ func NewIntegerArithmetics() *IntegerArithmetics {
 			"check if there's a possible state where op1 > op0. " +
 			"For every ADD, MUL instruction, " +
 			"check if there's a possible state where op1 + op0 > 2^32 - 1",
-		PreHooks: []string{"ADD", "MUL", "EXP", "SUB", "SSTORE",
+		PreHooks: []string{"ADD", "SUB", "MUL", "EXP", "SSTORE",
 			"JUMPI", "STOP", "RETURN", "CALL"},
 		Issues:               make([]*analysis.Issue, 0),
 		Cache:                utils.NewSet(),
@@ -79,8 +79,8 @@ func (dm *IntegerArithmetics) Execute(target *state.GlobalState) []*analysis.Iss
 
 func (dm *IntegerArithmetics) _get_args(state *state.GlobalState) (*z3.Bitvec, *z3.Bitvec) {
 	stack := state.Mstate.Stack
-	op0 := stack.Pop()
-	op1 := stack.Pop()
+	op0 := stack.RawStack[stack.Length()-1]
+	op1 := stack.RawStack[stack.Length()-2]
 	return op0, op1
 }
 
@@ -118,6 +118,7 @@ func (dm *IntegerArithmetics) _handel_add(globalState *state.GlobalState) {
 		Operator:         "addition",
 		Constraint:       c,
 	}
+	fmt.Println("handelADD", c.IsTrue())
 	op0.Annotate(annotation)
 }
 func (dm *IntegerArithmetics) _handel_mul(globalState *state.GlobalState) {
@@ -172,7 +173,8 @@ func (dm *IntegerArithmetics) _handel_sstore(globalState *state.GlobalState) {
 	stack := globalState.Mstate.Stack
 	value := stack.RawStack[stack.Length()-2]
 	stateAnnotation := getOverflowUnderflowStateAnnotation(globalState)
-	for _, annotation := range value.Annotations().Elements() {
+	for _, annotation := range value.Annotations.Elements() {
+		fmt.Println(reflect.TypeOf(annotation).String(), "addAnnoStore")
 		if reflect.TypeOf(annotation).String() == "OverUnderflowAnnotation" {
 			stateAnnotation.OverflowingStateAnnotations.Add(annotation)
 		}
@@ -183,9 +185,14 @@ func (dm *IntegerArithmetics) _handel_jumpi(globalState *state.GlobalState) {
 	stack := globalState.Mstate.Stack
 	value := stack.RawStack[stack.Length()-2]
 	stateAnnotation := getOverflowUnderflowStateAnnotation(globalState)
-	for _, annotation := range value.Annotations().Elements() {
-		if reflect.TypeOf(annotation).String() == "OverUnderflowAnnotation" {
+	fmt.Println("handel_jumpi", value.Annotations.Len())
+	fmt.Println(stateAnnotation, " ", stateAnnotation.OverflowingStateAnnotations.Len())
+	for _, annotation := range value.Annotations.Elements() {
+		fmt.Println(reflect.TypeOf(annotation).String(), "addAnnoJumpi")
+		if reflect.TypeOf(annotation).String() == "modules.OverUnderflowAnnotation" {
+			fmt.Println("addInglobaleStateAnno")
 			stateAnnotation.OverflowingStateAnnotations.Add(annotation)
+			fmt.Println(stateAnnotation, " ", stateAnnotation.OverflowingStateAnnotations.Len())
 		}
 	}
 }
@@ -194,7 +201,8 @@ func (dm *IntegerArithmetics) _handel_call(globalState *state.GlobalState) {
 	stack := globalState.Mstate.Stack
 	value := stack.RawStack[stack.Length()-3]
 	stateAnnotation := getOverflowUnderflowStateAnnotation(globalState)
-	for _, annotation := range value.Annotations().Elements() {
+	for _, annotation := range value.Annotations.Elements() {
+		fmt.Println(reflect.TypeOf(annotation).String(), "addAnnoCall")
 		if reflect.TypeOf(annotation).String() == "OverUnderflowAnnotation" {
 			stateAnnotation.OverflowingStateAnnotations.Add(annotation)
 		}
@@ -211,30 +219,41 @@ func (dm *IntegerArithmetics) _handel_return(globalState *state.GlobalState) {
 	stateAnnotation := getOverflowUnderflowStateAnnotation(globalState)
 
 	for _, element := range globalState.Mstate.Memory.GetItems(offsetV, offsetV+lengthV) {
-		for _, annotation := range element.Annotations().Elements() {
+		for _, annotation := range element.Annotations.Elements() {
+			fmt.Println(reflect.TypeOf(annotation).String(), "addAnnoReturn")
 			if reflect.TypeOf(annotation).String() == "OverUnderflowAnnotation" {
 				stateAnnotation.OverflowingStateAnnotations.Add(annotation)
 			}
 		}
 	}
+	fmt.Println("handelReturn")
 }
 
 func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalState) {
 	stateAnnotation := getOverflowUnderflowStateAnnotation(globalState)
-
+	fmt.Println(stateAnnotation, " ", stateAnnotation.OverflowingStateAnnotations.Len())
 	for _, annotation := range stateAnnotation.OverflowingStateAnnotations.Elements() {
+		fmt.Println("iterableInEnd")
 		ostate := annotation.(OverUnderflowAnnotation).OverflowingState
+		fmt.Println("ostate:", ostate)
 		if dm.OstatesUnsatisfiable.Contains(ostate) {
+			fmt.Println("contains")
 			continue
 		}
 		if !dm.OstatesSatisfiable.Contains(ostate) {
 			constraints := ostate.WorldState.Constraints.Copy()
 			constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
-			_, sat := state.GetModel(constraints,nil,nil,true,ostate.Z3ctx)
+
+			for i, v := range constraints.ConstraintList {
+				fmt.Println("constraints", i, ":", v.IsTrue())
+			}
+			_, sat := state.GetModel(constraints, nil, nil, false, ostate.Z3ctx)
 			if sat {
+				fmt.Println("sat")
 				dm.OstatesSatisfiable.Add(ostate)
 			} else {
 				// UnsatError
+				fmt.Println("unsat")
 				dm.OstatesUnsatisfiable.Add(ostate)
 				continue
 			}
@@ -245,15 +264,17 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 
 		constraints := globalState.WorldState.Constraints.Copy()
 		constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
+
 		transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
-		if transactionSequence == nil{
+		if transactionSequence == nil {
 			// UnsatError
+			fmt.Println("unsaterror for getTxSeq")
 			continue
 		}
 		var flowStr string
-		if annotation.(OverUnderflowAnnotation).Operator == "subtraction"{
+		if annotation.(OverUnderflowAnnotation).Operator == "subtraction" {
 			flowStr = "underflow"
-		}else{
+		} else {
 			flowStr = "overflow"
 		}
 		descriptionHead := "The arithmetic operator can " + flowStr
@@ -262,31 +283,33 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 			"Refer to the transaction trace generated for this issue to reproduce the issue."
 
 		issue := &analysis.Issue{
-			Contract: ostate.Environment.ActiveAccount.ContractName,
-			FunctionName: ostate.Environment.ActiveFuncName,
-			Address: ostate.GetCurrentInstruction().Address,
-			SWCID: analysis.NewSWCData()["INTEGER_OVERFLOW_AND_UNDERFLOW"],
-			Bytecode: ostate.Environment.Code.Bytecode,
-			Title: "Integer Arithmetic Bugs",
-			Severity: "High",
-			DescriptionHead: descriptionHead,
-			DescriptionTail: descriptionTail,
-			GasUsed: []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
+			Contract:            ostate.Environment.ActiveAccount.ContractName,
+			FunctionName:        ostate.Environment.ActiveFuncName,
+			Address:             ostate.GetCurrentInstruction().Address,
+			SWCID:               analysis.NewSWCData()["INTEGER_OVERFLOW_AND_UNDERFLOW"],
+			Bytecode:            ostate.Environment.Code.Bytecode,
+			Title:               "Integer Arithmetic Bugs",
+			Severity:            "High",
+			DescriptionHead:     descriptionHead,
+			DescriptionTail:     descriptionTail,
+			GasUsed:             []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
 			TransactionSequence: transactionSequence,
 		}
 
 		address := getAddressFromState(ostate)
 		dm.Cache.Add(address)
 		dm.Issues = append(dm.Issues, issue)
+		fmt.Println(dm.Issues)
 	}
+	fmt.Println("handelTxEnd")
 }
 
 func getAddressFromState(globalState *state.GlobalState) int {
 	return globalState.GetCurrentInstruction().Address
 }
 
-func getOverflowUnderflowStateAnnotation(globalState *state.GlobalState) OverUnderflowStateAnnotation {
-	typeInstance := OverUnderflowStateAnnotation{}
+func getOverflowUnderflowStateAnnotation(globalState *state.GlobalState) *OverUnderflowStateAnnotation {
+	typeInstance := &OverUnderflowStateAnnotation{}
 	stateAnnotations := globalState.GetAnnotations(reflect.TypeOf(typeInstance))
 
 	if len(stateAnnotations) == 0 {
@@ -294,6 +317,6 @@ func getOverflowUnderflowStateAnnotation(globalState *state.GlobalState) OverUnd
 		globalState.Annotate(stateAnnotation)
 		return stateAnnotation
 	} else {
-		return stateAnnotations[0].(OverUnderflowStateAnnotation)
+		return stateAnnotations[0].(*OverUnderflowStateAnnotation)
 	}
 }
