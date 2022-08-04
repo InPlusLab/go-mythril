@@ -41,17 +41,21 @@ func (dm *ArbitraryDelegateCall) Execute(target *state.GlobalState) []*analysis.
 	return result
 }
 
+func (dm *ArbitraryDelegateCall) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *ArbitraryDelegateCall) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil
 	}
 	potentialIssues := dm._analyze_state(globalState)
-	annotation := analysis.GetPotentialIssuesAnnotaion(globalState)
+	annotation := GetPotentialIssuesAnnotaion(globalState)
 	annotation.PotentialIssues = append(annotation.PotentialIssues, potentialIssues...)
 	return nil
 }
 
-func (dm *ArbitraryDelegateCall) _analyze_state(globalState *state.GlobalState) []*analysis.PotentialIssue {
+func (dm *ArbitraryDelegateCall) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
 	length := globalState.Mstate.Stack.Length()
 	gas := globalState.Mstate.Stack.RawStack[length-1]
 	to := globalState.Mstate.Stack.RawStack[length-2]
@@ -73,8 +77,8 @@ func (dm *ArbitraryDelegateCall) _analyze_state(globalState *state.GlobalState) 
 	descriptionTail := "The smart contract delegates execution to a user-supplied address.This could allow an attacker to " +
 		"execute arbitrary code in the context of this contract account and manipulate the state of the " +
 		"contract account or execute actions on its behalf."
-	issueArr := make([]*analysis.PotentialIssue, 0)
-	potentialIssue := &analysis.PotentialIssue{
+	issueArr := make([]*PotentialIssue, 0)
+	potentialIssue := &PotentialIssue{
 		Contract:        globalState.Environment.ActiveAccount.ContractName,
 		FunctionName:    globalState.Environment.ActiveFuncName,
 		Address:         address,

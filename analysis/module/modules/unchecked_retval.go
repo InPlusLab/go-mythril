@@ -60,6 +60,11 @@ func (dm *UncheckedRetval) Execute(target *state.GlobalState) []*analysis.Issue 
 	fmt.Println("Exiting analysis module:", dm.Name)
 	return result
 }
+
+func (dm *UncheckedRetval) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *UncheckedRetval) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil
@@ -88,12 +93,12 @@ func (dm *UncheckedRetval) _analyze_state(globalState *state.GlobalState) []*ana
 
 		for _, retval := range retvals {
 			txCon := globalState.WorldState.Constraints.Copy()
-			txCon.Add( retval.Retval.Eq(globalState.Z3ctx.NewBitvecVal(1,256)) )
+			txCon.Add(retval.Retval.Eq(globalState.Z3ctx.NewBitvecVal(1, 256)))
 			tx := analysis.GetTransactionSequence(globalState, txCon)
 			tmpCon := globalState.WorldState.Constraints.Copy()
-			tmpCon.Add( retval.Retval.Eq(globalState.Z3ctx.NewBitvecVal(0,256)) )
+			tmpCon.Add(retval.Retval.Eq(globalState.Z3ctx.NewBitvecVal(0, 256)))
 			transactionSequence := analysis.GetTransactionSequence(globalState, tmpCon)
-			if tx == nil || transactionSequence == nil{
+			if tx == nil || transactionSequence == nil {
 				// UnsatError
 				continue
 			}
@@ -103,16 +108,16 @@ func (dm *UncheckedRetval) _analyze_state(globalState *state.GlobalState) []*ana
 				"The caller should check whether an exception happened and react accordingly to avoid unexpected behavior. " +
 				"For example it is often desirable to wrap external calls in require() so the transaction is reverted if the call fails."
 			issue := &analysis.Issue{
-				Contract:        globalState.Environment.ActiveAccount.ContractName,
-				FunctionName:    globalState.Environment.ActiveFuncName,
-				Address:         retval.Address,
-				Bytecode:        globalState.Environment.Code.Bytecode,
-				Title:           "Unchecked return value from external call.",
-				SWCID:           analysis.NewSWCData()["UNCHECKED_RET_VAL"],
-				Severity:        "Medium",
-				DescriptionHead: "The return value of a message call is not checked.",
-				DescriptionTail: descriptionTail,
-				GasUsed:         []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
+				Contract:            globalState.Environment.ActiveAccount.ContractName,
+				FunctionName:        globalState.Environment.ActiveFuncName,
+				Address:             retval.Address,
+				Bytecode:            globalState.Environment.Code.Bytecode,
+				Title:               "Unchecked return value from external call.",
+				SWCID:               analysis.NewSWCData()["UNCHECKED_RET_VAL"],
+				Severity:            "Medium",
+				DescriptionHead:     "The return value of a message call is not checked.",
+				DescriptionTail:     descriptionTail,
+				GasUsed:             []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
 				TransactionSequence: transactionSequence,
 			}
 			issues = append(issues, issue)

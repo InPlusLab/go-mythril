@@ -2,6 +2,7 @@ package ethereum
 
 import (
 	"fmt"
+	"go-mythril/analysis/module/modules"
 	"go-mythril/laser/ethereum/function_managers"
 	"go-mythril/laser/ethereum/state"
 	"go-mythril/laser/smt/z3"
@@ -11,6 +12,12 @@ import (
 )
 
 type StateTransition struct {
+}
+
+func transferEther(globalState *state.GlobalState, sender *z3.Bitvec, receiver *z3.Bitvec, value *z3.Bitvec) {
+	globalState.WorldState.Constraints.Add(globalState.WorldState.Balances.GetItem(sender).BvUGe(value))
+	globalState.WorldState.Balances.SetItem(receiver, globalState.WorldState.Balances.GetItem(receiver).BvAdd(value))
+	globalState.WorldState.Balances.SetItem(sender, globalState.WorldState.Balances.GetItem(sender).BvSub(value))
 }
 
 // TODO:
@@ -41,6 +48,7 @@ func NewInstruction(opcode string, prehooks []moduleExecFunc, posthooks []module
 }
 
 func (instr *Instruction) ExePreHooks(globalState *state.GlobalState) {
+	modules.IsPreHook = true
 	for _, hook := range instr.PreHooks {
 		fmt.Println(instr.Opcode, ": preHook execute!")
 		hook(globalState)
@@ -48,6 +56,7 @@ func (instr *Instruction) ExePreHooks(globalState *state.GlobalState) {
 }
 
 func (instr *Instruction) ExePostHooks(globalState *state.GlobalState) {
+	modules.IsPreHook = false
 	for _, hook := range instr.PostHooks {
 		fmt.Println(instr.Opcode, ": postHook execute!")
 		hook(globalState)
@@ -455,7 +464,6 @@ func (instr *Instruction) div_(globalState *state.GlobalState) []*state.GlobalSt
 		mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(0, 256))
 	} else {
 		mstate.Stack.Append(op0.BvUDiv(op1))
-		mstate.Stack.RawStack = append(mstate.Stack.RawStack, op0.BvUDiv(op1))
 	}
 
 	ret = append(ret, globalState)
@@ -702,8 +710,8 @@ func (instr *Instruction) iszero_(globalState *state.GlobalState) []*state.Globa
 	ctx := globalState.Z3ctx
 	val := mstate.Stack.Pop()
 	exp := val.Eq(ctx.NewBitvecVal(0, 256))
-	mstate.Stack.Append(z3.If(exp, ctx.NewBitvecVal(1, 256),
-		ctx.NewBitvecVal(0, 256)).Simplify())
+	result := z3.If(exp, ctx.NewBitvecVal(1, 256), ctx.NewBitvecVal(0, 256))
+	mstate.Stack.Append(result.Simplify())
 
 	ret = append(ret, globalState)
 	return ret
@@ -830,10 +838,10 @@ func (instr *Instruction) balance_(globalState *state.GlobalState) []*state.Glob
 	address := mstate.Stack.Pop()
 	var balance *z3.Bitvec
 	if !address.Symbolic() {
-		balance = globalState.WorldState.AccountsExistOrLoad(address.Value()).Balance()
+		balance = globalState.WorldState.AccountsExistOrLoad(address).Balance()
 	} else {
 		balance = ctx.NewBitvecVal(0, 256)
-		for _, acc := range *globalState.WorldState.Accounts {
+		for _, acc := range globalState.WorldState.Accounts {
 			balance = z3.If(address.Eq(acc.Address), acc.Balance(), balance)
 		}
 	}
@@ -1117,7 +1125,7 @@ func (instr *Instruction) extcodesize_(globalState *state.GlobalState) []*state.
 		ret = append(ret, globalState)
 		return ret
 	}
-	code := globalState.WorldState.AccountsExistOrLoad(addr.Value()).Code.Bytecode
+	code := globalState.WorldState.AccountsExistOrLoad(addr).Code.Bytecode
 	mstate.Stack.Append(len(code) / 2)
 
 	ret = append(ret, globalState)
@@ -1222,10 +1230,12 @@ func (instr *Instruction) coinbase_(globalState *state.GlobalState) []*state.Glo
 }
 
 func (instr *Instruction) timestamp_(globalState *state.GlobalState) []*state.GlobalState {
+	// In EVM, it will push the current time in stack
+	// In mythril, it will push a symbolic bv in stack
 	ret := make([]*state.GlobalState, 0)
-
-	globalState.Mstate.Stack.Append(globalState.NewBitvec("timestamp", 256))
-
+	//globalState.Mstate.Stack.Append(globalState.NewBitvec("timestamp", 256))
+	// TODO: for test here
+	globalState.Mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(7, 256))
 	ret = append(ret, globalState)
 	return ret
 }
@@ -1309,6 +1319,10 @@ func (instr *Instruction) sload_(globalState *state.GlobalState) []*state.Global
 
 	mstate := globalState.Mstate
 	index := mstate.Stack.Pop()
+	// TODO: DynLoader to get the storage ?
+	// caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
+	globalState.Environment.ActiveAccount.Storage.SetItem(index, globalState.Z3ctx.NewBitvecVal(100, 256))
+
 	mstate.Stack.Append(globalState.Environment.ActiveAccount.Storage.GetItem(index))
 
 	ret = append(ret, globalState)
@@ -1473,9 +1487,9 @@ func (instr *Instruction) msize_(globalState *state.GlobalState) []*state.Global
 
 func (instr *Instruction) gas_(globalState *state.GlobalState) []*state.GlobalState {
 	ret := make([]*state.GlobalState, 0)
-
-	globalState.Mstate.Stack.Append(globalState.NewBitvec("gas", 256))
-
+	// TODO:
+	//globalState.Mstate.Stack.Append(globalState.NewBitvec("gas", 256))
+	globalState.Mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(15008, 256))
 	ret = append(ret, globalState)
 	return ret
 }
@@ -1634,10 +1648,32 @@ func (instr *Instruction) stop_(globalState *state.GlobalState) {
 	globalState.CurrentTransaction().End(globalState, returnData)
 }
 
-// TODO
 func (instr *Instruction) call_(globalState *state.GlobalState) []*state.GlobalState {
 	ret := make([]*state.GlobalState, 0)
+	//
+	instruction := globalState.GetCurrentInstruction()
+	environment := globalState.Environment
+	length := globalState.Mstate.Stack.Length()
+	memoryOutSize := globalState.Mstate.Stack.RawStack[length-7]
+	memoryOutOffset := globalState.Mstate.Stack.RawStack[length-6]
 
+	calleeAddres, calleeAccount, callData, value, gas, memoryOutOffset, memoryOutSize := GetCallParameters(globalState, true)
+	fmt.Println("call_", memoryOutSize, memoryOutOffset, calleeAddres, callData, gas, instruction)
+
+	if calleeAccount != nil && len(calleeAccount.Code.Bytecode) == 0 {
+		fmt.Println("The call is related to ether transfer between accounts")
+		sender := environment.ActiveAccount.Address
+		receiver := calleeAccount.Address
+		transferEther(globalState, sender, receiver, value)
+
+		// TODO: append a success status in stack?
+		//globalState.Mstate.Stack.Append(globalState.NewBitvec("retval_"+ strconv.Itoa(instruction.Address), 256))
+		globalState.Mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(1, 256))
+		ret = append(ret, globalState)
+		return ret
+	}
+	// TODO: symbolic ValueError exception
+	// TODO: nativeCall
 	ret = append(ret, globalState)
 	return ret
 }

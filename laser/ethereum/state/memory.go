@@ -100,11 +100,13 @@ func (m *Memory) GetItem(index int64) *z3.Bitvec {
 func (m *Memory) GetItems(start int64, stop int64) []*z3.Bitvec {
 	items := make([]*z3.Bitvec, 0)
 	mem := *m.RawMemory
-	length := stop - start
-	for i := start; i < length; i++ {
+	//length := stop - start
+	for i := start; i <= stop; i++ {
 		value, ok := mem[i]
 		if ok {
 			items = append(items, value)
+		} else {
+			fmt.Println("notGetItems")
 		}
 	}
 	return items

@@ -38,22 +38,26 @@ func (dm *ArbitraryStorage) Execute(target *state.GlobalState) []*analysis.Issue
 	return result
 }
 
+func (dm *ArbitraryStorage) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *ArbitraryStorage) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil
 	}
 	potentialIssues := dm._analyze_state(globalState)
-	annotation := analysis.GetPotentialIssuesAnnotaion(globalState)
+	annotation := GetPotentialIssuesAnnotaion(globalState)
 	annotation.PotentialIssues = append(annotation.PotentialIssues, potentialIssues...)
 	return nil
 }
 
-func (dm *ArbitraryStorage) _analyze_state(globalState *state.GlobalState) []*analysis.PotentialIssue {
+func (dm *ArbitraryStorage) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
 	writeSlot := globalState.Mstate.Stack.RawStack[globalState.Mstate.Stack.Length()-1]
 	ctx := writeSlot.GetCtx()
 	constrains := globalState.WorldState.Constraints.Copy()
 	constrains.Add(writeSlot.Eq(ctx.NewBitvecVal(324345425435, 256)))
-	potentialIssue := &analysis.PotentialIssue{
+	potentialIssue := &PotentialIssue{
 		Contract:        globalState.Environment.ActiveAccount.ContractName,
 		FunctionName:    globalState.Environment.ActiveFuncName,
 		Address:         globalState.GetCurrentInstruction().Address,
@@ -65,5 +69,5 @@ func (dm *ArbitraryStorage) _analyze_state(globalState *state.GlobalState) []*an
 		DescriptionTail: "It is possible to write to arbitrary storage locations. By modifying the values of storage variables, attackers may bypass security controls or manipulate the business logic of the smart contract.",
 		Constraints:     constrains,
 	}
-	return []*analysis.PotentialIssue{potentialIssue}
+	return []*PotentialIssue{potentialIssue}
 }

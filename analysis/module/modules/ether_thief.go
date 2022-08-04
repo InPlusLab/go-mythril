@@ -40,17 +40,22 @@ func (dm *EtherThief) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Exiting analysis module:", dm.Name)
 	return result
 }
+
+func (dm *EtherThief) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *EtherThief) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil
 	}
 	potentialIssues := dm._analyze_state(globalState)
-	annotation := analysis.GetPotentialIssuesAnnotaion(globalState)
+	annotation := GetPotentialIssuesAnnotaion(globalState)
 	annotation.PotentialIssues = append(annotation.PotentialIssues, potentialIssues...)
 	return nil
 }
 
-func (dm *EtherThief) _analyze_state(globalState *state.GlobalState) []*analysis.PotentialIssue {
+func (dm *EtherThief) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
 	Gstate := globalState.Copy()
 	ACTORS := transaction.NewActors(Gstate.Z3ctx)
 	instruction := Gstate.GetCurrentInstruction()
@@ -60,8 +65,8 @@ func (dm *EtherThief) _analyze_state(globalState *state.GlobalState) []*analysis
 		Gstate.Environment.Sender.Eq(ACTORS.GetAttacker()),
 		Gstate.CurrentTransaction().GetCaller().Eq(Gstate.CurrentTransaction().GetOrigin()))
 	// Pre-solve so we only add potential issues if the attacker's balance is increased.
-	_, sat := state.GetModel(constraints, nil,nil, true, globalState.Z3ctx)
-	potentialIssue := &analysis.PotentialIssue{
+	_, sat := state.GetModel(constraints, nil, nil, true, globalState.Z3ctx)
+	potentialIssue := &PotentialIssue{
 		Contract:     Gstate.Environment.ActiveAccount.ContractName,
 		FunctionName: Gstate.Environment.ActiveFuncName,
 		// In post hook we use offset of previous instruction
@@ -76,10 +81,10 @@ func (dm *EtherThief) _analyze_state(globalState *state.GlobalState) []*analysis
 			"security controls are in place to prevent unexpected loss of funds.",
 		Constraints: constraints,
 	}
-	if sat{
-		return []*analysis.PotentialIssue{potentialIssue}
-	}else{
+	if sat {
+		return []*PotentialIssue{potentialIssue}
+	} else {
 		// UnsatError
-		return make([]*analysis.PotentialIssue, 0)
+		return make([]*PotentialIssue, 0)
 	}
 }

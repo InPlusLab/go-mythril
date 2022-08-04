@@ -3,6 +3,7 @@ package state
 import (
 	"go-mythril/disassembler"
 	"go-mythril/laser/smt/z3"
+	"go-mythril/utils"
 	"strconv"
 )
 
@@ -43,11 +44,11 @@ func (acc *Account) SetBalance(balance *z3.Bitvec) {
 type Storage struct {
 	Address          *z3.Bitvec
 	StandardStorage  z3.BaseArray
-	PrintableStorage *map[*z3.Bitvec]*z3.Bitvec
+	PrintableStorage map[*z3.Bitvec]*z3.Bitvec
 	// set(int)
-	StorageKeysLoaded *map[int64]bool
+	StorageKeysLoaded *utils.Set
 	// set(bv)
-	KeysSet *map[*z3.Bitvec]bool
+	KeysSet *utils.Set
 }
 
 func NewStorage(addr *z3.Bitvec, concrete bool) *Storage {
@@ -60,15 +61,13 @@ func NewStorage(addr *z3.Bitvec, concrete bool) *Storage {
 	} else {
 		sstorage = ctx.NewArray("Storage"+addr.String(), 256, 256)
 	}
-	pstorage := make(map[*z3.Bitvec]*z3.Bitvec)
-	keysloaded := make(map[int64]bool)
-	keysSet := make(map[*z3.Bitvec]bool)
+
 	return &Storage{
 		Address:           addr,
 		StandardStorage:   sstorage,
-		PrintableStorage:  &pstorage,
-		StorageKeysLoaded: &keysloaded,
-		KeysSet:           &keysSet,
+		PrintableStorage:  make(map[*z3.Bitvec]*z3.Bitvec),
+		StorageKeysLoaded: utils.NewSet(),
+		KeysSet:           utils.NewSet(),
 	}
 }
 func (s *Storage) DeepCopy() *Storage {
@@ -91,34 +90,31 @@ func (s *Storage) GetItem(item *z3.Bitvec) *z3.Bitvec {
 	storage := s.StandardStorage
 
 	itemV, _ := strconv.ParseInt(s.Address.Value(), 10, 64)
-	storageKeysLoaded := *s.StorageKeysLoaded
-	_, inKeysLoaded := storageKeysLoaded[itemV]
+	storageKeysLoaded := s.StorageKeysLoaded
+	inKeysLoaded := storageKeysLoaded.Contains(itemV)
 	if !item.Symbolic() && itemV != 0 && !inKeysLoaded {
 		ctx := item.GetCtx()
-		// TODO
+		// TODO: dynLoader
 		value := ctx.NewBitvecVal(0, 256)
-		for key, _ := range *s.KeysSet {
-			value = z3.If(key.Eq(item), storage.GetItem(item), value)
+		for _, key := range s.KeysSet.Elements() {
+			value = z3.If(key.(*z3.Bitvec).Eq(item), storage.GetItem(item), value)
 		}
-		storage.SetItem(item, value)
-		storageKeysLoaded[itemV] = true
-		printableStorage := *s.PrintableStorage
-		printableStorage[item] = value
+		// storage.SetItem(item, value)
+		s.StorageKeysLoaded.Add(itemV)
+		s.PrintableStorage[item] = value
 		// TODO valueError
 	}
-
 	return storage.GetItem(item).Simplify()
 }
 func (s *Storage) SetItem(key *z3.Bitvec, value *z3.Bitvec) {
-	printableStorage := *s.PrintableStorage
+	printableStorage := s.PrintableStorage
 	printableStorage[key] = value
-	s.StandardStorage.SetItem(key, value)
-	keysSet := *s.KeysSet
-	keysSet[key] = true
+	s.StandardStorage = s.StandardStorage.SetItem(key, value)
+	s.KeysSet.Add(key)
 
 	if !key.Symbolic() {
 		keyV, _ := strconv.ParseInt(key.Value(), 10, 64)
-		storageKeysLoaded := *s.StorageKeysLoaded
-		storageKeysLoaded[keyV] = true
+		storageKeysLoaded := s.StorageKeysLoaded
+		storageKeysLoaded.Add(keyV)
 	}
 }

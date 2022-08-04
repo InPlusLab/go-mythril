@@ -53,32 +53,31 @@ func NewMessageCallTransaction(code string) *MessageCallTransaction {
 	ctx := z3.NewContext(config)
 	txcode := disassembler.NewDisasembly(code)
 	calldataList := make([]*z3.Bitvec, 0)
-	// Function hash: 0xf8a8fd6d, which is the hash of test() in origin.sol
-	//calldataList = append(calldataList, ctx.NewBitvecVal(248, 8))
-	//calldataList = append(calldataList, ctx.NewBitvecVal(168, 8))
-	//calldataList = append(calldataList, ctx.NewBitvecVal(253, 8))
-	//calldataList = append(calldataList, ctx.NewBitvecVal(109, 8))
 
 	// Input: 0x1003e2d2000000000000000000000000000000000000000000000000000000000000000a: add(10)
-	inputStrForOverflow := "1003e2d2000000000000000000000000000000000000000000000000000000000000000a"
-	for i := 0; i < len(inputStrForOverflow); i = i + 2 {
-		val, _ := strconv.ParseInt(inputStrForOverflow[i:i+2], 16, 10)
+	// inputStr := "1003e2d2000000000000000000000000000000000000000000000000000000000000000a"
+	// inputStr := "f2fde38b000000000000000000000000ab8483f64d9c6d1ecf9b849ae677dd3315835cb2"
+	// inputStr := "3ccfd60b"
+	inputStr := "2e1a7d4d0000000000000000000000000000000000000000000000000000000000000001"
+	for i := 0; i < len(inputStr); i = i + 2 {
+		val, _ := strconv.ParseInt(inputStr[i:i+2], 16, 10)
 		calldataList = append(calldataList, ctx.NewBitvecVal(val, 8))
 	}
 
 	caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
+	origin, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
 	tx := &MessageCallTransaction{
 		WorldState: NewWordState(ctx),
 		Code:       txcode,
 		// TODO: For test here.
 		CalleeAccount: NewAccount(ctx.NewBitvecVal(123, 256),
-			ctx.NewArray("balances", 256, 256), true, txcode),
+			ctx.NewArray("balances", 256, 256), false, txcode),
 		Caller:    ctx.NewBitvecVal(caller, 256),
-		Calldata:  NewConcreteCalldata("txid123", calldataList),
+		Calldata:  NewConcreteCalldata("txid123", calldataList, ctx),
 		GasPrice:  10,
-		GasLimit:  100,
+		GasLimit:  100000,
 		CallValue: 0,
-		Origin:    ctx.NewBitvec("origin", 256),
+		Origin:    ctx.NewBitvecVal(origin, 256),
 		Basefee:   ctx.NewBitvecVal(1000, 256),
 		Ctx:       ctx,
 		Id:        GetNextTransactionId(),
@@ -201,9 +200,9 @@ func NewContractCreationTransaction(code string) *ContractCreationTransaction {
 		CalleeAccount: NewAccount(ctx.NewBitvecVal(123, 256),
 			ctx.NewArray("balances", 256, 256), true, txcode),
 		Caller:    ctx.NewBitvecVal(caller, 256),
-		Calldata:  NewConcreteCalldata("txid123", calldataList),
+		Calldata:  NewConcreteCalldata("txid123", calldataList, ctx),
 		GasPrice:  10,
-		GasLimit:  3000000,
+		GasLimit:  100000,
 		CallValue: 0,
 		Origin:    ctx.NewBitvecVal(caller, 256),
 		Basefee:   ctx.NewBitvecVal(1000, 256),

@@ -472,12 +472,13 @@ func (a *Bitvec) Extract(high int, low int) *Bitvec {
 // If creates an if(a) t2 then t3 structure. t1 is bool sort, t2 and t3 must be the same sort.
 // created by chz
 func If(a *Bool, t2 *Bitvec, t3 *Bitvec) *Bitvec {
+	anno1 := a.Annotations.Union(t2.Annotations)
 	return &Bitvec{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_ite(a.rawCtx, a.rawAST, t2.rawAST, t3.rawAST),
 		rawSort:     t2.rawSort,
 		symbolic:    t2.symbolic || t3.symbolic,
-		Annotations: t2.Annotations.Union(t3.Annotations),
+		Annotations: anno1.Union(t3.Annotations),
 	}
 }
 

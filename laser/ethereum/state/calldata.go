@@ -38,9 +38,7 @@ type BasicSymbolicCalldata struct {
 	Ctx     *z3.Context
 }
 
-func NewConcreteCalldata(id string, calldata []*z3.Bitvec) *ConcreteCalldata {
-	item := calldata[0]
-	ctx := item.GetCtx()
+func NewConcreteCalldata(id string, calldata []*z3.Bitvec, ctx *z3.Context) *ConcreteCalldata {
 	k := ctx.NewK(256, 8, 0)
 	for i := 0; i < len(calldata); i++ {
 		k = k.SetItem(ctx.NewBitvecVal(i, 256), calldata[i]).(*z3.K)

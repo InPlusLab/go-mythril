@@ -38,6 +38,10 @@ func (dm *ArbitraryJump) Execute(target *state.GlobalState) []*analysis.Issue {
 	return result
 }
 
+func (dm *ArbitraryJump) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *ArbitraryJump) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil
@@ -55,23 +59,23 @@ func (dm *ArbitraryJump) _analyze_state(globalState *state.GlobalState) []*analy
 		return issueArr
 	}
 	transactionSequence := analysis.GetTransactionSequence(globalState, globalState.WorldState.Constraints)
-	if transactionSequence == nil{
+	if transactionSequence == nil {
 		// UnsatError
 		return issueArr
 	}
 	issue := &analysis.Issue{
-		Contract: globalState.Environment.ActiveAccount.ContractName,
-		FunctionName: globalState.Environment.ActiveFuncName,
-		Address: globalState.GetCurrentInstruction().Address,
-		Bytecode: globalState.Environment.Code.Bytecode,
-		Title: "Jump to an arbitrary instruction",
-		SWCID: analysis.NewSWCData()["ARBITRARY_JUMP"],
-		Severity: "High",
+		Contract:        globalState.Environment.ActiveAccount.ContractName,
+		FunctionName:    globalState.Environment.ActiveFuncName,
+		Address:         globalState.GetCurrentInstruction().Address,
+		Bytecode:        globalState.Environment.Code.Bytecode,
+		Title:           "Jump to an arbitrary instruction",
+		SWCID:           analysis.NewSWCData()["ARBITRARY_JUMP"],
+		Severity:        "High",
 		DescriptionHead: "The caller can redirect execution to arbitrary bytecode locations.",
 		DescriptionTail: "It is possible to redirect the control flow to arbitrary locations in the code. " +
 			"This may allow an attacker to bypass security controls or manipulate the business logic of the " +
 			"smart contract. Avoid using low-level-operations and assembly to prevent this issue.",
-		GasUsed: []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
+		GasUsed:             []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
 		TransactionSequence: transactionSequence,
 	}
 	issueArr = append(issueArr, issue)

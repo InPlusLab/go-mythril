@@ -52,6 +52,11 @@ func (dm *Exceptions) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Exiting analysis module:", dm.Name)
 	return result
 }
+
+func (dm *Exceptions) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *Exceptions) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	for _, v := range dm.Cache.Elements() {
 		if reflect.TypeOf(v).String() == "map[int]string" {
@@ -93,24 +98,24 @@ func (dm *Exceptions) _analyze_state(globalState *state.GlobalState) []*analysis
 		"is to constrain user inputs or enforce preconditions. Remember to validate inputs from both callers " +
 		"(for instance, via passed arguments) and callees (for instance, via return values)."
 	transactionSequence := analysis.GetTransactionSequence(globalState, globalState.WorldState.Constraints)
-	if transactionSequence == nil{
+	if transactionSequence == nil {
 		// UnsatError
 		fmt.Println("no model found")
-		return make([]*analysis.Issue,0)
+		return make([]*analysis.Issue, 0)
 	}
 	issue := &analysis.Issue{
-		Contract:        globalState.Environment.ActiveAccount.ContractName,
-		FunctionName:    globalState.Environment.ActiveFuncName,
-		Address:         address,
-		SWCID:           analysis.NewSWCData()["ASSERT_VIOLATION"],
-		Title:           "Exception State",
-		Severity:        "Medium",
-		DescriptionHead: "An assertion violation was triggered.",
-		DescriptionTail: descriptionTail,
-		Bytecode:        globalState.Environment.Code.Bytecode,
+		Contract:            globalState.Environment.ActiveAccount.ContractName,
+		FunctionName:        globalState.Environment.ActiveFuncName,
+		Address:             address,
+		SWCID:               analysis.NewSWCData()["ASSERT_VIOLATION"],
+		Title:               "Exception State",
+		Severity:            "Medium",
+		DescriptionHead:     "An assertion violation was triggered.",
+		DescriptionTail:     descriptionTail,
+		Bytecode:            globalState.Environment.Code.Bytecode,
 		TransactionSequence: transactionSequence,
-		GasUsed:        []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
-		SourceLocation: annotations[0].(LastJumpAnnotation).LastJump,
+		GasUsed:             []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
+		SourceLocation:      annotations[0].(LastJumpAnnotation).LastJump,
 	}
 	return []*analysis.Issue{issue}
 }

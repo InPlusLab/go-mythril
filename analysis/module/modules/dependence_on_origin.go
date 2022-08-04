@@ -43,6 +43,11 @@ func (dm *TxOrigin) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Exiting analysis module:", dm.Name)
 	return result
 }
+
+func (dm *TxOrigin) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *TxOrigin) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil
@@ -60,13 +65,16 @@ func (dm *TxOrigin) _analyze_state(globalState *state.GlobalState) []*analysis.I
 
 	if globalState.GetCurrentInstruction().OpCode.Name == "JUMPI" {
 		// In JUMPI prehook
+		fmt.Println("IN jumpi")
 		length := globalState.Mstate.Stack.Length()
 		for _, annotation := range globalState.Mstate.Stack.RawStack[length-2].Annotations.Elements() {
-			if reflect.TypeOf(annotation).String() == "TxOriginAnnotation" {
+			fmt.Println("IN jumpi iteration")
+			if reflect.TypeOf(annotation).String() == "modules.TxOriginAnnotation" {
 				constraints := globalState.WorldState.Constraints.Copy()
-
 				transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
 				if transactionSequence == nil {
+					// UnsatError
+					fmt.Println("unsaterror for getTxSeq")
 					continue
 				}
 				description := "The tx.origin environment variable has been found to influence a control flow decision. " +
@@ -92,6 +100,7 @@ func (dm *TxOrigin) _analyze_state(globalState *state.GlobalState) []*analysis.I
 		}
 	} else {
 		// In ORIGIN posthook
+		fmt.Println("IN origin")
 		length := globalState.Mstate.Stack.Length()
 		globalState.Mstate.Stack.RawStack[length-1].Annotate(TxOriginAnnotation{})
 	}

@@ -47,6 +47,11 @@ func (dm *MultipleSends) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Exiting analysis module:", dm.Name)
 	return result
 }
+
+func (dm *MultipleSends) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *MultipleSends) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil
@@ -75,8 +80,8 @@ func (dm *MultipleSends) _analyze_state(globalState *state.GlobalState) []*analy
 	} else {
 		// RETURN OR STOP
 		for i := 1; i < len(callOffsets); i++ {
-			transactionSequence := analysis.GetTransactionSequence(globalState,globalState.WorldState.Constraints)
-			if transactionSequence == nil{
+			transactionSequence := analysis.GetTransactionSequence(globalState, globalState.WorldState.Constraints)
+			if transactionSequence == nil {
 				// UnsatError
 				continue
 			}
@@ -85,16 +90,16 @@ func (dm *MultipleSends) _analyze_state(globalState *state.GlobalState) []*analy
 				"intentionally by a malicious callee. If possible, refactor the code such that each transaction " +
 				"only executes one external call or make sure that all callees can be trusted (i.e. they’re part of your own codebase)."
 			issue := &analysis.Issue{
-				Contract:        globalState.Environment.ActiveAccount.ContractName,
-				FunctionName:    globalState.Environment.ActiveFuncName,
-				Address:         callOffsets[i],
-				SWCID:           analysis.NewSWCData()["MULTIPLE_SENDS"],
-				Bytecode:        globalState.Environment.Code.Bytecode,
-				Title:           "Multiple Calls in a Single Transaction",
-				Severity:        "Low",
-				DescriptionHead: "Multiple calls are executed in the same transaction.",
-				DescriptionTail: descriptionTail,
-				GasUsed:         []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
+				Contract:            globalState.Environment.ActiveAccount.ContractName,
+				FunctionName:        globalState.Environment.ActiveFuncName,
+				Address:             callOffsets[i],
+				SWCID:               analysis.NewSWCData()["MULTIPLE_SENDS"],
+				Bytecode:            globalState.Environment.Code.Bytecode,
+				Title:               "Multiple Calls in a Single Transaction",
+				Severity:            "Low",
+				DescriptionHead:     "Multiple calls are executed in the same transaction.",
+				DescriptionTail:     descriptionTail,
+				GasUsed:             []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
 				TransactionSequence: transactionSequence,
 			}
 			return []*analysis.Issue{issue}

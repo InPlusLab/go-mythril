@@ -36,14 +36,19 @@ func (dm *ExternalCalls) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Exiting analysis module:", dm.Name)
 	return result
 }
+
+func (dm *ExternalCalls) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *ExternalCalls) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	potentialIssues := dm._analyze_state(globalState)
-	annotation := analysis.GetPotentialIssuesAnnotaion(globalState)
+	annotation := GetPotentialIssuesAnnotaion(globalState)
 	annotation.PotentialIssues = append(annotation.PotentialIssues, potentialIssues...)
 	return nil
 }
 
-func (dm *ExternalCalls) _analyze_state(globalState *state.GlobalState) []*analysis.PotentialIssue {
+func (dm *ExternalCalls) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
 	gas := globalState.Mstate.Stack.RawStack[globalState.Mstate.Stack.Length()-1]
 	to := globalState.Mstate.Stack.RawStack[globalState.Mstate.Stack.Length()-2]
 	address := globalState.GetCurrentInstruction().Address
@@ -55,17 +60,17 @@ func (dm *ExternalCalls) _analyze_state(globalState *state.GlobalState) []*analy
 	tmpCon := constraints.Copy()
 	tmpCon.Add(globalState.WorldState.Constraints.ConstraintList...)
 	transactionSequence := analysis.GetTransactionSequence(globalState, tmpCon)
-	if transactionSequence == nil{
+	if transactionSequence == nil {
 		// UnsatError
 		fmt.Println("[EXTERNAL_CALLS] No model found.")
-		return make([]*analysis.PotentialIssue,0)
+		return make([]*PotentialIssue, 0)
 	}
 	descriptionHead := "A call to a user-supplied address is executed."
 	descriptionTail := "An external message call to an address specified by the caller is executed. Note that " +
 		"the callee account might contain arbitrary code and could re-enter any function " +
 		"within this contract. Reentering the contract in an intermediate state may lead to " +
 		"unexpected behaviour. Make sure that no state modifications are executed after this call and/or reentrancy guards are in place."
-	issue := &analysis.PotentialIssue{
+	issue := &PotentialIssue{
 		Contract:        globalState.Environment.ActiveAccount.ContractName,
 		FunctionName:    globalState.Environment.ActiveFuncName,
 		Address:         address,
@@ -77,5 +82,5 @@ func (dm *ExternalCalls) _analyze_state(globalState *state.GlobalState) []*analy
 		DescriptionTail: descriptionTail,
 		Constraints:     constraints,
 	}
-	return []*analysis.PotentialIssue{issue}
+	return []*PotentialIssue{issue}
 }

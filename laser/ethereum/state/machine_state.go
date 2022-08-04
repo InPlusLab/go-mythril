@@ -73,21 +73,7 @@ func (m *MachineStack) PrintStack() {
 	if len(m.RawStack) == 0 {
 		fmt.Println("PrintStack: null")
 	}
-	//for _, item := range m.RawStack {
-	//	if item.GetAstKind() == z3.NumeralKindAST {
-	//		if item.Annotations.Len()!=0{
-	//			fmt.Println("PrintStack: ", item.Value(), ' ', item.Annotations)
-	//		}else{
-	//			fmt.Println("PrintStack: ", item.Value())
-	//		}
-	//	} else {
-	//		if item.Annotations.Len()!=0{
-	//			fmt.Println("PrintStack: ", item.String(), ' ', item.Annotations)
-	//		}else{
-	//			fmt.Println("PrintStack: ", item.String())
-	//		}
-	//	}
-	//}
+
 	for i := m.Length() - 1; i >= 0; i-- {
 		if m.RawStack[i].GetAstKind() == z3.NumeralKindAST {
 			if m.RawStack[i].Annotations.Len() != 0 {
@@ -119,7 +105,7 @@ type MachineState struct {
 func NewMachineState() *MachineState {
 	stack := NewMachineStack()
 	return &MachineState{
-		GasLimit:   100,
+		GasLimit:   100000,
 		Pc:         0,
 		Stack:      stack,
 		Memory:     NewMemory(),
@@ -152,6 +138,7 @@ func (m *MachineState) CalculateMemoryGas(start int, size int) int {
 
 func (m *MachineState) CheckGas() {
 	if m.MinGasUsed > m.GasLimit {
+		fmt.Println(m.MinGasUsed, m.GasLimit)
 		panic("OutOfGasException-Mstate-CheckGas")
 	}
 }

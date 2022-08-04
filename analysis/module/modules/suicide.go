@@ -41,6 +41,10 @@ func (dm *AccidentallyKillable) Execute(target *state.GlobalState) []*analysis.I
 	return result
 }
 
+func (dm *AccidentallyKillable) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *AccidentallyKillable) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil
@@ -62,12 +66,12 @@ func (dm *AccidentallyKillable) _analyze_state(globalState *state.GlobalState) [
 	descriptionHead := "Any sender can cause the contract to self-destruct."
 	constraints := state.NewConstraints()
 	actors := transaction.NewActors(globalState.Z3ctx)
-	attackerV, _ := new(big.Int).SetString(actors.Attacker,16)
-	for _, tx := range globalState.WorldState.TransactionSequence{
+	attackerV, _ := new(big.Int).SetString(actors.Attacker, 16)
+	for _, tx := range globalState.WorldState.TransactionSequence {
 		switch tx.(type) {
-			case *state.MessageCallTransaction:
-				constraints.Add( (tx.GetCaller().Eq( globalState.Z3ctx.NewBitvecVal(attackerV,256))).And(
-					tx.GetCaller().Eq(tx.GetOrigin()) ) )
+		case *state.MessageCallTransaction:
+			constraints.Add((tx.GetCaller().Eq(globalState.Z3ctx.NewBitvecVal(attackerV, 256))).And(
+				tx.GetCaller().Eq(tx.GetOrigin())))
 		}
 	}
 
@@ -76,21 +80,21 @@ func (dm *AccidentallyKillable) _analyze_state(globalState *state.GlobalState) [
 
 	tmpCon := globalState.WorldState.Constraints.Copy()
 	tmpCon.Add(constraints.ConstraintList...)
-	tmpCon.Add( to.Eq(globalState.Z3ctx.NewBitvecVal(attackerV,256)) )
+	tmpCon.Add(to.Eq(globalState.Z3ctx.NewBitvecVal(attackerV, 256)))
 	transactionSequence = analysis.GetTransactionSequence(globalState, tmpCon)
-	if transactionSequence == nil{
+	if transactionSequence == nil {
 		tmpCon2 := globalState.WorldState.Constraints.Copy()
 		tmpCon2.Add(constraints.ConstraintList...)
 		transactionSequence = analysis.GetTransactionSequence(globalState, tmpCon2)
-		if transactionSequence == nil{
+		if transactionSequence == nil {
 			fmt.Println("No model found")
 			return make([]*analysis.Issue, 0)
-		}else{
+		} else {
 			descriptionTail = "Any sender can trigger execution of the SELFDESTRUCT instruction to destroy this " +
 				"contract account. Review the transaction trace generated for this issue and make sure that " +
 				"appropriate security controls are in place to prevent unrestricted access."
 		}
-	}else{
+	} else {
 		descriptionTail = "Any sender can trigger execution of the SELFDESTRUCT instruction to destroy this " +
 			"contract account and withdraw its balance to an arbitrary address. Review the transaction trace " +
 			"generated for this issue and make sure that appropriate security controls are in place to prevent " +
@@ -98,17 +102,17 @@ func (dm *AccidentallyKillable) _analyze_state(globalState *state.GlobalState) [
 	}
 
 	issue := &analysis.Issue{
-		Contract: globalState.Environment.ActiveAccount.ContractName,
-		FunctionName: globalState.Environment.ActiveFuncName,
-		Address: instruction.Address,
-		SWCID: analysis.NewSWCData()["UNPROTECTED_SELFDESTRUCT"],
-		Bytecode: globalState.Environment.Code.Bytecode,
-		Title: "Unprotected Selfdestruct",
-		Severity: "High",
-		DescriptionHead: descriptionHead,
-		DescriptionTail: descriptionTail,
+		Contract:            globalState.Environment.ActiveAccount.ContractName,
+		FunctionName:        globalState.Environment.ActiveFuncName,
+		Address:             instruction.Address,
+		SWCID:               analysis.NewSWCData()["UNPROTECTED_SELFDESTRUCT"],
+		Bytecode:            globalState.Environment.Code.Bytecode,
+		Title:               "Unprotected Selfdestruct",
+		Severity:            "High",
+		DescriptionHead:     descriptionHead,
+		DescriptionTail:     descriptionTail,
 		TransactionSequence: transactionSequence,
-		GasUsed: []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
+		GasUsed:             []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
 	}
 	issueArr := []*analysis.Issue{issue}
 	return issueArr

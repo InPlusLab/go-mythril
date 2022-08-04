@@ -34,8 +34,8 @@ func GetTransactionSequence(globalState *state.GlobalState, constraints *state.C
 	minPriceDict := make(map[string]int)
 	ctx := globalState.Z3ctx
 
-	for address, _ := range *initialAccounts {
-		minPriceDict[strconv.FormatInt(address, 10)] = model.Eval(
+	for address, _ := range initialAccounts {
+		minPriceDict[address] = model.Eval(
 			initialWorldState.StartingBalances.GetItem(ctx.NewBitvecVal(address, 256)).AsAST(), true).Int()
 	}
 	concreteInitialState := _get_concrete_state(initialAccounts, &minPriceDict)
@@ -54,16 +54,16 @@ func GetTransactionSequence(globalState *state.GlobalState, constraints *state.C
 	return steps
 }
 
-func _get_concrete_state(initialAccounts *map[int64]*state.Account, minPriceDict *map[string]int) *map[string]*map[string]string {
+func _get_concrete_state(initialAccounts map[string]*state.Account, minPriceDict *map[string]int) *map[string]*map[string]string {
 	accounts := make(map[string]*map[string]string)
-	for address, _ := range *initialAccounts {
+	for address, _ := range initialAccounts {
 		data := make(map[string]string)
 		// data["nonce"] = strconv.Itoa( account.Nonce )
 		// data["code"] = string(account.Code.Bytecode)
 		// TODO: storage 2 str ?
 		// data["storage"] = account.Storage
 		// data["balance"] = hex(minPriceDict["address"])
-		accounts[strconv.FormatInt(address, 10)] = &data
+		accounts[address] = &data
 	}
 	return &accounts
 }
@@ -103,7 +103,7 @@ func _set_minimisation_constraints(txSeq []state.BaseTransaction, constraints *s
 
 		constraints.Add(ctx.NewBitvecVal(tmpValue, 256).BvUGe(worldState.StartingBalances.GetItem(tx.GetCaller())))
 	}
-	for _, account := range *worldState.Accounts {
+	for _, account := range worldState.Accounts {
 		// Lazy way to prevent overflows and to ensure "reasonable" balances
 		// Each account starts with less than 100 ETH
 		constraints.Add(ctx.NewBitvecVal(tmpValue, 256).BvUGe(worldState.StartingBalances.GetItem(account.Address)))

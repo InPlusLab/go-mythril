@@ -1,12 +1,13 @@
 package state
 
 import (
+	"go-mythril/disassembler"
 	"go-mythril/laser/smt/z3"
-	"strconv"
 )
 
 type WorldState struct {
-	Accounts            *map[int64]*Account
+	// the key of Accounts is decimal
+	Accounts            map[string]*Account
 	Balances            *z3.Array
 	StartingBalances    *z3.Array
 	Constraints         *Constraints
@@ -14,9 +15,9 @@ type WorldState struct {
 }
 
 func NewWordState(ctx *z3.Context) *WorldState {
-	accounts := make(map[int64]*Account)
+	accounts := make(map[string]*Account)
 	return &WorldState{
-		Accounts:            &accounts,
+		Accounts:            accounts,
 		Balances:            ctx.NewArray("balance", 256, 256),
 		StartingBalances:    ctx.NewArray("balance", 256, 256),
 		Constraints:         NewConstraints(),
@@ -26,7 +27,7 @@ func NewWordState(ctx *z3.Context) *WorldState {
 
 func (ws *WorldState) Copy() *WorldState {
 	var tmp *WorldState
-	for _, acc := range *ws.Accounts {
+	for _, acc := range ws.Accounts {
 		tmp.PutAccount(acc.Copy())
 	}
 	tmp.Balances = ws.Balances
@@ -35,22 +36,19 @@ func (ws *WorldState) Copy() *WorldState {
 	return tmp
 }
 
-func (ws *WorldState) AccountsExistOrLoad(bvValue string) *Account {
-	// Big int here?
-	value, _ := strconv.ParseInt(bvValue, 10, 64)
-	accounts := *ws.Accounts
-	acc, ok := accounts[value]
+func (ws *WorldState) AccountsExistOrLoad(addr *z3.Bitvec) *Account {
+	accounts := ws.Accounts
+	acc, ok := accounts[addr.Value()]
 	if ok {
 		return acc
 	} else {
 		// TODO: find in dynamicLoader
-		return nil
+		return NewAccount(addr, nil, false, disassembler.NewDisasembly(""))
 	}
 }
 
 func (ws *WorldState) PutAccount(acc *Account) {
-	addrV, _ := strconv.ParseInt(acc.Address.Value(), 10, 64)
-	accounts := *ws.Accounts
-	accounts[addrV] = acc
+	accounts := ws.Accounts
+	accounts[acc.Address.Value()] = acc
 	acc.Balances = ws.Balances
 }

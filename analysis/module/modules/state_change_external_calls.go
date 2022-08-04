@@ -25,11 +25,11 @@ type StateChangeCallsAnnotation struct {
 	UserDefinedAddress bool
 }
 
-func NewStateChangeCallsAnnotation( globalState *state.GlobalState, userDefinedAddress bool) StateChangeCallsAnnotation{
+func NewStateChangeCallsAnnotation(globalState *state.GlobalState, userDefinedAddress bool) StateChangeCallsAnnotation {
 	stateList := make([]*state.GlobalState, 0)
 	return StateChangeCallsAnnotation{
-		CallState: globalState,
-		StateChangeStates: stateList,
+		CallState:          globalState,
+		StateChangeStates:  stateList,
 		UserDefinedAddress: userDefinedAddress,
 	}
 }
@@ -43,7 +43,7 @@ func (anno StateChangeCallsAnnotation) PersistOverCalls() bool {
 func (anno StateChangeCallsAnnotation) AppendState(globalState *state.GlobalState) {
 	anno.StateChangeStates = append(anno.StateChangeStates, globalState)
 }
-func (anno StateChangeCallsAnnotation) GetIssue(globalState *state.GlobalState) *analysis.PotentialIssue {
+func (anno StateChangeCallsAnnotation) GetIssue(globalState *state.GlobalState) *PotentialIssue {
 	if len(anno.StateChangeStates) == 0 {
 		return nil
 	}
@@ -68,7 +68,7 @@ func (anno StateChangeCallsAnnotation) GetIssue(globalState *state.GlobalState) 
 	}
 	constraints.Add(globalState.WorldState.Constraints.ConstraintList...)
 	transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
-	if transactionSequence == nil{
+	if transactionSequence == nil {
 		// UnsatError
 		return nil
 	}
@@ -82,7 +82,7 @@ func (anno StateChangeCallsAnnotation) GetIssue(globalState *state.GlobalState) 
 	descriptionTail := "The contract account state is accessed after an external call to a " + addressType + " address." +
 		"To prevent reentrancy issues, consider accessing the state only before the call, especially if the callee is untrusted. " +
 		"Alternatively, a reentrancy lock can be used to prevent untrusted callees from re-entering the contract in an intermediate state."
-	return &analysis.PotentialIssue{
+	return &PotentialIssue{
 		Contract:        globalState.Environment.ActiveAccount.ContractName,
 		FunctionName:    globalState.Environment.ActiveFuncName,
 		Address:         address,
@@ -118,17 +118,22 @@ func (dm *StateChangeAfterCall) Execute(target *state.GlobalState) []*analysis.I
 	fmt.Println("Exiting analysis module:", dm.Name)
 	return result
 }
+
+func (dm *StateChangeAfterCall) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *StateChangeAfterCall) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil
 	}
 	issues := dm._analyze_state(globalState)
-	annotation := analysis.GetPotentialIssuesAnnotaion(globalState)
+	annotation := GetPotentialIssuesAnnotaion(globalState)
 	annotation.PotentialIssues = append(annotation.PotentialIssues, issues...)
 	return nil
 }
 
-func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) []*analysis.PotentialIssue {
+func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
 	annotations := globalState.GetAnnotations(reflect.TypeOf(StateChangeCallsAnnotation{}))
 	opcode := globalState.GetCurrentInstruction().OpCode
 
@@ -136,7 +141,7 @@ func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) [
 	STATE_READ_WRITE_LIST := []string{"SSTORE", "SLOAD", "CREATE", "CREATE2"}
 
 	if len(annotations) == 0 && utils.In(opcode.Name, STATE_READ_WRITE_LIST) {
-		return make([]*analysis.PotentialIssue, 0)
+		return make([]*PotentialIssue, 0)
 	}
 	if utils.In(opcode.Name, STATE_READ_WRITE_LIST) {
 		for _, annotation := range annotations {
@@ -158,7 +163,7 @@ func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) [
 		dm._add_external_call(globalState)
 	}
 	// Check for vulnerabilities
-	vulnerabilities := make([]*analysis.PotentialIssue, 0)
+	vulnerabilities := make([]*PotentialIssue, 0)
 	for _, annotation := range annotations {
 		if len(annotation.(StateChangeCallsAnnotation).StateChangeStates) == 0 {
 			continue
@@ -179,19 +184,19 @@ func (dm *StateChangeAfterCall) _add_external_call(globalState *state.GlobalStat
 
 	constraints := globalState.WorldState.Constraints.Copy()
 	tmpCon := globalState.WorldState.Constraints.Copy()
-	tmpCon.Add( gas.BvUGt(ctx.NewBitvecVal(2300,256)),
-		(to.BvSGt(ctx.NewBitvecVal(16,256))).Or(to.Eq(ctx.NewBitvecVal(0,256))))
-	_, sat := state.GetModel(tmpCon, make([]*z3.Bool,0), make([]*z3.Bool,0), true, ctx)
-	if !sat{
+	tmpCon.Add(gas.BvUGt(ctx.NewBitvecVal(2300, 256)),
+		(to.BvSGt(ctx.NewBitvecVal(16, 256))).Or(to.Eq(ctx.NewBitvecVal(0, 256))))
+	_, sat := state.GetModel(tmpCon, make([]*z3.Bool, 0), make([]*z3.Bool, 0), true, ctx)
+	if !sat {
 		return
 	}
 	// Check whether we can also set the callee address
 	tmpVal, _ := new(big.Int).SetString("DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF", 16)
 	constraints.Add(to.Eq(ctx.NewBitvecVal(tmpVal, 256)))
-	_, sat2 := state.GetModel(constraints,make([]*z3.Bool,0), make([]*z3.Bool,0),true, ctx )
+	_, sat2 := state.GetModel(constraints, make([]*z3.Bool, 0), make([]*z3.Bool, 0), true, ctx)
 	if sat2 {
 		globalState.Annotate(NewStateChangeCallsAnnotation(globalState, true))
-	}else{
+	} else {
 		globalState.Annotate(NewStateChangeCallsAnnotation(globalState, false))
 	}
 }
@@ -202,11 +207,11 @@ func (dm *StateChangeAfterCall) _balance_change(value *z3.Bitvec, globalState *s
 		return v > 0
 	} else {
 		constraints := globalState.WorldState.Constraints.Copy()
-		constraints.Add( value.BvSGt(globalState.Z3ctx.NewBitvecVal(0, 256)) )
-		_, sat := state.GetModel(constraints, make([]*z3.Bool,0), make([]*z3.Bool,0),true, globalState.Z3ctx)
-		if sat{
+		constraints.Add(value.BvSGt(globalState.Z3ctx.NewBitvecVal(0, 256)))
+		_, sat := state.GetModel(constraints, make([]*z3.Bool, 0), make([]*z3.Bool, 0), true, globalState.Z3ctx)
+		if sat {
 			return true
-		}else{
+		} else {
 			return false
 		}
 	}

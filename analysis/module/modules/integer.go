@@ -77,6 +77,10 @@ func (dm *IntegerArithmetics) Execute(target *state.GlobalState) []*analysis.Iss
 	return result
 }
 
+func (dm *IntegerArithmetics) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *IntegerArithmetics) _get_args(state *state.GlobalState) (*z3.Bitvec, *z3.Bitvec) {
 	stack := state.Mstate.Stack
 	op0 := stack.RawStack[stack.Length()-1]
@@ -175,7 +179,7 @@ func (dm *IntegerArithmetics) _handel_sstore(globalState *state.GlobalState) {
 	stateAnnotation := getOverflowUnderflowStateAnnotation(globalState)
 	for _, annotation := range value.Annotations.Elements() {
 		fmt.Println(reflect.TypeOf(annotation).String(), "addAnnoStore")
-		if reflect.TypeOf(annotation).String() == "OverUnderflowAnnotation" {
+		if reflect.TypeOf(annotation).String() == "modules.OverUnderflowAnnotation" {
 			stateAnnotation.OverflowingStateAnnotations.Add(annotation)
 		}
 	}
@@ -203,7 +207,7 @@ func (dm *IntegerArithmetics) _handel_call(globalState *state.GlobalState) {
 	stateAnnotation := getOverflowUnderflowStateAnnotation(globalState)
 	for _, annotation := range value.Annotations.Elements() {
 		fmt.Println(reflect.TypeOf(annotation).String(), "addAnnoCall")
-		if reflect.TypeOf(annotation).String() == "OverUnderflowAnnotation" {
+		if reflect.TypeOf(annotation).String() == "modules.OverUnderflowAnnotation" {
 			stateAnnotation.OverflowingStateAnnotations.Add(annotation)
 		}
 	}
@@ -221,7 +225,7 @@ func (dm *IntegerArithmetics) _handel_return(globalState *state.GlobalState) {
 	for _, element := range globalState.Mstate.Memory.GetItems(offsetV, offsetV+lengthV) {
 		for _, annotation := range element.Annotations.Elements() {
 			fmt.Println(reflect.TypeOf(annotation).String(), "addAnnoReturn")
-			if reflect.TypeOf(annotation).String() == "OverUnderflowAnnotation" {
+			if reflect.TypeOf(annotation).String() == "modules.OverUnderflowAnnotation" {
 				stateAnnotation.OverflowingStateAnnotations.Add(annotation)
 			}
 		}

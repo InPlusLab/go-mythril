@@ -39,6 +39,11 @@ func (dm *UserAssertions) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Exiting analysis module:", dm.Name)
 	return result
 }
+
+func (dm *UserAssertions) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *UserAssertions) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	issues := dm._analyze_state(globalState)
 	for _, issue := range issues {
@@ -80,7 +85,7 @@ func (dm *UserAssertions) _analyze_state(globalState *state.GlobalState) []*anal
 		}
 	}
 	transactionSequence := analysis.GetTransactionSequence(globalState, globalState.WorldState.Constraints)
-	if transactionSequence == nil{
+	if transactionSequence == nil {
 		// UnsatError
 		fmt.Println("no model found")
 		return make([]*analysis.Issue, 0)
@@ -94,17 +99,17 @@ func (dm *UserAssertions) _analyze_state(globalState *state.GlobalState) []*anal
 	fmt.Println("MythX assertion emitted:" + descriptionTail)
 	address := globalState.GetCurrentInstruction().Address
 	issue := &analysis.Issue{
-		Contract:        globalState.Environment.ActiveAccount.ContractName,
-		FunctionName:    globalState.Environment.ActiveFuncName,
-		Address:         address,
-		SWCID:           analysis.NewSWCData()["ASSERT_VIOLATION"],
-		Title:           "Exception State",
-		Severity:        "Medium",
-		DescriptionHead: "A user-provided assertion failed.",
-		DescriptionTail: descriptionTail,
-		Bytecode:        globalState.Environment.Code.Bytecode,
+		Contract:            globalState.Environment.ActiveAccount.ContractName,
+		FunctionName:        globalState.Environment.ActiveFuncName,
+		Address:             address,
+		SWCID:               analysis.NewSWCData()["ASSERT_VIOLATION"],
+		Title:               "Exception State",
+		Severity:            "Medium",
+		DescriptionHead:     "A user-provided assertion failed.",
+		DescriptionTail:     descriptionTail,
+		Bytecode:            globalState.Environment.Code.Bytecode,
 		TransactionSequence: transactionSequence,
-		GasUsed: []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
+		GasUsed:             []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
 	}
 	return []*analysis.Issue{issue}
 }

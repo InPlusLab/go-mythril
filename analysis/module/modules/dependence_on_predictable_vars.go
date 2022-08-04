@@ -28,6 +28,9 @@ type OldBlockNumberUsedAnnotation struct {
 	// Symbol annotation used if a variable is initialized from a predictable environment variable.
 }
 
+// Only used here
+var IsPreHook bool
+
 func (anno OldBlockNumberUsedAnnotation) PersistToWorldState() bool {
 	return false
 }
@@ -57,6 +60,11 @@ func (dm *PredictableVariables) Execute(target *state.GlobalState) []*analysis.I
 	fmt.Println("Exiting analysis module:", dm.Name)
 	return result
 }
+
+func (dm *PredictableVariables) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *PredictableVariables) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil
@@ -73,14 +81,13 @@ func (dm *PredictableVariables) _analyze_state(globalState *state.GlobalState) [
 	issues := make([]*analysis.Issue, 0)
 
 	// TODO: isPrehook() ?
-	isPrehook := true
-	if isPrehook {
+	if IsPreHook {
 		opcode := globalState.GetCurrentInstruction().OpCode
 		length := globalState.Mstate.Stack.Length()
 		if opcode.Name == "JUMPI" {
 			// Look for predictable state variables in jump condition
 			for _, annotation := range globalState.Mstate.Stack.RawStack[length-2].Annotations.Elements() {
-				if reflect.TypeOf(annotation).String() == "PredictableValueAnnotation" {
+				if reflect.TypeOf(annotation).String() == "modules.PredictableValueAnnotation" {
 					constraints := globalState.WorldState.Constraints
 
 					transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
@@ -146,7 +153,7 @@ func (dm *PredictableVariables) _analyze_state(globalState *state.GlobalState) [
 		} else {
 			// Always create an annotation when COINBASE, GASLIMIT, TIMESTAMP or NUMBER is executed.
 			globalState.Mstate.Stack.RawStack[length-1].Annotate(PredictableValueAnnotation{
-				Operation: "The blokc " + opcode.Name + " environment variable",
+				Operation: "The block " + opcode.Name + " environment variable",
 			})
 		}
 	}
