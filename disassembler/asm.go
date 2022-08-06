@@ -2,7 +2,6 @@ package disassembler
 
 import (
 	"encoding/hex"
-	"fmt"
 	"go-mythril/support"
 	"strconv"
 	"strings"
@@ -44,7 +43,7 @@ func disassemble(bytecode []byte) []*EvmInstruction {
 			address += int(value)
 		}
 		// For debug
-		fmt.Println(currentInstr)
+		//fmt.Println(currentInstr)
 		ret = append(ret, currentInstr)
 		address += 1
 	}

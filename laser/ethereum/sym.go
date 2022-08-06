@@ -26,6 +26,8 @@ type LaserEVM struct {
 	BeginCh     chan int
 	EndCh       chan int
 	GofuncCount int
+	// Analysis
+	Loader *module.ModuleLoader
 }
 
 func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, moduleLoader *module.ModuleLoader) *LaserEVM {
@@ -65,6 +67,7 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		BeginCh:     make(chan int),
 		EndCh:       make(chan int),
 		GofuncCount: 4,
+		Loader:      moduleLoader,
 	}
 	return &evm
 }
@@ -102,7 +105,6 @@ func (evm *LaserEVM) NormalSymExec(CreationCode string) {
 
 func (evm *LaserEVM) SymExec(CreationCode string) {
 	fmt.Println("Symbolic Executing: ", CreationCode)
-
 	// TOOD: actually creation code is not for base tx, but for creation tx, just for test here
 	tx := state.NewMessageCallTransaction(CreationCode)
 	globalState := tx.InitialGlobalState()
@@ -128,7 +130,6 @@ LOOP:
 			}
 		}
 	}
-
 	fmt.Println("Finish", len(evm.WorkList))
 }
 
@@ -194,9 +195,24 @@ func (evm *LaserEVM) Run(id int) {
 			evm.WorkList <- newState
 		}
 		fmt.Println(id, "done", globalState, opcode)
-
+		fmt.Println("======================================================")
+		if opcode == "STOP" || opcode == "RETURN" {
+			modules.CheckPotentialIssues(globalState)
+			issues := evm.Loader.Modules[3].(*modules.ExternalCalls).Issues
+			for _, issue := range issues {
+				fmt.Println("ContractName:", issue.Contract)
+				fmt.Println("FunctionName:", issue.FunctionName)
+				fmt.Println("Title:", issue.Title)
+				fmt.Println("SWCID:", issue.SWCID)
+				fmt.Println("Address:", issue.Address)
+				fmt.Println("Severity", issue.Severity)
+			}
+			// TODO: a better way for exiting
+			panic("we have already reached the end of code!!!")
+		}
 		// TODO not good for sleep
 		time.Sleep(time.Second)
 		evm.EndCh <- id
+
 	}
 }
