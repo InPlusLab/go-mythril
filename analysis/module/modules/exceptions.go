@@ -53,8 +53,8 @@ func (dm *Exceptions) Execute(target *state.GlobalState) []*analysis.Issue {
 	return result
 }
 
-func (dm *Exceptions) GetIssues() []*analysis.Issue {
-	return dm.Issues
+func (dm *Exceptions) AddIssue(issue *analysis.Issue) {
+	dm.Issues = append(dm.Issues, issue)
 }
 
 func (dm *Exceptions) _execute(globalState *state.GlobalState) []*analysis.Issue {

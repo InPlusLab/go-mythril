@@ -61,8 +61,8 @@ func (dm *UncheckedRetval) Execute(target *state.GlobalState) []*analysis.Issue 
 	return result
 }
 
-func (dm *UncheckedRetval) GetIssues() []*analysis.Issue {
-	return dm.Issues
+func (dm *UncheckedRetval) AddIssue(issue *analysis.Issue) {
+	dm.Issues = append(dm.Issues, issue)
 }
 
 func (dm *UncheckedRetval) _execute(globalState *state.GlobalState) []*analysis.Issue {

@@ -48,8 +48,8 @@ func (dm *MultipleSends) Execute(target *state.GlobalState) []*analysis.Issue {
 	return result
 }
 
-func (dm *MultipleSends) GetIssues() []*analysis.Issue {
-	return dm.Issues
+func (dm *MultipleSends) AddIssue(issue *analysis.Issue) {
+	dm.Issues = append(dm.Issues, issue)
 }
 
 func (dm *MultipleSends) _execute(globalState *state.GlobalState) []*analysis.Issue {

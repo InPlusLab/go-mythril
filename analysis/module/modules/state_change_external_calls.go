@@ -119,8 +119,8 @@ func (dm *StateChangeAfterCall) Execute(target *state.GlobalState) []*analysis.I
 	return result
 }
 
-func (dm *StateChangeAfterCall) GetIssues() []*analysis.Issue {
-	return dm.Issues
+func (dm *StateChangeAfterCall) AddIssue(issue *analysis.Issue) {
+	dm.Issues = append(dm.Issues, issue)
 }
 
 func (dm *StateChangeAfterCall) _execute(globalState *state.GlobalState) []*analysis.Issue {

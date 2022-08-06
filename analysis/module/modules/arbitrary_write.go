@@ -38,8 +38,8 @@ func (dm *ArbitraryStorage) Execute(target *state.GlobalState) []*analysis.Issue
 	return result
 }
 
-func (dm *ArbitraryStorage) GetIssues() []*analysis.Issue {
-	return dm.Issues
+func (dm *ArbitraryStorage) AddIssue(issue *analysis.Issue) {
+	dm.Issues = append(dm.Issues, issue)
 }
 
 func (dm *ArbitraryStorage) _execute(globalState *state.GlobalState) []*analysis.Issue {

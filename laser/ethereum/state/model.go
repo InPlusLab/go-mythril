@@ -29,9 +29,10 @@ func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool
 	}
 	for _, constraint := range constraints.ConstraintList {
 		// TODO: constraint == nil
-		if constraint.Annotations != nil {
-			s.Assert(constraint.AsAST())
-		}
+		s.Assert(constraint.AsAST())
+		//if constraint.Annotations != nil {
+		//	s.Assert(constraint.AsAST())
+		//}
 	}
 	for _, e := range minimize {
 		s.Minimize(e.AsAST())

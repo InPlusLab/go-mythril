@@ -41,8 +41,8 @@ func (dm *ArbitraryDelegateCall) Execute(target *state.GlobalState) []*analysis.
 	return result
 }
 
-func (dm *ArbitraryDelegateCall) GetIssues() []*analysis.Issue {
-	return dm.Issues
+func (dm *ArbitraryDelegateCall) AddIssue(issue *analysis.Issue) {
+	dm.Issues = append(dm.Issues, issue)
 }
 
 func (dm *ArbitraryDelegateCall) _execute(globalState *state.GlobalState) []*analysis.Issue {

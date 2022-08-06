@@ -44,8 +44,8 @@ func (dm *TxOrigin) Execute(target *state.GlobalState) []*analysis.Issue {
 	return result
 }
 
-func (dm *TxOrigin) GetIssues() []*analysis.Issue {
-	return dm.Issues
+func (dm *TxOrigin) AddIssue(issue *analysis.Issue) {
+	dm.Issues = append(dm.Issues, issue)
 }
 
 func (dm *TxOrigin) _execute(globalState *state.GlobalState) []*analysis.Issue {

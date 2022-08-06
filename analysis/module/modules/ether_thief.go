@@ -41,8 +41,8 @@ func (dm *EtherThief) Execute(target *state.GlobalState) []*analysis.Issue {
 	return result
 }
 
-func (dm *EtherThief) GetIssues() []*analysis.Issue {
-	return dm.Issues
+func (dm *EtherThief) AddIssue(issue *analysis.Issue) {
+	dm.Issues = append(dm.Issues, issue)
 }
 
 func (dm *EtherThief) _execute(globalState *state.GlobalState) []*analysis.Issue {

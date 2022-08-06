@@ -30,11 +30,12 @@ func (c *Constraints) IsPossible() bool {
 
 func (c *Constraints) Add(constraints ...*z3.Bool) bool {
 	for _, constraint := range constraints {
+		//fmt.Println("addConstraints:", constraint.AsAST().String())
 		c.ConstraintList = append(c.ConstraintList, constraint)
 	}
 	return true
 }
 
-func (c *Constraints) Length() int{
+func (c *Constraints) Length() int {
 	return len(c.ConstraintList)
 }

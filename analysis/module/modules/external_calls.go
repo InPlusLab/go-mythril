@@ -37,14 +37,17 @@ func (dm *ExternalCalls) Execute(target *state.GlobalState) []*analysis.Issue {
 	return result
 }
 
-func (dm *ExternalCalls) GetIssues() []*analysis.Issue {
-	return dm.Issues
+func (dm *ExternalCalls) AddIssue(issue *analysis.Issue) {
+	dm.Issues = append(dm.Issues, issue)
 }
 
 func (dm *ExternalCalls) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	potentialIssues := dm._analyze_state(globalState)
+	fmt.Println("potentialIssues:", potentialIssues)
 	annotation := GetPotentialIssuesAnnotaion(globalState)
 	annotation.PotentialIssues = append(annotation.PotentialIssues, potentialIssues...)
+	fmt.Println("annotation:", annotation)
+	fmt.Println("gs annotation:", globalState.Annotations)
 	return nil
 }
 
@@ -59,10 +62,30 @@ func (dm *ExternalCalls) _analyze_state(globalState *state.GlobalState) []*Poten
 
 	tmpCon := constraints.Copy()
 	tmpCon.Add(globalState.WorldState.Constraints.ConstraintList...)
+	fmt.Println("Constraints in externalCalls: ")
+	fmt.Println(tmpCon.ConstraintList)
+	for _, con := range tmpCon.ConstraintList {
+		fmt.Println(con.AsAST().String())
+	}
+
 	transactionSequence := analysis.GetTransactionSequence(globalState, tmpCon)
 	if transactionSequence == nil {
 		// UnsatError
 		fmt.Println("[EXTERNAL_CALLS] No model found.")
+		//issue := &PotentialIssue{
+		//	Contract:        globalState.Environment.ActiveAccount.ContractName,
+		//	FunctionName:    globalState.Environment.ActiveFuncName,
+		//	Address:         address,
+		//	SWCID:           analysis.NewSWCData()["REENTRANCY"],
+		//	Title:           "External Call To User-Supplied Address",
+		//	Bytecode:        globalState.Environment.Code.Bytecode,
+		//	Severity:        "Low",
+		//	DescriptionHead: "descriptionHead",
+		//	DescriptionTail: "descriptionTail",
+		//	Constraints:     constraints,
+		//	Detector: dm,
+		//}
+		//return []*PotentialIssue{issue}
 		return make([]*PotentialIssue, 0)
 	}
 	descriptionHead := "A call to a user-supplied address is executed."
@@ -81,6 +104,8 @@ func (dm *ExternalCalls) _analyze_state(globalState *state.GlobalState) []*Poten
 		DescriptionHead: descriptionHead,
 		DescriptionTail: descriptionTail,
 		Constraints:     constraints,
+		Detector:        dm,
 	}
+	fmt.Println("detected!")
 	return []*PotentialIssue{issue}
 }

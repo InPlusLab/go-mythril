@@ -61,8 +61,8 @@ func (dm *PredictableVariables) Execute(target *state.GlobalState) []*analysis.I
 	return result
 }
 
-func (dm *PredictableVariables) GetIssues() []*analysis.Issue {
-	return dm.Issues
+func (dm *PredictableVariables) AddIssue(issue *analysis.Issue) {
+	dm.Issues = append(dm.Issues, issue)
 }
 
 func (dm *PredictableVariables) _execute(globalState *state.GlobalState) []*analysis.Issue {

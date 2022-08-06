@@ -40,8 +40,8 @@ func (dm *UserAssertions) Execute(target *state.GlobalState) []*analysis.Issue {
 	return result
 }
 
-func (dm *UserAssertions) GetIssues() []*analysis.Issue {
-	return dm.Issues
+func (dm *UserAssertions) AddIssue(issue *analysis.Issue) {
+	dm.Issues = append(dm.Issues, issue)
 }
 
 func (dm *UserAssertions) _execute(globalState *state.GlobalState) []*analysis.Issue {

@@ -38,8 +38,8 @@ func (dm *ArbitraryJump) Execute(target *state.GlobalState) []*analysis.Issue {
 	return result
 }
 
-func (dm *ArbitraryJump) GetIssues() []*analysis.Issue {
-	return dm.Issues
+func (dm *ArbitraryJump) AddIssue(issue *analysis.Issue) {
+	dm.Issues = append(dm.Issues, issue)
 }
 
 func (dm *ArbitraryJump) _execute(globalState *state.GlobalState) []*analysis.Issue {

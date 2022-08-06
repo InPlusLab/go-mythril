@@ -85,11 +85,15 @@ func (evm *LaserEVM) NormalSymExec(CreationCode string) {
 		evm.ManageCFG(opcode, newStates)
 
 		for _, newState := range newStates {
+			//if opcode == "STOP" || opcode == "RETURN" {
+			//	modules.CheckPotentialIssues(newState)
+			//}
 			evm.WorkList <- newState
 		}
 		fmt.Println(id, "done", globalState, opcode)
 		fmt.Println("======================================================")
 		if opcode == "STOP" || opcode == "RETURN" {
+			modules.CheckPotentialIssues(globalState)
 			break
 		}
 		id++

@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"fmt"
 	"go-mythril/analysis"
 	"go-mythril/laser/ethereum/state"
 	"reflect"
@@ -26,8 +27,8 @@ type PotentialIssuesAnnotation struct {
 	PotentialIssues []*PotentialIssue
 }
 
-func NewPotentialIssuesAnnotation() PotentialIssuesAnnotation {
-	return PotentialIssuesAnnotation{
+func NewPotentialIssuesAnnotation() *PotentialIssuesAnnotation {
+	return &PotentialIssuesAnnotation{
 		PotentialIssues: make([]*PotentialIssue, 0),
 	}
 }
@@ -38,10 +39,10 @@ func (anno PotentialIssuesAnnotation) PersistOverCalls() bool {
 	return false
 }
 
-func GetPotentialIssuesAnnotaion(globalState *state.GlobalState) PotentialIssuesAnnotation {
+func GetPotentialIssuesAnnotaion(globalState *state.GlobalState) *PotentialIssuesAnnotation {
 	for _, annotation := range globalState.Annotations {
-		if reflect.TypeOf(annotation).String() == "PotentialIssuesAnnotation" {
-			return annotation.(PotentialIssuesAnnotation)
+		if reflect.TypeOf(annotation).String() == "*modules.PotentialIssuesAnnotation" {
+			return annotation.(*PotentialIssuesAnnotation)
 		}
 	}
 	annotation := NewPotentialIssuesAnnotation()
@@ -61,6 +62,7 @@ func CheckPotentialIssues(globalState *state.GlobalState) {
 		tmpConstraint.Add(potentialIssue.Constraints.ConstraintList...)
 		transactionSequence := analysis.GetTransactionSequence(globalState, tmpConstraint)
 		if transactionSequence == nil {
+			fmt.Println("unsatEror")
 			// UnsatError
 			unsatPotentialIssues = append(unsatPotentialIssues, potentialIssue)
 			continue
@@ -79,8 +81,7 @@ func CheckPotentialIssues(globalState *state.GlobalState) {
 			DescriptionTail:     potentialIssue.DescriptionTail,
 			TransactionSequence: transactionSequence,
 		}
-		issues := potentialIssue.Detector.GetIssues()
-		issues = append(issues, issue)
+		potentialIssue.Detector.AddIssue(issue)
 	}
 	annotation.PotentialIssues = unsatPotentialIssues
 }

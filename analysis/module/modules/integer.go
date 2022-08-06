@@ -77,8 +77,8 @@ func (dm *IntegerArithmetics) Execute(target *state.GlobalState) []*analysis.Iss
 	return result
 }
 
-func (dm *IntegerArithmetics) GetIssues() []*analysis.Issue {
-	return dm.Issues
+func (dm *IntegerArithmetics) AddIssue(issue *analysis.Issue) {
+	dm.Issues = append(dm.Issues, issue)
 }
 
 func (dm *IntegerArithmetics) _get_args(state *state.GlobalState) (*z3.Bitvec, *z3.Bitvec) {
