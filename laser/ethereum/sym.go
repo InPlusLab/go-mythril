@@ -9,10 +9,14 @@ import (
 	"go-mythril/laser/smt/z3"
 	"go-mythril/support"
 	"go-mythril/utils"
-	"time"
 )
 
 type moduleExecFunc func(globalState *state.GlobalState) []*analysis.Issue
+
+type Signal struct {
+	Id       int
+	Finished bool
+}
 
 type LaserEVM struct {
 	ExecutionTimeout int
@@ -23,8 +27,10 @@ type LaserEVM struct {
 	InstrPreHook  *map[string][]moduleExecFunc
 	InstrPostHook *map[string][]moduleExecFunc
 	// Parallal
-	BeginCh     chan int
-	EndCh       chan int
+	// BeginCh     chan int
+	// EndCh       chan int
+	SignalCh chan Signal
+
 	GofuncCount int
 	// Analysis
 	Loader *module.ModuleLoader
@@ -64,19 +70,20 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		InstrPreHook:  &preHook,
 		InstrPostHook: &postHook,
 
-		BeginCh:     make(chan int),
-		EndCh:       make(chan int),
+		// BeginCh:     make(chan int),
+		// EndCh:       make(chan int),
+		SignalCh:    make(chan Signal),
 		GofuncCount: 4,
 		Loader:      moduleLoader,
 	}
 	return &evm
 }
 
-func (evm *LaserEVM) NormalSymExec(CreationCode string) {
+func (evm *LaserEVM) NormalSymExec(CreationCode string, contractName string) {
 	fmt.Println("Symbolic Executing: ", CreationCode)
 	fmt.Println("")
 	//tx := state.NewContractCreationTransaction(CreationCode)
-	tx := state.NewMessageCallTransaction(CreationCode)
+	tx := state.NewMessageCallTransaction(CreationCode, contractName)
 	globalState := tx.InitialGlobalState()
 	evm.WorkList <- globalState
 	id := 0
@@ -103,31 +110,44 @@ func (evm *LaserEVM) NormalSymExec(CreationCode string) {
 	}
 }
 
-func (evm *LaserEVM) SymExec(CreationCode string) {
+func (evm *LaserEVM) SymExec(CreationCode string, contractName string) {
 	fmt.Println("Symbolic Executing: ", CreationCode)
 	// TOOD: actually creation code is not for base tx, but for creation tx, just for test here
-	tx := state.NewMessageCallTransaction(CreationCode)
+	tx := state.NewMessageCallTransaction(CreationCode, contractName)
 	globalState := tx.InitialGlobalState()
 	evm.WorkList <- globalState
 	for i := 0; i < evm.GofuncCount; i++ {
 		go evm.Run(i)
 	}
 	// TODO: not good here
-	beginCount := 0
-	endCount := 0
+	// beginCount := 0
+	// endCount := 0
+	latestSignals := make(map[int]bool)
 LOOP:
 	for {
-		select {
-		case <-evm.BeginCh:
-			beginCount++
-		case <-evm.EndCh:
-			endCount++
-			if endCount == beginCount {
-				fmt.Println("finish", beginCount, endCount)
-				break LOOP
-			} else {
-				fmt.Println("not finish", beginCount, endCount)
+		// select {
+		// case <-evm.BeginCh:
+		// 	beginCount++
+		// case <-evm.EndCh:
+		// 	endCount++
+		// 	if endCount == beginCount {
+		// 		fmt.Println("finish", beginCount, endCount)
+		// 		break LOOP
+		// 	} else {
+		// 		fmt.Println("not finish", beginCount, endCount)
+		// 	}
+		// }
+		//}
+		signal := <-evm.SignalCh
+		latestSignals[signal.Id] = signal.Finished
+		allFinished := true
+		for _, finished := range latestSignals {
+			if !finished {
+				allFinished = false
 			}
+		}
+		if allFinished {
+			break LOOP
 		}
 	}
 	fmt.Println("Finish", len(evm.WorkList))
@@ -186,7 +206,7 @@ func (evm *LaserEVM) Run(id int) {
 	fmt.Println("Run")
 	for {
 		globalState := <-evm.WorkList
-		evm.BeginCh <- id
+		//evm.BeginCh <- id
 		fmt.Println(id, globalState)
 		newStates, opcode := evm.ExecuteState(globalState)
 		evm.ManageCFG(opcode, newStates)
@@ -208,11 +228,16 @@ func (evm *LaserEVM) Run(id int) {
 				fmt.Println("Severity", issue.Severity)
 			}
 			// TODO: a better way for exiting
-			panic("we have already reached the end of code!!!")
+			// panic("we have already reached the end of code!!!")
 		}
 		// TODO not good for sleep
-		time.Sleep(time.Second)
-		evm.EndCh <- id
+		// time.Sleep(100 * time.Millisecond)
+		// evm.EndCh <- id
+		evm.SignalCh <- Signal{
+			Id:       id,
+			Finished: (len(newStates) == 0),
+		}
+		fmt.Println("signal", id, len(newStates) == 0)
 
 	}
 }

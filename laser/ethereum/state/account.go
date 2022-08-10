@@ -16,13 +16,13 @@ type Account struct {
 	Deleted      bool
 }
 
-func NewAccount(addr *z3.Bitvec, balances *z3.Array, concreteStorage bool, code *disassembler.Disasembly) *Account {
+func NewAccount(addr *z3.Bitvec, balances *z3.Array, concreteStorage bool, code *disassembler.Disasembly, contractName string) *Account {
 	return &Account{
 		Address:      addr,
 		Balances:     balances,
 		Storage:      NewStorage(addr, concreteStorage),
 		Code:         code,
-		ContractName: "Origin",
+		ContractName: contractName,
 		Deleted:      false,
 	}
 }

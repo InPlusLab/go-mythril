@@ -232,7 +232,6 @@ func (instr *Instruction) Mutator(globalState *state.GlobalState) []*state.Globa
 	} else if instr.Opcode == "RETURN" {
 		instr.return_(globalState)
 		ret := make([]*state.GlobalState, 0)
-		ret = append(ret, globalState)
 		return ret
 	} else if instr.Opcode == "SELFDESTRUCT" {
 		instr.selfdestruct_(globalState)
@@ -257,7 +256,6 @@ func (instr *Instruction) Mutator(globalState *state.GlobalState) []*state.Globa
 	} else if instr.Opcode == "STOP" {
 		instr.stop_(globalState)
 		ret := make([]*state.GlobalState, 0)
-		ret = append(ret, globalState)
 		return ret
 	} else if instr.Opcode == "CALL" {
 		return instr.call_(globalState)

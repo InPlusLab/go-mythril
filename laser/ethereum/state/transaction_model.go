@@ -47,7 +47,7 @@ type MessageCallTransaction struct {
 	ReturnData    []byte
 }
 
-func NewMessageCallTransaction(code string) *MessageCallTransaction {
+func NewMessageCallTransaction(code string, contractName string) *MessageCallTransaction {
 
 	config := z3.NewConfig()
 	ctx := z3.NewContext(config)
@@ -71,7 +71,7 @@ func NewMessageCallTransaction(code string) *MessageCallTransaction {
 		Code:       txcode,
 		// TODO: For test here.
 		CalleeAccount: NewAccount(ctx.NewBitvecVal(123, 256),
-			ctx.NewArray("balances", 256, 256), false, txcode),
+			ctx.NewArray("balances", 256, 256), false, txcode, contractName),
 		Caller:    ctx.NewBitvecVal(caller, 256),
 		Calldata:  NewConcreteCalldata("txid123", calldataList, ctx),
 		GasPrice:  10,
@@ -176,7 +176,7 @@ type ContractCreationTransaction struct {
 	ReturnData    []byte
 }
 
-func NewContractCreationTransaction(code string) *ContractCreationTransaction {
+func NewContractCreationTransaction(code string, contractName string) *ContractCreationTransaction {
 	config := z3.NewConfig()
 	ctx := z3.NewContext(config)
 	txcode := disassembler.NewDisasembly(code)
@@ -198,7 +198,7 @@ func NewContractCreationTransaction(code string) *ContractCreationTransaction {
 		Code:       txcode,
 		// TODO: For test here.
 		CalleeAccount: NewAccount(ctx.NewBitvecVal(123, 256),
-			ctx.NewArray("balances", 256, 256), true, txcode),
+			ctx.NewArray("balances", 256, 256), true, txcode, contractName),
 		Caller:    ctx.NewBitvecVal(caller, 256),
 		Calldata:  NewConcreteCalldata("txid123", calldataList, ctx),
 		GasPrice:  10,

@@ -43,7 +43,7 @@ func (ws *WorldState) AccountsExistOrLoad(addr *z3.Bitvec) *Account {
 		return acc
 	} else {
 		// TODO: find in dynamicLoader
-		return NewAccount(addr, nil, false, disassembler.NewDisasembly(""))
+		return NewAccount(addr, nil, false, disassembler.NewDisasembly(""), "")
 	}
 }
 

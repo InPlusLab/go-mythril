@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"go-mythril/analysis/module"
-	"go-mythril/analysis/module/modules"
 	"go-mythril/laser/ethereum"
 )
 
@@ -36,17 +35,17 @@ func main() {
 
 	/* code for Reentrancy.sol */
 	reentrancyRuntimeBytecode := "608060405260043610610056576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168062362a951461005b5780632e1a7d4d14610091578063d5d44d80146100be575b600080fd5b61008f600480360381019080803573ffffffffffffffffffffffffffffffffffffffff169060200190929190505050610115565b005b34801561009d57600080fd5b506100bc60048036038101908080359060200190929190505050610164565b005b3480156100ca57600080fd5b506100ff600480360381019080803573ffffffffffffffffffffffffffffffffffffffff169060200190929190505050610232565b6040518082815260200191505060405180910390f35b346000808373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000206000828254019250508190555050565b806000803373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1681526020019081526020016000205410151561022f573373ffffffffffffffffffffffffffffffffffffffff168160405160006040518083038185875af19250505015156101e257600080fd5b806000803373ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff168152602001908152602001600020600082825403925050819055505b50565b600060205280600052604060002060009150905054815600a165627a7a723058207948469cd963b4c9fe220456690d1a527b6ae59eb1ee5876a2b3996ce93dc1e80029"
-	//evm.NormalSymExec(reentrancyRuntimeBytecode)
-	evm.SymExec(reentrancyRuntimeBytecode)
-	issues := LOADER.Modules[3].(*modules.ExternalCalls).Issues
-	for _, issue := range issues {
-		fmt.Println("ContractName:", issue.Contract)
-		fmt.Println("FunctionName:", issue.FunctionName)
-		fmt.Println("Title:", issue.Title)
-		fmt.Println("SWCID:", issue.SWCID)
-		fmt.Println("Address:", issue.Address)
-		fmt.Println("Severity", issue.Severity)
-	}
+	//evm.NormalSymExec(reentrancyRuntimeBytecode, "Reentrancy")
+	evm.SymExec(reentrancyRuntimeBytecode, "Reentrancy")
+	//issues := LOADER.Modules[3].(*modules.ExternalCalls).Issues
+	//for _, issue := range issues {
+	//	fmt.Println("ContractName:", issue.Contract)
+	//	fmt.Println("FunctionName:", issue.FunctionName)
+	//	fmt.Println("Title:", issue.Title)
+	//	fmt.Println("SWCID:", issue.SWCID)
+	//	fmt.Println("Address:", issue.Address)
+	//	fmt.Println("Severity", issue.Severity)
+	//}
 	return
 
 	/*	evm.NormalSymExec("6060320032")
