@@ -1233,9 +1233,9 @@ func (instr *Instruction) timestamp_(globalState *state.GlobalState) []*state.Gl
 	// In EVM, it will push the current time in stack
 	// In mythril, it will push a symbolic bv in stack
 	ret := make([]*state.GlobalState, 0)
-	//globalState.Mstate.Stack.Append(globalState.NewBitvec("timestamp", 256))
+	globalState.Mstate.Stack.Append(globalState.NewBitvec("timestamp", 256))
 	// TODO: for test here
-	globalState.Mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(7, 256))
+	//globalState.Mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(7, 256))
 	ret = append(ret, globalState)
 	return ret
 }
@@ -1396,8 +1396,11 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 
 	jumpAddr, _ := strconv.ParseInt(op0.Value(), 10, 64)
 	zero := ctx.NewBitvecVal(0, 256)
-	negatedCond := condition.Eq(zero).Simplify().IsTrue()
-	positiveCond := condition.Eq(zero).Simplify().IsFalse()
+
+	negated := condition.Eq(zero).Simplify()
+	condi := condition.Eq(zero).Not().Simplify()
+	negatedCond := !negated.IsFalse()
+	positiveCond := !condi.IsFalse()
 
 	// False case
 	if negatedCond {
