@@ -47,8 +47,8 @@ func main() {
 
 	/*	evm.NormalSymExec("6060320032")
 		return*/
-
-	/*	fmt.Println("go mythril-testForGoz3")
+	/*
+		fmt.Println("go mythril-testForGoz3")
 		config := z3.NewConfig()
 		ctx := z3.NewContext(config)
 		config.Close()
@@ -57,15 +57,13 @@ func main() {
 		s := ctx.NewSolver()
 		defer s.Close()
 
-		x := ctx.NewBitvecVal(7, 16)
-		y := ctx.NewBitvecVal(1, 16)
-		z := ctx.NewBitvec("z", 16)
-		fmt.Println(x.Value(), x.BvSize())
-		fmt.Println(y.Value(), y.BvSize())
-		fmt.Println(z.Value(), z.BvSize())
-		fmt.Println(x.BvAdd(y).Value(), x.BvAdd(y).BvSize())
-
-		s.Assert(z.Eq(x.BvAdd(y)).AsAST())
+		zero := ctx.NewBitvecVal(0, 256)
+		timestamp := ctx.NewBitvec("timestamp", 256)
+		z := z3.If(zero.Eq(timestamp), ctx.NewBitvecVal(1, 256), ctx.NewBitvecVal(0, 256))
+		fmt.Println(z)
+		fmt.Println(z.String())
+		fmt.Println(z.Simplify())
+		s.Assert(z.AsAST().Simplify())
 
 		if v := s.Check(); v != z3.True {
 			fmt.Println("Unsolveable")
@@ -76,5 +74,5 @@ func main() {
 		answer := m.Assignments()
 		fmt.Println("solver0's result:")
 		fmt.Println(answer)
-		fmt.Println(z.Value(), z.BvSize())*/
+	*/
 }

@@ -101,7 +101,7 @@ func (evm *LaserEVM) NormalSymExec(CreationCode string, contractName string) {
 			evm.WorkList <- newState
 		}
 		fmt.Println(id, "done", globalState, opcode)
-		fmt.Println("======================================================")
+		fmt.Println("==============================================================================")
 		if opcode == "STOP" || opcode == "RETURN" {
 			modules.CheckPotentialIssues(globalState)
 			break
@@ -215,7 +215,7 @@ func (evm *LaserEVM) Run(id int) {
 			evm.WorkList <- newState
 		}
 		fmt.Println(id, "done", globalState, opcode)
-		fmt.Println("======================================================")
+		fmt.Println("===============================================================================================")
 		if opcode == "STOP" || opcode == "RETURN" {
 			modules.CheckPotentialIssues(globalState)
 			issues := evm.Loader.Modules[3].(*modules.ExternalCalls).Issues

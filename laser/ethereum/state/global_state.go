@@ -71,7 +71,7 @@ func (globalState *GlobalState) CurrentTransaction() BaseTransaction {
 
 func (globalState *GlobalState) NewBitvec(name string, size int) *z3.Bitvec {
 	txId := globalState.CurrentTransaction().GetId()
-	str := txId + name
+	str := txId + "_" + name
 	return globalState.Z3ctx.NewBitvec(str, size)
 }
 

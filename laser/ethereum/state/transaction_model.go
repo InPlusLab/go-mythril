@@ -13,7 +13,7 @@ var nextTransactionId int
 
 func GetNextTransactionId() string {
 	nextTransactionId += 1
-	return string(nextTransactionId)
+	return strconv.Itoa(nextTransactionId)
 }
 
 type BaseTransaction interface {

@@ -72,11 +72,13 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 		if instr.Opcode != "JUMPI" && instr.Opcode != "JUMP" && instr.Opcode != "RETURNSUB" {
 			state.Mstate.Pc++
 		}
+	}
+	instr.ExePostHooks(globalState)
+	for _, state := range result {
 		// For debug
 		state.Mstate.Stack.PrintStack()
 		state.Mstate.Memory.PrintMemory()
 	}
-	instr.ExePostHooks(globalState)
 
 	return result
 }
@@ -1319,7 +1321,7 @@ func (instr *Instruction) sload_(globalState *state.GlobalState) []*state.Global
 	index := mstate.Stack.Pop()
 	// TODO: DynLoader to get the storage ?
 	// caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
-	globalState.Environment.ActiveAccount.Storage.SetItem(index, globalState.Z3ctx.NewBitvecVal(100, 256))
+	globalState.Environment.ActiveAccount.Storage.SetItem(index, globalState.Z3ctx.NewBitvecVal(0, 256))
 
 	mstate.Stack.Append(globalState.Environment.ActiveAccount.Storage.GetItem(index))
 
