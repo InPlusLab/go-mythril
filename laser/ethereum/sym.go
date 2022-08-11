@@ -227,8 +227,6 @@ func (evm *LaserEVM) Run(id int) {
 				fmt.Println("Address:", issue.Address)
 				fmt.Println("Severity", issue.Severity)
 			}
-			// TODO: a better way for exiting
-			// panic("we have already reached the end of code!!!")
 		}
 		// TODO not good for sleep
 		// time.Sleep(100 * time.Millisecond)
