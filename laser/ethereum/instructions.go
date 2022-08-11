@@ -67,9 +67,7 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 
 	instr.ExePreHooks(globalState)
 	result := instr.Mutator(globalState)
-	instr.ExePostHooks(globalState)
-
-	// TODO
+	// has the same function of StateTransition in instructions.go
 	for _, state := range result {
 		if instr.Opcode != "JUMPI" && instr.Opcode != "JUMP" && instr.Opcode != "RETURNSUB" {
 			state.Mstate.Pc++
@@ -78,6 +76,8 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 		state.Mstate.Stack.PrintStack()
 		state.Mstate.Memory.PrintMemory()
 	}
+	instr.ExePostHooks(globalState)
+
 	return result
 }
 

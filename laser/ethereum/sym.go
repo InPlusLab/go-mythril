@@ -49,17 +49,17 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 	//integerDetectionModule := moduleLoader.Modules[0]
 	//preHooksDM := integerDetectionModule.(*modules.IntegerArithmetics).PreHooks
 	//originDetectionModule := moduleLoader.Modules[1]
-	//timestampDetectionModule := moduleLoader.Modules[2]
-	reentrancyDetectionModule := moduleLoader.Modules[3]
+	timestampDetectionModule := moduleLoader.Modules[2]
+	//reentrancyDetectionModule := moduleLoader.Modules[3]
 	//reentrancyDetectionModule := moduleLoader.Modules[4]
-	preHooksDM := reentrancyDetectionModule.(*modules.ExternalCalls).PreHooks
-	// postHooksDM := reentrancyDetectionModule.(*modules.ExternalCalls).PostHooks
+	preHooksDM := timestampDetectionModule.(*modules.PredictableVariables).PreHooks
+	postHooksDM := timestampDetectionModule.(*modules.PredictableVariables).PostHooks
 	for _, op := range preHooksDM {
-		preHook[op] = []moduleExecFunc{reentrancyDetectionModule.Execute}
+		preHook[op] = []moduleExecFunc{timestampDetectionModule.Execute}
 	}
-	//for _, op := range postHooksDM {
-	//	postHook[op] = []moduleExecFunc{reentrancyDetectionModule.Execute}
-	//}
+	for _, op := range postHooksDM {
+		postHook[op] = []moduleExecFunc{timestampDetectionModule.Execute}
+	}
 
 	evm := LaserEVM{
 		ExecutionTimeout: ExecutionTimeout,

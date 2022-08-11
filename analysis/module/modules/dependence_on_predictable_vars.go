@@ -140,6 +140,7 @@ func (dm *PredictableVariables) _analyze_state(globalState *state.GlobalState) [
 			}
 		}
 	} else {
+		// opcode := globalState.GetCurrentInstruction().OpCode
 		opcode := globalState.Environment.Code.InstructionList[globalState.Mstate.Pc-1].OpCode
 		length := globalState.Mstate.Stack.Length()
 		if opcode.Name == "BLOCKHASH" {
@@ -153,7 +154,7 @@ func (dm *PredictableVariables) _analyze_state(globalState *state.GlobalState) [
 		} else {
 			// Always create an annotation when COINBASE, GASLIMIT, TIMESTAMP or NUMBER is executed.
 			globalState.Mstate.Stack.RawStack[length-1].Annotate(PredictableValueAnnotation{
-				Operation: "The block " + opcode.Name + " environment variable",
+				Operation: "The block " + strings.ToLower(opcode.Name) + " environment variable",
 			})
 		}
 	}
