@@ -74,10 +74,11 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 		}
 	}
 	instr.ExePostHooks(globalState)
+	fmt.Println("PC:", globalState.Mstate.Pc)
 	for _, state := range result {
 		// For debug
 		state.Mstate.Stack.PrintStack()
-		state.Mstate.Memory.PrintMemory()
+		//state.Mstate.Memory.PrintMemory()
 	}
 
 	return result
@@ -243,7 +244,6 @@ func (instr *Instruction) Mutator(globalState *state.GlobalState) []*state.Globa
 	} else if instr.Opcode == "REVERT" {
 		instr.revert_(globalState)
 		ret := make([]*state.GlobalState, 0)
-		ret = append(ret, globalState)
 		return ret
 	} else if instr.Opcode == "ASSERTFAIL" {
 		instr.assert_fail_(globalState)
@@ -1411,7 +1411,13 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 		// manually increment PC
 		newState.Mstate.Depth += 1
 		newState.Mstate.Pc += 1
-		newState.WorldState.Constraints.Add(condition.Eq(zero).Simplify())
+		newState.WorldState.Constraints.Add(negated)
+
+		returnData := make(map[int64]*z3.Bitvec)
+		returnData[0] = newState.Z3ctx.NewBitvecVal(0, 256)
+		newState.LastReturnData = &returnData
+
+		fmt.Println("negativeState:", newState)
 		ret = append(ret, newState)
 	} else {
 		fmt.Println("Pruned unreachable states.")
@@ -1433,7 +1439,13 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 
 			newState.Mstate.Pc = index
 			newState.Mstate.Depth += 1
-			newState.WorldState.Constraints.Add(condition.Eq(zero).Not().Simplify())
+			newState.WorldState.Constraints.Add(condi)
+
+			returnData := make(map[int64]*z3.Bitvec)
+			returnData[0] = newState.Z3ctx.NewBitvecVal(1, 256)
+			newState.LastReturnData = &returnData
+
+			fmt.Println("positiveState:", newState)
 			ret = append(ret, newState)
 		} else {
 			fmt.Println("Pruned unreachable states!")

@@ -26,14 +26,21 @@ func NewWordState(ctx *z3.Context) *WorldState {
 }
 
 func (ws *WorldState) Copy() *WorldState {
-	var tmp *WorldState
-	for _, acc := range ws.Accounts {
-		tmp.PutAccount(acc.Copy())
+	//var tmp *WorldState
+	//for _, acc := range ws.Accounts {
+	//	tmp.PutAccount(acc.Copy())
+	//}
+	//tmp.Balances = ws.Balances
+	//tmp.Constraints = ws.Constraints.Copy()
+	//
+	//return tmp
+	return &WorldState{
+		Accounts:            ws.Accounts,
+		Balances:            ws.Balances,
+		StartingBalances:    ws.StartingBalances,
+		Constraints:         ws.Constraints.Copy(),
+		TransactionSequence: ws.TransactionSequence,
 	}
-	tmp.Balances = ws.Balances
-	tmp.Constraints = ws.Constraints.Copy()
-
-	return tmp
 }
 
 func (ws *WorldState) AccountsExistOrLoad(addr *z3.Bitvec) *Account {

@@ -207,18 +207,23 @@ func (evm *LaserEVM) Run(id int) {
 	for {
 		globalState := <-evm.WorkList
 		//evm.BeginCh <- id
-		fmt.Println(id, globalState)
+		fmt.Println(id, globalState, &globalState)
 		newStates, opcode := evm.ExecuteState(globalState)
-		evm.ManageCFG(opcode, newStates)
+		//evm.ManageCFG(opcode, newStates)
 
 		for _, newState := range newStates {
 			evm.WorkList <- newState
 		}
-		fmt.Println(id, "done", globalState, opcode)
-		fmt.Println("===============================================================================================")
+		fmt.Println(id, "done", globalState, opcode, &globalState)
+		evm.SignalCh <- Signal{
+			Id:       id,
+			Finished: (len(newStates) == 0),
+		}
+		fmt.Println("signal", id, len(newStates) == 0)
+		fmt.Println("===========================================================================")
 		if opcode == "STOP" || opcode == "RETURN" {
 			modules.CheckPotentialIssues(globalState)
-			issues := evm.Loader.Modules[3].(*modules.ExternalCalls).Issues
+			issues := evm.Loader.Modules[2].(*modules.PredictableVariables).Issues
 			for _, issue := range issues {
 				fmt.Println("ContractName:", issue.Contract)
 				fmt.Println("FunctionName:", issue.FunctionName)
@@ -231,11 +236,5 @@ func (evm *LaserEVM) Run(id int) {
 		// TODO not good for sleep
 		// time.Sleep(100 * time.Millisecond)
 		// evm.EndCh <- id
-		evm.SignalCh <- Signal{
-			Id:       id,
-			Finished: (len(newStates) == 0),
-		}
-		fmt.Println("signal", id, len(newStates) == 0)
-
 	}
 }

@@ -35,13 +35,24 @@ func (globalState *GlobalState) Copy() *GlobalState {
 	//worldState := globalState.WorldState.Copy()
 	//environment := globalState.Environment.Copy()
 	//mstate := globalState.Mstate.DeepCopy()
-	//var txStack []*BaseTransaction
-	// shallow copy seems to be different in python and golang?
+	//var txStack []BaseTransaction
+	//// shallow copy seems to be different in python and golang?
 	//copy(txStack, globalState.TxStack)
+	//var anno []StateAnnotation
+	//copy(globalState.Annotations, anno)
+	//return &GlobalState{
+	//	WorldState:     worldState,
+	//	Environment:    environment,
+	//	Mstate:         mstate,
+	//	TxStack:        txStack,
+	//	Z3ctx:          globalState.Z3ctx,
+	//	LastReturnData: globalState.LastReturnData,
+	//	Annotations:    anno,
+	//}
 	return &GlobalState{
 		WorldState:     globalState.WorldState,
 		Environment:    globalState.Environment,
-		Mstate:         globalState.Mstate,
+		Mstate:         globalState.Mstate.DeepCopy(),
 		TxStack:        globalState.TxStack,
 		Z3ctx:          globalState.Z3ctx,
 		LastReturnData: globalState.LastReturnData,

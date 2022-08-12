@@ -119,6 +119,7 @@ func (dm *PredictableVariables) _analyze_state(globalState *state.GlobalState) [
 						GasUsed:             []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
 						TransactionSequence: transactionSequence,
 					}
+					fmt.Println("timestamp push")
 					issues = append(issues, issue)
 				}
 			}
