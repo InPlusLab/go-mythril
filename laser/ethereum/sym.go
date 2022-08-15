@@ -48,17 +48,17 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 	// TODO: svm.py - register_instr_hooks
 	//integerDetectionModule := moduleLoader.Modules[0]
 	//preHooksDM := integerDetectionModule.(*modules.IntegerArithmetics).PreHooks
-	//originDetectionModule := moduleLoader.Modules[1]
-	timestampDetectionModule := moduleLoader.Modules[2]
+	originDetectionModule := moduleLoader.Modules[1]
+	//timestampDetectionModule := moduleLoader.Modules[2]
 	//reentrancyDetectionModule := moduleLoader.Modules[3]
 	//reentrancyDetectionModule := moduleLoader.Modules[4]
-	preHooksDM := timestampDetectionModule.(*modules.PredictableVariables).PreHooks
-	postHooksDM := timestampDetectionModule.(*modules.PredictableVariables).PostHooks
+	preHooksDM := originDetectionModule.(*modules.TxOrigin).PreHooks
+	postHooksDM := originDetectionModule.(*modules.TxOrigin).PostHooks
 	for _, op := range preHooksDM {
-		preHook[op] = []moduleExecFunc{timestampDetectionModule.Execute}
+		preHook[op] = []moduleExecFunc{originDetectionModule.Execute}
 	}
 	for _, op := range postHooksDM {
-		postHook[op] = []moduleExecFunc{timestampDetectionModule.Execute}
+		postHook[op] = []moduleExecFunc{originDetectionModule.Execute}
 	}
 
 	evm := LaserEVM{
@@ -91,8 +91,11 @@ func (evm *LaserEVM) NormalSymExec(CreationCode string, contractName string) {
 		globalState := <-evm.WorkList
 		fmt.Println(id, globalState)
 		fmt.Println(id, "constraints:", globalState.WorldState.Constraints)
+		for _, constraint := range globalState.WorldState.Constraints.ConstraintList {
+			fmt.Println(constraint)
+		}
 		newStates, opcode := evm.ExecuteState(globalState)
-		evm.ManageCFG(opcode, newStates)
+		// evm.ManageCFG(opcode, newStates)
 
 		for _, newState := range newStates {
 			//if opcode == "STOP" || opcode == "RETURN" {
@@ -223,7 +226,7 @@ func (evm *LaserEVM) Run(id int) {
 		fmt.Println("===========================================================================")
 		if opcode == "STOP" || opcode == "RETURN" {
 			modules.CheckPotentialIssues(globalState)
-			issues := evm.Loader.Modules[2].(*modules.PredictableVariables).Issues
+			issues := evm.Loader.Modules[1].(*modules.TxOrigin).Issues
 			for _, issue := range issues {
 				fmt.Println("ContractName:", issue.Contract)
 				fmt.Println("FunctionName:", issue.FunctionName)

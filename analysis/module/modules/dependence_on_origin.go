@@ -58,6 +58,7 @@ func (dm *TxOrigin) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	}
 	dm.Issues = append(dm.Issues, issues...)
 	return nil
+	//return dm._analyze_state(globalState)
 }
 
 func (dm *TxOrigin) _analyze_state(globalState *state.GlobalState) []*analysis.Issue {
@@ -68,7 +69,6 @@ func (dm *TxOrigin) _analyze_state(globalState *state.GlobalState) []*analysis.I
 		fmt.Println("IN jumpi")
 		length := globalState.Mstate.Stack.Length()
 		for _, annotation := range globalState.Mstate.Stack.RawStack[length-2].Annotations.Elements() {
-			fmt.Println("IN jumpi iteration")
 			if reflect.TypeOf(annotation).String() == "modules.TxOriginAnnotation" {
 				constraints := globalState.WorldState.Constraints.Copy()
 				transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
@@ -95,6 +95,8 @@ func (dm *TxOrigin) _analyze_state(globalState *state.GlobalState) []*analysis.I
 					GasUsed:             []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
 					TransactionSequence: transactionSequence,
 				}
+				// TODO: globalState.annotate
+				fmt.Println("success append Issue")
 				issues = append(issues, issue)
 			}
 		}

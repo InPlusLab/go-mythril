@@ -593,29 +593,12 @@ func (instr *Instruction) exp_(globalState *state.GlobalState) []*state.GlobalSt
 	mstate := globalState.Mstate
 	base := mstate.Stack.Pop()
 	exponent := mstate.Stack.Pop()
-	exponentiation, constraint := createCondition(base, exponent, globalState.Z3ctx)
+	exponentiation, constraint := function_managers.CreateCondition(base, exponent, globalState.Z3ctx)
 	mstate.Stack.Append(exponentiation)
 	globalState.WorldState.Constraints.Add(constraint)
 
 	ret = append(ret, globalState)
 	return ret
-}
-
-// The method should be in the laser/ethereum/function_managers
-func createCondition(base *z3.Bitvec, exponent *z3.Bitvec, ctx *z3.Context) (*z3.Bitvec, *z3.Bool) {
-
-	if !base.Symbolic() && !exponent.Symbolic() {
-		// TODO: MAX value check
-		baseV, _ := strconv.ParseInt(base.Value(), 10, 64)
-		exponentV, _ := strconv.ParseInt(exponent.Value(), 10, 64)
-		val := new(big.Int).Exp(big.NewInt(baseV), big.NewInt(exponentV), nil)
-		constExponentiation := ctx.NewBitvecVal(val, 256)
-		// TODO:
-		constraint := &z3.Bool{}
-		return constExponentiation, constraint
-	}
-	// TODO:
-	return nil, nil
 }
 
 // TODO: NOT tested
@@ -1320,8 +1303,8 @@ func (instr *Instruction) sload_(globalState *state.GlobalState) []*state.Global
 	mstate := globalState.Mstate
 	index := mstate.Stack.Pop()
 	// TODO: DynLoader to get the storage ?
-	// caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
-	globalState.Environment.ActiveAccount.Storage.SetItem(index, globalState.Z3ctx.NewBitvecVal(0, 256))
+	caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
+	globalState.Environment.ActiveAccount.Storage.SetItem(index, globalState.Z3ctx.NewBitvecVal(caller, 256))
 
 	mstate.Stack.Append(globalState.Environment.ActiveAccount.Storage.GetItem(index))
 

@@ -64,7 +64,7 @@ func (b *Bool) Copy() *Bool {
 	}
 }
 
-func (b *Bool) String() string {
+func (b *Bool) ToString() string {
 	return C.GoString(C.Z3_ast_to_string(b.rawCtx, b.rawAST))
 }
 
