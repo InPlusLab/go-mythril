@@ -56,6 +56,18 @@ func (b *Bool) Simplify() *Bool {
 	}
 }
 
+func (b *Bool) Copy() *Bool {
+	return &Bool{
+		rawCtx:      b.rawCtx,
+		rawAST:      b.rawAST,
+		Annotations: b.Annotations,
+	}
+}
+
+func (b *Bool) String() string {
+	return C.GoString(C.Z3_ast_to_string(b.rawCtx, b.rawAST))
+}
+
 // Not tested !
 func (b *AST) Substitute(args ...*AST) *AST {
 	froms := make([]C.Z3_ast, len(args)/2)

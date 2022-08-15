@@ -34,11 +34,12 @@ func (ws *WorldState) Copy() *WorldState {
 	//tmp.Constraints = ws.Constraints.Copy()
 	//
 	//return tmp
+
 	return &WorldState{
 		Accounts:            ws.Accounts,
 		Balances:            ws.Balances,
 		StartingBalances:    ws.StartingBalances,
-		Constraints:         ws.Constraints.Copy(),
+		Constraints:         ws.Constraints.DeepCopy(),
 		TransactionSequence: ws.TransactionSequence,
 	}
 }

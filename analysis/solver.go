@@ -96,7 +96,7 @@ func _set_minimisation_constraints(txSeq []state.BaseTransaction, constraints *s
 	for _, tx := range txSeq {
 		// Set upper bound on calldata size
 		maxCalldataSize := ctx.NewBitvecVal(maxSize, 256)
-		constraints.Add(maxCalldataSize.BvUGe(tx.GetCalldata().Calldatasize()))
+		constraints.Add(maxCalldataSize.BvUGe(tx.GetCalldata().Calldatasize()).Simplify())
 		// Minimize
 		minimize = append(minimize, tx.GetCalldata().Calldatasize().AsBool())
 		minimize = append(minimize, tx.GetCallValue().AsBool())

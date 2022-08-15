@@ -230,7 +230,7 @@ func (evm *LaserEVM) Run(id int) {
 				fmt.Println("Title:", issue.Title)
 				fmt.Println("SWCID:", issue.SWCID)
 				fmt.Println("Address:", issue.Address)
-				fmt.Println("Severity", issue.Severity)
+				fmt.Println("Severity:", issue.Severity)
 			}
 		}
 		// TODO not good for sleep

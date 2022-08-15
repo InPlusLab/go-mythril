@@ -46,8 +46,8 @@ func main() {
 
 	/*	evm.NormalSymExec("6060320032")
 		return*/
-
-	/*	fmt.Println("go mythril-testForGoz3")
+	/*
+		fmt.Println("go mythril-testForGoz3")
 		config := z3.NewConfig()
 		ctx := z3.NewContext(config)
 		config.Close()

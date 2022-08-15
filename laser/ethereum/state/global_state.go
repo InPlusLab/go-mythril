@@ -50,7 +50,7 @@ func (globalState *GlobalState) Copy() *GlobalState {
 	//	Annotations:    anno,
 	//}
 	return &GlobalState{
-		WorldState:     globalState.WorldState,
+		WorldState:     globalState.WorldState.Copy(),
 		Environment:    globalState.Environment,
 		Mstate:         globalState.Mstate.DeepCopy(),
 		TxStack:        globalState.TxStack,

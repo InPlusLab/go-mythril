@@ -23,6 +23,14 @@ func (c *Constraints) Copy() *Constraints {
 	return tmp
 }
 
+func (c *Constraints) DeepCopy() *Constraints {
+	tmp := NewConstraints()
+	for _, item := range c.ConstraintList {
+		tmp.Add(item.Copy())
+	}
+	return tmp
+}
+
 func (c *Constraints) IsPossible() bool {
 	// TODO: z3 solve
 	return true
