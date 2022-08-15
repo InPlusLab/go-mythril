@@ -46,20 +46,20 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		postHook[v.Name] = make([]moduleExecFunc, 0)
 	}
 	// TODO: svm.py - register_instr_hooks
-	//integerDetectionModule := moduleLoader.Modules[0]
+	integerDetectionModule := moduleLoader.Modules[0]
 	//preHooksDM := integerDetectionModule.(*modules.IntegerArithmetics).PreHooks
-	originDetectionModule := moduleLoader.Modules[1]
+	//originDetectionModule := moduleLoader.Modules[1]
 	//timestampDetectionModule := moduleLoader.Modules[2]
 	//reentrancyDetectionModule := moduleLoader.Modules[3]
 	//reentrancyDetectionModule := moduleLoader.Modules[4]
-	preHooksDM := originDetectionModule.(*modules.TxOrigin).PreHooks
-	postHooksDM := originDetectionModule.(*modules.TxOrigin).PostHooks
+	preHooksDM := integerDetectionModule.(*modules.IntegerArithmetics).PreHooks
+	// postHooksDM := integerDetectionModule.(*modules.IntegerArithmetics).PostHooks
 	for _, op := range preHooksDM {
-		preHook[op] = []moduleExecFunc{originDetectionModule.Execute}
+		preHook[op] = []moduleExecFunc{integerDetectionModule.Execute}
 	}
-	for _, op := range postHooksDM {
-		postHook[op] = []moduleExecFunc{originDetectionModule.Execute}
-	}
+	//for _, op := range postHooksDM {
+	//	postHook[op] = []moduleExecFunc{integerDetectionModule.Execute}
+	//}
 
 	evm := LaserEVM{
 		ExecutionTimeout: ExecutionTimeout,
@@ -226,7 +226,7 @@ func (evm *LaserEVM) Run(id int) {
 		fmt.Println("===========================================================================")
 		if opcode == "STOP" || opcode == "RETURN" {
 			modules.CheckPotentialIssues(globalState)
-			issues := evm.Loader.Modules[1].(*modules.TxOrigin).Issues
+			issues := evm.Loader.Modules[0].(*modules.IntegerArithmetics).Issues
 			for _, issue := range issues {
 				fmt.Println("ContractName:", issue.Contract)
 				fmt.Println("FunctionName:", issue.FunctionName)

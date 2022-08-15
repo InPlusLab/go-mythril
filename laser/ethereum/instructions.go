@@ -1303,7 +1303,7 @@ func (instr *Instruction) sload_(globalState *state.GlobalState) []*state.Global
 	mstate := globalState.Mstate
 	index := mstate.Stack.Pop()
 	// TODO: DynLoader to get the storage ?
-	caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
+	caller, _ := new(big.Int).SetString("1", 16)
 	globalState.Environment.ActiveAccount.Storage.SetItem(index, globalState.Z3ctx.NewBitvecVal(caller, 256))
 
 	mstate.Stack.Append(globalState.Environment.ActiveAccount.Storage.GetItem(index))

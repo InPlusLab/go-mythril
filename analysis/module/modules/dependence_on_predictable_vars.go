@@ -70,6 +70,7 @@ func (dm *PredictableVariables) _execute(globalState *state.GlobalState) []*anal
 		return nil
 	}
 	issues := dm._analyze_state(globalState)
+	fmt.Println("_analyzeState")
 	for _, issue := range issues {
 		dm.Cache.Add(issue)
 	}
@@ -157,6 +158,7 @@ func (dm *PredictableVariables) _analyze_state(globalState *state.GlobalState) [
 			globalState.Mstate.Stack.RawStack[length-1].Annotate(PredictableValueAnnotation{
 				Operation: "The block " + strings.ToLower(opcode.Name) + " environment variable",
 			})
+			fmt.Println("in anno")
 		}
 	}
 	return issues
