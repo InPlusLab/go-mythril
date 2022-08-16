@@ -135,3 +135,14 @@ func (m *Memory) SetItem(key int64, value *z3.Bitvec) {
 
 	memory[key] = value
 }
+
+func (m *Memory) Copy() *Memory {
+	rawM := make(map[int64]*z3.Bitvec)
+	for i, v := range *m.RawMemory {
+		rawM[i] = v
+	}
+	return &Memory{
+		Msize:     m.Msize,
+		RawMemory: &rawM,
+	}
+}

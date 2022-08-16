@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"go-mythril/laser/smt/z3"
 	"strconv"
 )
@@ -126,18 +127,21 @@ func (scd *SymbolicCalldata) Calldatasize() *z3.Bitvec {
 	return scd.Size()
 }
 func (scd *SymbolicCalldata) GetWordAt(offset *z3.Bitvec) *z3.Bitvec {
-	tmp := scd.Load(scd.Ctx.NewBitvecVal(offset, 256))
-	// OutofIndex check
-	index, _ := strconv.ParseInt(offset.Value(), 10, 64)
-	for i := index + 1; i < index+32; i++ {
-		tmp = tmp.Concat(scd.Load(scd.Ctx.NewBitvecVal(i, 256)))
-	}
-	return tmp.Simplify()
+	//tmp := scd.Load(offset)
+	//// OutofIndex check
+	//index, _ := strconv.ParseInt(offset.Value(), 10, 64)
+	//for i := index + 1; i < index+32; i++ {
+	//	tmp = tmp.Concat(scd.Load(scd.Ctx.NewBitvecVal(i, 256)))
+	//}
+	//return tmp.Simplify()
+	fmt.Println(offset)
+	return scd.Ctx.NewBitvec("SymbolicInput", 256)
 }
 func (scd *SymbolicCalldata) Load(item *z3.Bitvec) *z3.Bitvec {
-	return z3.If(item.BvSLt(scd.SymSize),
-		scd.Calldata.GetItem(item).Simplify(),
-		scd.Ctx.NewBitvecVal(0, 8)).Simplify()
+	//return z3.If(item.BvSLt(scd.SymSize),
+	//	scd.Calldata.GetItem(item).Simplify(),
+	//	scd.Ctx.NewBitvecVal(0, 8)).Simplify()
+	return scd.Calldata.GetItem(item).Simplify()
 }
 
 // TODO: z3.model should be changed. In Mythril, model.py is a list of models.

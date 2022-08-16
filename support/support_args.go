@@ -13,7 +13,7 @@ type Args struct {
 
 func NewArgs() *Args {
 	return &Args{
-		SolverTimeout:        10000,
+		SolverTimeout:        30000,
 		SparsePruning:        true,
 		UnconstrainedStorage: false,
 		ParallelSolving:      false,

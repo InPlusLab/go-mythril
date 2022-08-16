@@ -53,7 +53,7 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 	//reentrancyDetectionModule := moduleLoader.Modules[3]
 	//reentrancyDetectionModule := moduleLoader.Modules[4]
 	preHooksDM := integerDetectionModule.(*modules.IntegerArithmetics).PreHooks
-	// postHooksDM := integerDetectionModule.(*modules.IntegerArithmetics).PostHooks
+	//postHooksDM := integerDetectionModule.(*modules.IntegerArithmetics).PostHooks
 	for _, op := range preHooksDM {
 		preHook[op] = []moduleExecFunc{integerDetectionModule.Execute}
 	}

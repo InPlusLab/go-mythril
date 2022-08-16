@@ -90,7 +90,6 @@ func (dm *IntegerArithmetics) _get_args(state *state.GlobalState) (*z3.Bitvec, *
 
 func (dm *IntegerArithmetics) _execute(globalState *state.GlobalState) []*analysis.Issue {
 
-	fmt.Println("IntegerArithmetics - _execute!")
 	address := getAddressFromState(globalState)
 	if dm.Cache.Contains(address) {
 		return dm.Issues
@@ -245,7 +244,7 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 			continue
 		}
 		if !dm.OstatesSatisfiable.Contains(ostate) {
-			constraints := ostate.WorldState.Constraints.Copy()
+			constraints := ostate.WorldState.Constraints.DeepCopy()
 			constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
 
 			for i, v := range constraints.ConstraintList {
@@ -266,7 +265,7 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 			"at transaction end address", globalState.GetCurrentInstruction().Address, "ostate address",
 			ostate.GetCurrentInstruction().Address)
 
-		constraints := globalState.WorldState.Constraints.Copy()
+		constraints := globalState.WorldState.Constraints.DeepCopy()
 		constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
 
 		transactionSequence := analysis.GetTransactionSequence(globalState, constraints)

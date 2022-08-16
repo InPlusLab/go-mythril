@@ -63,6 +63,16 @@ func (m *MachineStack) Pop() *z3.Bitvec {
 	}
 }
 
+func (m *MachineStack) Copy() *MachineStack {
+	stack := &MachineStack{
+		RawStack: make([]*z3.Bitvec, 0),
+	}
+	for _, v := range m.RawStack {
+		stack.Append(v)
+	}
+	return stack
+}
+
 func decimalStr2HexStr(num string) string {
 	val, _ := strconv.Atoi(num)
 	return utils.ToHexStr(val)
@@ -169,19 +179,24 @@ func (m *MachineState) MemExtend(start *z3.Bitvec, size int) {
 }
 
 func (m *MachineState) DeepCopy() *MachineState {
-	// In mythril, memory and stack use shallow copy.
 	memory := &Memory{
 		Msize:     m.Memory.Msize,
 		RawMemory: m.Memory.RawMemory,
 	}
-	stack := &MachineStack{
-		RawStack: m.Stack.RawStack,
-	}
+	//stack := &MachineStack{
+	//	RawStack: make([]*z3.Bitvec, 0),
+	//}
+	//for _, v := range m.Stack.RawStack {
+	//	stack.Append(v)
+	//}
+	//fmt.Println("deepcopy", len(stack.RawStack))
+
 	return &MachineState{
-		GasLimit:   m.GasLimit,
-		Pc:         m.Pc,
+		GasLimit: m.GasLimit,
+		Pc:       m.Pc,
+		//Memory:     m.Memory.Copy(),
 		Memory:     memory,
-		Stack:      stack,
+		Stack:      m.Stack.Copy(),
 		MinGasUsed: m.MinGasUsed,
 		MaxGasUsed: m.MaxGasUsed,
 	}

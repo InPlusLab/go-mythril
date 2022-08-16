@@ -719,6 +719,7 @@ func (instr *Instruction) calldataload_(globalState *state.GlobalState) []*state
 	env := globalState.Environment
 	op0 := mstate.Stack.Pop()
 	value := env.Calldata.GetWordAt(op0)
+	fmt.Println("calldataload_:", value)
 	mstate.Stack.Append(value)
 
 	ret = append(ret, globalState)
