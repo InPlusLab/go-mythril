@@ -52,6 +52,10 @@ func (dm *MultipleSends) AddIssue(issue *analysis.Issue) {
 	dm.Issues = append(dm.Issues, issue)
 }
 
+func (dm *MultipleSends) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *MultipleSends) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil

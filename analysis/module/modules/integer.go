@@ -81,6 +81,10 @@ func (dm *IntegerArithmetics) AddIssue(issue *analysis.Issue) {
 	dm.Issues = append(dm.Issues, issue)
 }
 
+func (dm *IntegerArithmetics) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *IntegerArithmetics) _get_args(state *state.GlobalState) (*z3.Bitvec, *z3.Bitvec) {
 	stack := state.Mstate.Stack
 	op0 := stack.RawStack[stack.Length()-1]
@@ -234,11 +238,9 @@ func (dm *IntegerArithmetics) _handel_return(globalState *state.GlobalState) {
 
 func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalState) {
 	stateAnnotation := getOverflowUnderflowStateAnnotation(globalState)
-	fmt.Println(stateAnnotation, " ", stateAnnotation.OverflowingStateAnnotations.Len())
 	for _, annotation := range stateAnnotation.OverflowingStateAnnotations.Elements() {
 		fmt.Println("iterableInEnd")
 		ostate := annotation.(OverUnderflowAnnotation).OverflowingState
-		fmt.Println("ostate:", ostate)
 		if dm.OstatesUnsatisfiable.Contains(ostate) {
 			fmt.Println("contains")
 			continue
@@ -247,9 +249,6 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 			constraints := ostate.WorldState.Constraints.DeepCopy()
 			constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
 
-			for i, v := range constraints.ConstraintList {
-				fmt.Println("constraints", i, ":", v.IsTrue())
-			}
 			_, sat := state.GetModel(constraints, nil, nil, false, ostate.Z3ctx)
 			if sat {
 				fmt.Println("sat")

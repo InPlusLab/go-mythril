@@ -45,6 +45,10 @@ func (dm *EtherThief) AddIssue(issue *analysis.Issue) {
 	dm.Issues = append(dm.Issues, issue)
 }
 
+func (dm *EtherThief) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *EtherThief) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil

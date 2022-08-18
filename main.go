@@ -53,8 +53,10 @@ func main() {
 		ctx := z3.NewContext(config)
 		config.Close()
 		defer ctx.Close()
+
 		s := ctx.NewSolver()
 		defer s.Close()
+
 		//zero := ctx.NewBitvecVal(0, 256)
 		one := ctx.NewBitvecVal(1, 256)
 		timestamp := ctx.NewBitvec("timestamp", 256)

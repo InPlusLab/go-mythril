@@ -25,25 +25,25 @@ type StateChangeCallsAnnotation struct {
 	UserDefinedAddress bool
 }
 
-func NewStateChangeCallsAnnotation(globalState *state.GlobalState, userDefinedAddress bool) StateChangeCallsAnnotation {
+func NewStateChangeCallsAnnotation(globalState *state.GlobalState, userDefinedAddress bool) *StateChangeCallsAnnotation {
 	stateList := make([]*state.GlobalState, 0)
-	return StateChangeCallsAnnotation{
+	return &StateChangeCallsAnnotation{
 		CallState:          globalState,
 		StateChangeStates:  stateList,
 		UserDefinedAddress: userDefinedAddress,
 	}
 }
 
-func (anno StateChangeCallsAnnotation) PersistToWorldState() bool {
+func (anno *StateChangeCallsAnnotation) PersistToWorldState() bool {
 	return false
 }
-func (anno StateChangeCallsAnnotation) PersistOverCalls() bool {
+func (anno *StateChangeCallsAnnotation) PersistOverCalls() bool {
 	return false
 }
-func (anno StateChangeCallsAnnotation) AppendState(globalState *state.GlobalState) {
+func (anno *StateChangeCallsAnnotation) AppendState(globalState *state.GlobalState) {
 	anno.StateChangeStates = append(anno.StateChangeStates, globalState)
 }
-func (anno StateChangeCallsAnnotation) GetIssue(globalState *state.GlobalState) *PotentialIssue {
+func (anno *StateChangeCallsAnnotation) GetIssue(globalState *state.GlobalState) *PotentialIssue {
 	if len(anno.StateChangeStates) == 0 {
 		return nil
 	}
@@ -134,7 +134,7 @@ func (dm *StateChangeAfterCall) _execute(globalState *state.GlobalState) []*anal
 }
 
 func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
-	annotations := globalState.GetAnnotations(reflect.TypeOf(StateChangeCallsAnnotation{}))
+	annotations := globalState.GetAnnotations(reflect.TypeOf(&StateChangeCallsAnnotation{}))
 	opcode := globalState.GetCurrentInstruction().OpCode
 
 	CALL_LIST := []string{"CALL", "DELEGATECALL", "CALLCODE"}
@@ -145,7 +145,7 @@ func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) [
 	}
 	if utils.In(opcode.Name, STATE_READ_WRITE_LIST) {
 		for _, annotation := range annotations {
-			annotation.(StateChangeCallsAnnotation).AppendState(globalState)
+			annotation.(*StateChangeCallsAnnotation).AppendState(globalState)
 		}
 	}
 	// Record state changes following from a transfer of ether
@@ -154,7 +154,7 @@ func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) [
 		value := globalState.Mstate.Stack.RawStack[stackLen-3]
 		if dm._balance_change(value, globalState) {
 			for _, annotation := range annotations {
-				annotation.(StateChangeCallsAnnotation).AppendState(globalState)
+				annotation.(*StateChangeCallsAnnotation).AppendState(globalState)
 			}
 		}
 	}
@@ -165,10 +165,10 @@ func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) [
 	// Check for vulnerabilities
 	vulnerabilities := make([]*PotentialIssue, 0)
 	for _, annotation := range annotations {
-		if len(annotation.(StateChangeCallsAnnotation).StateChangeStates) == 0 {
+		if len(annotation.(*StateChangeCallsAnnotation).StateChangeStates) == 0 {
 			continue
 		}
-		issue := annotation.(StateChangeCallsAnnotation).GetIssue(globalState)
+		issue := annotation.(*StateChangeCallsAnnotation).GetIssue(globalState)
 		if issue != nil {
 			vulnerabilities = append(vulnerabilities, issue)
 		}
