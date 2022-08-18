@@ -57,6 +57,10 @@ func (dm *Exceptions) AddIssue(issue *analysis.Issue) {
 	dm.Issues = append(dm.Issues, issue)
 }
 
+func (dm *Exceptions) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
 func (dm *Exceptions) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	for _, v := range dm.Cache.Elements() {
 		if reflect.TypeOf(v).String() == "map[int]string" {

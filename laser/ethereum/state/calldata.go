@@ -1,7 +1,6 @@
 package state
 
 import (
-	"fmt"
 	"go-mythril/laser/smt/z3"
 	"strconv"
 )
@@ -134,8 +133,7 @@ func (scd *SymbolicCalldata) GetWordAt(offset *z3.Bitvec) *z3.Bitvec {
 	//	tmp = tmp.Concat(scd.Load(scd.Ctx.NewBitvecVal(i, 256)))
 	//}
 	//return tmp.Simplify()
-	fmt.Println(offset)
-	return scd.Ctx.NewBitvec("SymbolicInput", 256)
+	return scd.Ctx.NewBitvec("SymbolicInput-"+offset.String(), 256)
 }
 func (scd *SymbolicCalldata) Load(item *z3.Bitvec) *z3.Bitvec {
 	//return z3.If(item.BvSLt(scd.SymSize),

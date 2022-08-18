@@ -644,7 +644,8 @@ func (instr *Instruction) gt_(globalState *state.GlobalState) []*state.GlobalSta
 	mstate := globalState.Mstate
 	op1 := mstate.Stack.Pop()
 	op2 := mstate.Stack.Pop()
-	mstate.Stack.Append(op1.BvUGt(op2))
+	exp := op1.BvUGt(op2)
+	mstate.Stack.Append(exp)
 
 	ret = append(ret, globalState)
 	return ret
@@ -1486,9 +1487,7 @@ func (instr *Instruction) msize_(globalState *state.GlobalState) []*state.Global
 
 func (instr *Instruction) gas_(globalState *state.GlobalState) []*state.GlobalState {
 	ret := make([]*state.GlobalState, 0)
-	// TODO:
-	//globalState.Mstate.Stack.Append(globalState.NewBitvec("gas", 256))
-	globalState.Mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(15008, 256))
+	globalState.Mstate.Stack.Append(globalState.NewBitvec("gas", 256))
 	ret = append(ret, globalState)
 	return ret
 }

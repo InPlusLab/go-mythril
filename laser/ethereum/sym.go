@@ -53,12 +53,12 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 	//reentrancyDetectionModule := moduleLoader.Modules[3]
 	//reentrancyDetectionModule := moduleLoader.Modules[4]
 	preHooksDM := integerDetectionModule.(*modules.IntegerArithmetics).PreHooks
-	//postHooksDM := integerDetectionModule.(*modules.IntegerArithmetics).PostHooks
+	//postHooksDM := reentrancyDetectionModule.(*modules.ExternalCalls).PostHooks
 	for _, op := range preHooksDM {
 		preHook[op] = []moduleExecFunc{integerDetectionModule.Execute}
 	}
 	//for _, op := range postHooksDM {
-	//	postHook[op] = []moduleExecFunc{integerDetectionModule.Execute}
+	//	postHook[op] = []moduleExecFunc{reentrancyDetectionModule.Execute}
 	//}
 
 	evm := LaserEVM{
@@ -107,7 +107,18 @@ func (evm *LaserEVM) NormalSymExec(CreationCode string, contractName string) {
 		fmt.Println("==============================================================================")
 		if opcode == "STOP" || opcode == "RETURN" {
 			modules.CheckPotentialIssues(globalState)
-			break
+			// break
+			for _, detector := range evm.Loader.Modules {
+				issues := detector.GetIssues()
+				for _, issue := range issues {
+					fmt.Println("ContractName:", issue.Contract)
+					fmt.Println("FunctionName:", issue.FunctionName)
+					fmt.Println("Title:", issue.Title)
+					fmt.Println("SWCID:", issue.SWCID)
+					fmt.Println("Address:", issue.Address)
+					fmt.Println("Severity:", issue.Severity)
+				}
+			}
 		}
 		id++
 	}
@@ -226,14 +237,16 @@ func (evm *LaserEVM) Run(id int) {
 		fmt.Println("===========================================================================")
 		if opcode == "STOP" || opcode == "RETURN" {
 			modules.CheckPotentialIssues(globalState)
-			issues := evm.Loader.Modules[0].(*modules.IntegerArithmetics).Issues
-			for _, issue := range issues {
-				fmt.Println("ContractName:", issue.Contract)
-				fmt.Println("FunctionName:", issue.FunctionName)
-				fmt.Println("Title:", issue.Title)
-				fmt.Println("SWCID:", issue.SWCID)
-				fmt.Println("Address:", issue.Address)
-				fmt.Println("Severity:", issue.Severity)
+			for _, detector := range evm.Loader.Modules {
+				issues := detector.GetIssues()
+				for _, issue := range issues {
+					fmt.Println("ContractName:", issue.Contract)
+					fmt.Println("FunctionName:", issue.FunctionName)
+					fmt.Println("Title:", issue.Title)
+					fmt.Println("SWCID:", issue.SWCID)
+					fmt.Println("Address:", issue.Address)
+					fmt.Println("Severity:", issue.Severity)
+				}
 			}
 		}
 		// TODO not good for sleep

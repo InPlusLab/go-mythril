@@ -9,5 +9,6 @@ type DetectionModule interface {
 	ResetModule()
 	Execute(target *state.GlobalState) []*analysis.Issue
 	AddIssue(issue *analysis.Issue)
+	GetIssues() []*analysis.Issue
 	_execute(target *state.GlobalState) []*analysis.Issue
 }

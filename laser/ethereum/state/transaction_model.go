@@ -55,10 +55,10 @@ func NewMessageCallTransaction(code string, contractName string) *MessageCallTra
 	calldataList := make([]*z3.Bitvec, 0)
 
 	// Input: 0x1003e2d2000000000000000000000000000000000000000000000000000000000000000a: add(10)
-	inputStr := "1003e2d2ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+	inputStr := "1003e2d2000000000000000000000000000000000000000000000000000000000000000a"
 	//inputStr := "f2fde38b000000000000000000000000ab8483f64d9c6d1ecf9b849ae677dd3315835cb2"
 	//inputStr := "3ccfd60b"
-	// inputStr := "2e1a7d4d0000000000000000000000000000000000000000000000000000000000000001"
+	//inputStr := "2e1a7d4d0000000000000000000000000000000000000000000000000000000000000001"
 	for i := 0; i < len(inputStr); i = i + 2 {
 		val, _ := strconv.ParseInt(inputStr[i:i+2], 16, 10)
 		calldataList = append(calldataList, ctx.NewBitvecVal(val, 8))
