@@ -46,20 +46,22 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		postHook[v.Name] = make([]moduleExecFunc, 0)
 	}
 	// TODO: svm.py - register_instr_hooks
-	integerDetectionModule := moduleLoader.Modules[0]
+	//integerDetectionModule := moduleLoader.Modules[0]
 	//preHooksDM := integerDetectionModule.(*modules.IntegerArithmetics).PreHooks
 	//originDetectionModule := moduleLoader.Modules[1]
-	//timestampDetectionModule := moduleLoader.Modules[2]
+	timestampDetectionModule := moduleLoader.Modules[2]
 	//reentrancyDetectionModule := moduleLoader.Modules[3]
 	//reentrancyDetectionModule := moduleLoader.Modules[4]
-	preHooksDM := integerDetectionModule.(*modules.IntegerArithmetics).PreHooks
-	//postHooksDM := reentrancyDetectionModule.(*modules.ExternalCalls).PostHooks
+	preHooksDM := timestampDetectionModule.(*modules.PredictableVariables).PreHooks
+	postHooksDM := timestampDetectionModule.(*modules.PredictableVariables).PostHooks
 	for _, op := range preHooksDM {
-		preHook[op] = []moduleExecFunc{integerDetectionModule.Execute}
+		//preHook[op] = []moduleExecFunc{reentrancyDetectionModule.Execute}
+		preHook[op] = append(preHook[op], timestampDetectionModule.Execute)
 	}
-	//for _, op := range postHooksDM {
-	//	postHook[op] = []moduleExecFunc{reentrancyDetectionModule.Execute}
-	//}
+	for _, op := range postHooksDM {
+		// postHook[op] = []moduleExecFunc{timestampDetectionModule.Execute}
+		postHook[op] = append(postHook[op], timestampDetectionModule.Execute)
+	}
 
 	evm := LaserEVM{
 		ExecutionTimeout: ExecutionTimeout,
