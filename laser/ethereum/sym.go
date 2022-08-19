@@ -1,6 +1,7 @@
 package ethereum
 
 import (
+	"errors"
 	"fmt"
 	"go-mythril/analysis"
 	"go-mythril/analysis/module"
@@ -70,11 +71,9 @@ func (evm *LaserEVM) registerInstrHooks() {
 	postHook := *evm.InstrPostHook
 	for _, module := range evm.Loader.Modules {
 		for _, op := range module.GetPreHooks() {
-			fmt.Println("op prehooks")
 			preHook[op] = append(preHook[op], module.Execute)
 		}
 		for _, op := range module.GetPostHooks() {
-			fmt.Println("op posthooks")
 			postHook[op] = append(postHook[op], module.Execute)
 		}
 	}
@@ -99,7 +98,12 @@ func (evm *LaserEVM) NormalSymExec(CreationCode string, contractName string) {
 	globalState := tx.InitialGlobalState()
 	evm.WorkList <- globalState
 	id := 0
+LOOP:
 	for {
+		// When there is no newState in channel, exit the iteration
+		if len(evm.WorkList) == 0 {
+			break LOOP
+		}
 		globalState := <-evm.WorkList
 		fmt.Println(id, globalState)
 		fmt.Println(id, "constraints:", globalState.WorldState.Constraints)
@@ -119,7 +123,6 @@ func (evm *LaserEVM) NormalSymExec(CreationCode string, contractName string) {
 		fmt.Println("==============================================================================")
 		if opcode == "STOP" || opcode == "RETURN" {
 			modules.CheckPotentialIssues(globalState)
-			// break
 			for _, detector := range evm.Loader.Modules {
 				issues := detector.GetIssues()
 				for _, issue := range issues {
@@ -228,39 +231,61 @@ func (evm *LaserEVM) newNodeState(state *state.GlobalState, edgeType JumpType, c
 	// default: edge_type=JumpType.UNCONDITIONAL, condition=None
 }
 
+func readWithSelect(ch chan *state.GlobalState) (*state.GlobalState, error) {
+	select {
+	case globalState := <-ch:
+		return globalState, nil
+	default:
+		return nil, errors.New("evm.WorkList is empty")
+	}
+}
+
 func (evm *LaserEVM) Run(id int) {
 	fmt.Println("Run")
 	for {
-		globalState := <-evm.WorkList
-		//evm.BeginCh <- id
-		fmt.Println(id, globalState, &globalState)
-		newStates, opcode := evm.ExecuteState(globalState)
-		//evm.ManageCFG(opcode, newStates)
+		// globalState := <-evm.WorkList
+		globalState, _ := readWithSelect(evm.WorkList)
+		//fmt.Println("error:", err, id)
 
-		for _, newState := range newStates {
-			evm.WorkList <- newState
-		}
-		fmt.Println(id, "done", globalState, opcode, &globalState)
-		evm.SignalCh <- Signal{
-			Id:       id,
-			Finished: (len(newStates) == 0),
-		}
-		fmt.Println("signal", id, len(newStates) == 0)
-		fmt.Println("===========================================================================")
-		if opcode == "STOP" || opcode == "RETURN" {
-			modules.CheckPotentialIssues(globalState)
-			for _, detector := range evm.Loader.Modules {
-				issues := detector.GetIssues()
-				for _, issue := range issues {
-					fmt.Println("ContractName:", issue.Contract)
-					fmt.Println("FunctionName:", issue.FunctionName)
-					fmt.Println("Title:", issue.Title)
-					fmt.Println("SWCID:", issue.SWCID)
-					fmt.Println("Address:", issue.Address)
-					fmt.Println("Severity:", issue.Severity)
+		if globalState != nil {
+			//evm.BeginCh <- id
+			fmt.Println(id, globalState, &globalState)
+			newStates, opcode := evm.ExecuteState(globalState)
+			//evm.ManageCFG(opcode, newStates)
+			fmt.Println("test")
+			for _, newState := range newStates {
+				fmt.Println("2")
+				evm.WorkList <- newState
+				fmt.Println("append:", len(evm.WorkList))
+			}
+			fmt.Println(id, "done", globalState, opcode, &globalState)
+			evm.SignalCh <- Signal{
+				Id:       id,
+				Finished: (len(newStates) == 0),
+			}
+			fmt.Println("signal", id, len(newStates) == 0)
+			fmt.Println("===========================================================================")
+			if opcode == "STOP" || opcode == "RETURN" {
+				modules.CheckPotentialIssues(globalState)
+				for _, detector := range evm.Loader.Modules {
+					issues := detector.GetIssues()
+					for _, issue := range issues {
+						fmt.Println("ContractName:", issue.Contract)
+						fmt.Println("FunctionName:", issue.FunctionName)
+						fmt.Println("Title:", issue.Title)
+						fmt.Println("SWCID:", issue.SWCID)
+						fmt.Println("Address:", issue.Address)
+						fmt.Println("Severity:", issue.Severity)
+					}
 				}
 			}
+		} else {
+			evm.SignalCh <- Signal{
+				Id:       id,
+				Finished: true,
+			}
 		}
+
 		// TODO not good for sleep
 		// time.Sleep(100 * time.Millisecond)
 		// evm.EndCh <- id
