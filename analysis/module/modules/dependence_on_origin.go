@@ -52,6 +52,14 @@ func (dm *TxOrigin) GetIssues() []*analysis.Issue {
 	return dm.Issues
 }
 
+func (dm *TxOrigin) GetPreHooks() []string {
+	return dm.PreHooks
+}
+
+func (dm *TxOrigin) GetPostHooks() []string {
+	return dm.PostHooks
+}
+
 func (dm *TxOrigin) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil

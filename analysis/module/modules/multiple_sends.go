@@ -56,6 +56,14 @@ func (dm *MultipleSends) GetIssues() []*analysis.Issue {
 	return dm.Issues
 }
 
+func (dm *MultipleSends) GetPreHooks() []string {
+	return dm.PreHooks
+}
+
+func (dm *MultipleSends) GetPostHooks() []string {
+	return make([]string, 0)
+}
+
 func (dm *MultipleSends) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil

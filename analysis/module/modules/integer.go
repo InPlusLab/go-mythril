@@ -85,6 +85,14 @@ func (dm *IntegerArithmetics) GetIssues() []*analysis.Issue {
 	return dm.Issues
 }
 
+func (dm *IntegerArithmetics) GetPreHooks() []string {
+	return dm.PreHooks
+}
+
+func (dm *IntegerArithmetics) GetPostHooks() []string {
+	return make([]string, 0)
+}
+
 func (dm *IntegerArithmetics) _get_args(state *state.GlobalState) (*z3.Bitvec, *z3.Bitvec) {
 	stack := state.Mstate.Stack
 	op0 := stack.RawStack[stack.Length()-1]

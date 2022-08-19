@@ -69,6 +69,14 @@ func (dm *UncheckedRetval) GetIssues() []*analysis.Issue {
 	return dm.Issues
 }
 
+func (dm *UncheckedRetval) GetPreHooks() []string {
+	return dm.PreHooks
+}
+
+func (dm *UncheckedRetval) GetPostHooks() []string {
+	return dm.PostHooks
+}
+
 func (dm *UncheckedRetval) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil

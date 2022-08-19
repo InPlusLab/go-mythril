@@ -61,6 +61,14 @@ func (dm *Exceptions) GetIssues() []*analysis.Issue {
 	return dm.Issues
 }
 
+func (dm *Exceptions) GetPreHooks() []string {
+	return dm.PreHooks
+}
+
+func (dm *Exceptions) GetPostHooks() []string {
+	return make([]string, 0)
+}
+
 func (dm *Exceptions) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	for _, v := range dm.Cache.Elements() {
 		if reflect.TypeOf(v).String() == "map[int]string" {

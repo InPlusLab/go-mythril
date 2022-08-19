@@ -46,6 +46,14 @@ func (dm *ArbitraryJump) GetIssues() []*analysis.Issue {
 	return dm.Issues
 }
 
+func (dm *ArbitraryJump) GetPreHooks() []string {
+	return dm.PreHooks
+}
+
+func (dm *ArbitraryJump) GetPostHooks() []string {
+	return make([]string, 0)
+}
+
 func (dm *ArbitraryJump) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil

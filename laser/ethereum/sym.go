@@ -45,23 +45,6 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		preHook[v.Name] = make([]moduleExecFunc, 0)
 		postHook[v.Name] = make([]moduleExecFunc, 0)
 	}
-	// TODO: svm.py - register_instr_hooks
-	//integerDetectionModule := moduleLoader.Modules[0]
-	//preHooksDM := integerDetectionModule.(*modules.IntegerArithmetics).PreHooks
-	//originDetectionModule := moduleLoader.Modules[1]
-	timestampDetectionModule := moduleLoader.Modules[2]
-	//reentrancyDetectionModule := moduleLoader.Modules[3]
-	//reentrancyDetectionModule := moduleLoader.Modules[4]
-	preHooksDM := timestampDetectionModule.(*modules.PredictableVariables).PreHooks
-	postHooksDM := timestampDetectionModule.(*modules.PredictableVariables).PostHooks
-	for _, op := range preHooksDM {
-		//preHook[op] = []moduleExecFunc{reentrancyDetectionModule.Execute}
-		preHook[op] = append(preHook[op], timestampDetectionModule.Execute)
-	}
-	for _, op := range postHooksDM {
-		// postHook[op] = []moduleExecFunc{timestampDetectionModule.Execute}
-		postHook[op] = append(postHook[op], timestampDetectionModule.Execute)
-	}
 
 	evm := LaserEVM{
 		ExecutionTimeout: ExecutionTimeout,
@@ -78,7 +61,34 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		GofuncCount: 4,
 		Loader:      moduleLoader,
 	}
+	evm.registerInstrHooks()
 	return &evm
+}
+
+func (evm *LaserEVM) registerInstrHooks() {
+	preHook := *evm.InstrPreHook
+	postHook := *evm.InstrPostHook
+	for _, module := range evm.Loader.Modules {
+		for _, op := range module.GetPreHooks() {
+			fmt.Println("op prehooks")
+			preHook[op] = append(preHook[op], module.Execute)
+		}
+		for _, op := range module.GetPostHooks() {
+			fmt.Println("op posthooks")
+			postHook[op] = append(postHook[op], module.Execute)
+		}
+	}
+	//timestampDetectionModule := evm.Loader.Modules[2]
+	//preHooksDM := timestampDetectionModule.(*modules.PredictableVariables).PreHooks
+	//postHooksDM := timestampDetectionModule.(*modules.PredictableVariables).PostHooks
+	//for _, op := range preHooksDM {
+	//	//preHook[op] = []moduleExecFunc{reentrancyDetectionModule.Execute}
+	//	preHook[op] = append(preHook[op], timestampDetectionModule.Execute)
+	//}
+	//for _, op := range postHooksDM {
+	//	// postHook[op] = []moduleExecFunc{timestampDetectionModule.Execute}
+	//	postHook[op] = append(postHook[op], timestampDetectionModule.Execute)
+	//}
 }
 
 func (evm *LaserEVM) NormalSymExec(CreationCode string, contractName string) {

@@ -123,6 +123,18 @@ func (dm *StateChangeAfterCall) AddIssue(issue *analysis.Issue) {
 	dm.Issues = append(dm.Issues, issue)
 }
 
+func (dm *StateChangeAfterCall) GetIssues() []*analysis.Issue {
+	return dm.Issues
+}
+
+func (dm *StateChangeAfterCall) GetPreHooks() []string {
+	return dm.PreHooks
+}
+
+func (dm *StateChangeAfterCall) GetPostHooks() []string {
+	return make([]string, 0)
+}
+
 func (dm *StateChangeAfterCall) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil

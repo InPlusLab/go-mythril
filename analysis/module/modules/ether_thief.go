@@ -49,6 +49,14 @@ func (dm *EtherThief) GetIssues() []*analysis.Issue {
 	return dm.Issues
 }
 
+func (dm *EtherThief) GetPreHooks() []string {
+	return make([]string, 0)
+}
+
+func (dm *EtherThief) GetPostHooks() []string {
+	return dm.PostHooks
+}
+
 func (dm *EtherThief) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil

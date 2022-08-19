@@ -10,5 +10,7 @@ type DetectionModule interface {
 	Execute(target *state.GlobalState) []*analysis.Issue
 	AddIssue(issue *analysis.Issue)
 	GetIssues() []*analysis.Issue
+	GetPreHooks() []string
+	GetPostHooks() []string
 	_execute(target *state.GlobalState) []*analysis.Issue
 }
