@@ -54,11 +54,18 @@ func NewMessageCallTransaction(code string, contractName string) *MessageCallTra
 	txcode := disassembler.NewDisasembly(code)
 	calldataList := make([]*z3.Bitvec, 0)
 
-	// Input: 0x1003e2d2000000000000000000000000000000000000000000000000000000000000000a: add(10)
+	// IntegerOverflow: symbolicCallData, sload-0, callValue-0
 	//inputStr := "1003e2d2000000000000000000000000000000000000000000000000000000000000000a"
+	//inputStr := "1003e2d2ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+
+	// Origin: callValue-0, sload-addr
 	//inputStr := "f2fde38b000000000000000000000000ab8483f64d9c6d1ecf9b849ae677dd3315835cb2"
-	inputStr := "3ccfd60b"
-	//inputStr := "2e1a7d4d0000000000000000000000000000000000000000000000000000000000000001"
+
+	// TimeStamp: callValue-1000000000000000000
+	//inputStr := "3ccfd60b"
+
+	// Reentrancy: callvalue-0, sload-addr
+	inputStr := "2e1a7d4d0000000000000000000000000000000000000000000000000000000000000001"
 	for i := 0; i < len(inputStr); i = i + 2 {
 		val, _ := strconv.ParseInt(inputStr[i:i+2], 16, 10)
 		calldataList = append(calldataList, ctx.NewBitvecVal(val, 8))
@@ -77,7 +84,7 @@ func NewMessageCallTransaction(code string, contractName string) *MessageCallTra
 		//Calldata:  NewSymbolicCalldata("txid123", ctx),
 		GasPrice:  10,
 		GasLimit:  100000,
-		CallValue: 1000000000000000000, // 1 ether
+		CallValue: 0, // 1 ether
 		Origin:    ctx.NewBitvecVal(origin, 256),
 		Basefee:   ctx.NewBitvecVal(1000, 256),
 		Ctx:       ctx,

@@ -76,6 +76,11 @@ func (evm *LaserEVM) registerInstrHooks() {
 			postHook[op] = append(postHook[op], module.Execute)
 		}
 	}
+	//integerDetectionModule := evm.Loader.Modules[0]
+	//preHooksDM := integerDetectionModule.(*modules.IntegerArithmetics).PreHooks
+	//for _, op := range preHooksDM {
+	//	preHook[op] = []moduleExecFunc{integerDetectionModule.Execute}
+	//}
 }
 
 func (evm *LaserEVM) NormalSymExec(CreationCode string, contractName string) {
@@ -251,19 +256,9 @@ func (evm *LaserEVM) Run(id int) {
 			fmt.Println("signal", id, len(newStates) == 0)
 			fmt.Println("===========================================================================")
 			if opcode == "STOP" || opcode == "RETURN" || opcode == "REVERT" {
-				// when the other goroutines have no globalStates to solve.
-				flag := true
-				for i, v := range evm.NoStatesSignal {
-					if i != id {
-						flag = flag && v
-					}
-				}
-				if flag {
-					fmt.Println("all goroutines have no globalStates")
-					evm.NoStatesFlag = true
-				}
-
+				fmt.Println("before potentialIssues")
 				modules.CheckPotentialIssues(globalState)
+				fmt.Println("finish potentialIssues")
 				for _, detector := range evm.Loader.Modules {
 					issues := detector.GetIssues()
 					for _, issue := range issues {
@@ -274,6 +269,17 @@ func (evm *LaserEVM) Run(id int) {
 						fmt.Println("Address:", issue.Address)
 						fmt.Println("Severity:", issue.Severity)
 					}
+				}
+				// when the other goroutines have no globalStates to solve.
+				flag := true
+				for i, v := range evm.NoStatesSignal {
+					if i != id {
+						flag = flag && v
+					}
+				}
+				if flag {
+					fmt.Println("all goroutines have no globalStates")
+					evm.NoStatesFlag = true
 				}
 			}
 		}
