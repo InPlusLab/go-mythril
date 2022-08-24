@@ -708,7 +708,7 @@ func (instr *Instruction) callvalue_(globalState *state.GlobalState) []*state.Gl
 	mstate := globalState.Mstate
 	env := globalState.Environment
 	mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(env.CallValue, 256))
-
+	//mstate.Stack.Append(globalState.Z3ctx.NewBitvec("callValue", 256))
 	ret = append(ret, globalState)
 	return ret
 }
@@ -823,7 +823,9 @@ func (instr *Instruction) balance_(globalState *state.GlobalState) []*state.Glob
 	address := mstate.Stack.Pop()
 	var balance *z3.Bitvec
 	if !address.Symbolic() {
+		fmt.Println("before")
 		balance = globalState.WorldState.AccountsExistOrLoad(address).Balance()
+		fmt.Println("after")
 	} else {
 		balance = ctx.NewBitvecVal(0, 256)
 		for _, acc := range globalState.WorldState.Accounts {

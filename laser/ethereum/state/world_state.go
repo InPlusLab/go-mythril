@@ -3,6 +3,7 @@ package state
 import (
 	"go-mythril/disassembler"
 	"go-mythril/laser/smt/z3"
+	"math/big"
 )
 
 type WorldState struct {
@@ -16,9 +17,14 @@ type WorldState struct {
 
 func NewWordState(ctx *z3.Context) *WorldState {
 	accounts := make(map[string]*Account)
+	// TODO: just test for balance_()
+	caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
+	balances := ctx.NewArray("balance", 256, 256)
+	balances.SetItem(ctx.NewBitvecVal(caller, 256), ctx.NewBitvecVal(1, 256))
 	return &WorldState{
-		Accounts:            accounts,
-		Balances:            ctx.NewArray("balance", 256, 256),
+		Accounts: accounts,
+		//Balances:            ctx.NewArray("balance", 256, 256),
+		Balances:            balances,
 		StartingBalances:    ctx.NewArray("balance", 256, 256),
 		Constraints:         NewConstraints(),
 		TransactionSequence: make([]BaseTransaction, 0),
@@ -51,7 +57,7 @@ func (ws *WorldState) AccountsExistOrLoad(addr *z3.Bitvec) *Account {
 		return acc
 	} else {
 		// TODO: find in dynamicLoader
-		return NewAccount(addr, nil, false, disassembler.NewDisasembly(""), "")
+		return NewAccount(addr, ws.Balances, false, disassembler.NewDisasembly(""), "")
 	}
 }
 

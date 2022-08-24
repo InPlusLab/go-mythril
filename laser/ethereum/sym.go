@@ -97,7 +97,6 @@ LOOP:
 		if len(evm.WorkList) == 0 {
 			break LOOP
 		}
-		fmt.Println("loop in currentObj")
 		globalState := <-evm.WorkList
 		fmt.Println(id, globalState)
 		fmt.Println(id, "constraints:", globalState.WorldState.Constraints)
@@ -153,6 +152,7 @@ LOOP:
 		*/
 
 		// Situation 2
+		fmt.Println("noStatesFlag:", evm.NoStatesFlag)
 		if evm.NoStatesFlag {
 			fmt.Println("break in situation 2")
 			break LOOP
@@ -160,6 +160,7 @@ LOOP:
 
 		// Situation 1
 		signal := <-evm.SignalCh
+		fmt.Println("signal: true")
 		latestSignals[signal.Id] = signal.Finished
 		allFinished := true
 		for i, finished := range latestSignals {
@@ -172,6 +173,7 @@ LOOP:
 			fmt.Println("break in situation 1")
 			break LOOP
 		}
+
 	}
 	fmt.Println("Finish", len(evm.WorkList))
 }
@@ -256,9 +258,8 @@ func (evm *LaserEVM) Run(id int) {
 			fmt.Println("signal", id, len(newStates) == 0)
 			fmt.Println("===========================================================================")
 			if opcode == "STOP" || opcode == "RETURN" || opcode == "REVERT" {
-				fmt.Println("before potentialIssues")
+
 				modules.CheckPotentialIssues(globalState)
-				fmt.Println("finish potentialIssues")
 				for _, detector := range evm.Loader.Modules {
 					issues := detector.GetIssues()
 					for _, issue := range issues {
@@ -280,6 +281,7 @@ func (evm *LaserEVM) Run(id int) {
 				if flag {
 					fmt.Println("all goroutines have no globalStates")
 					evm.NoStatesFlag = true
+					break
 				}
 			}
 		}

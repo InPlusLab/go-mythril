@@ -62,10 +62,14 @@ func NewMessageCallTransaction(code string, contractName string) *MessageCallTra
 	//inputStr := "f2fde38b000000000000000000000000ab8483f64d9c6d1ecf9b849ae677dd3315835cb2"
 
 	// TimeStamp: callValue-1000000000000000000
-	//inputStr := "3ccfd60b"
+	inputStr := "3ccfd60b"
 
 	// Reentrancy: callvalue-0, sload-addr
-	inputStr := "2e1a7d4d0000000000000000000000000000000000000000000000000000000000000001"
+	//inputStr := "2e1a7d4d0000000000000000000000000000000000000000000000000000000000000001"
+
+	// Lotttopolo: callvalue-symbolic
+	//inputStr := "0eecae21"
+
 	for i := 0; i < len(inputStr); i = i + 2 {
 		val, _ := strconv.ParseInt(inputStr[i:i+2], 16, 10)
 		calldataList = append(calldataList, ctx.NewBitvecVal(val, 8))
@@ -77,14 +81,14 @@ func NewMessageCallTransaction(code string, contractName string) *MessageCallTra
 		WorldState: NewWordState(ctx),
 		Code:       txcode,
 		// TODO: For test here.
-		CalleeAccount: NewAccount(ctx.NewBitvecVal(123, 256),
+		CalleeAccount: NewAccount(ctx.NewBitvecVal(caller, 256),
 			ctx.NewArray("balances", 256, 256), false, txcode, contractName),
 		Caller:   ctx.NewBitvecVal(caller, 256),
 		Calldata: NewConcreteCalldata("txid123", calldataList, ctx),
 		//Calldata:  NewSymbolicCalldata("txid123", ctx),
 		GasPrice:  10,
 		GasLimit:  100000,
-		CallValue: 0, // 1 ether
+		CallValue: 1000000000000000000, // 1 ether
 		Origin:    ctx.NewBitvecVal(origin, 256),
 		Basefee:   ctx.NewBitvecVal(1000, 256),
 		Ctx:       ctx,
