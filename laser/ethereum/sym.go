@@ -24,6 +24,7 @@ type LaserEVM struct {
 	CreateTimeout    int
 	TransactionCount int
 	WorkList         chan *state.GlobalState
+	OpenStates       []*state.WorldState
 	// FinalState       chan *state.GlobalState
 	InstrPreHook  *map[string][]moduleExecFunc
 	InstrPostHook *map[string][]moduleExecFunc
@@ -51,6 +52,7 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		CreateTimeout:    CreateTimeout,
 		TransactionCount: TransactionCount,
 		WorkList:         make(chan *state.GlobalState, 1000),
+		OpenStates:       make([]*state.WorldState, 0),
 		// FinalState:       make(chan *state.GlobalState),
 		InstrPreHook:  &preHook,
 		InstrPostHook: &postHook,
@@ -76,10 +78,14 @@ func (evm *LaserEVM) registerInstrHooks() {
 			postHook[op] = append(postHook[op], module.Execute)
 		}
 	}
-	//integerDetectionModule := evm.Loader.Modules[0]
-	//preHooksDM := integerDetectionModule.(*modules.IntegerArithmetics).PreHooks
+	//timeStampDetectionModule := evm.Loader.Modules[2]
+	//preHooksDM := timeStampDetectionModule.(*modules.PredictableVariables).PreHooks
 	//for _, op := range preHooksDM {
-	//	preHook[op] = []moduleExecFunc{integerDetectionModule.Execute}
+	//	preHook[op] = []moduleExecFunc{timeStampDetectionModule.Execute}
+	//}
+	//postHooksDM := timeStampDetectionModule.(*modules.PredictableVariables).PostHooks
+	//for _, op := range postHooksDM {
+	//	postHook[op] = []moduleExecFunc{timeStampDetectionModule.Execute}
 	//}
 }
 
@@ -160,7 +166,6 @@ LOOP:
 
 		// Situation 1
 		signal := <-evm.SignalCh
-		fmt.Println("signal: true")
 		latestSignals[signal.Id] = signal.Finished
 		allFinished := true
 		for i, finished := range latestSignals {
@@ -234,6 +239,21 @@ func readWithSelect(evm *LaserEVM) (*state.GlobalState, error) {
 		return globalState, nil
 	default:
 		return nil, errors.New("evm.WorkList is empty")
+	}
+}
+
+func (evm *LaserEVM) executeTransactions(address string) {
+
+	for i := 0; i < evm.TransactionCount; i++ {
+		if len(evm.OpenStates) == 0 {
+			break
+		}
+		//oldStatesCount := len(evm.OpenStates)
+		fmt.Println("Starting message call transaction, iteration:", i, len(evm.OpenStates), "initial states")
+		args := support.NewArgs()
+		funcHashes := args.TransactionSequences[i]
+		fmt.Println(funcHashes)
+		// TODO: ExecuteMessageCall()
 	}
 }
 

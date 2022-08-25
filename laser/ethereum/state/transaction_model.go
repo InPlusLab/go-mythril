@@ -62,13 +62,16 @@ func NewMessageCallTransaction(code string, contractName string) *MessageCallTra
 	//inputStr := "f2fde38b000000000000000000000000ab8483f64d9c6d1ecf9b849ae677dd3315835cb2"
 
 	// TimeStamp: callValue-1000000000000000000
-	inputStr := "3ccfd60b"
+	//inputStr := "3ccfd60b"
 
 	// Reentrancy: callvalue-0, sload-addr
 	//inputStr := "2e1a7d4d0000000000000000000000000000000000000000000000000000000000000001"
 
-	// Lotttopolo: callvalue-symbolic
+	// Lotttopolo: callvalueInstr-symbolic
 	//inputStr := "0eecae21"
+
+	// largeTimeStamp: callvalue-10000000000000000000,
+	inputStr := "17c6abfa"
 
 	for i := 0; i < len(inputStr); i = i + 2 {
 		val, _ := strconv.ParseInt(inputStr[i:i+2], 16, 10)
@@ -88,7 +91,7 @@ func NewMessageCallTransaction(code string, contractName string) *MessageCallTra
 		//Calldata:  NewSymbolicCalldata("txid123", ctx),
 		GasPrice:  10,
 		GasLimit:  100000,
-		CallValue: 1000000000000000000, // 1 ether
+		CallValue: 0, // 1 ether
 		Origin:    ctx.NewBitvecVal(origin, 256),
 		Basefee:   ctx.NewBitvecVal(1000, 256),
 		Ctx:       ctx,

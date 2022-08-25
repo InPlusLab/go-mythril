@@ -41,7 +41,9 @@ func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool
 		s.Maximize(e.AsAST())
 	}
 	// TODO: args.solverLog
+	fmt.Println("beforeCheck")
 	result := s.Check()
+	fmt.Println("afterCheck")
 	if result == z3.True {
 		return s.Model(), true
 	} else {

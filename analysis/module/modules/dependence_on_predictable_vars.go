@@ -99,11 +99,15 @@ func (dm *PredictableVariables) _analyze_state(globalState *state.GlobalState) [
 		length := globalState.Mstate.Stack.Length()
 		if opcode.Name == "JUMPI" {
 			// Look for predictable state variables in jump condition
+			fmt.Println("timeStamp: jumpi")
 			for _, annotation := range globalState.Mstate.Stack.RawStack[length-2].Annotations.Elements() {
+				fmt.Println("timeStamp: jumpi2")
 				if reflect.TypeOf(annotation).String() == "modules.PredictableValueAnnotation" {
+					fmt.Println("timeStamp: jumpi3")
 					constraints := globalState.WorldState.Constraints
 
 					transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
+					fmt.Println("timeStamp: jumpi4")
 					if transactionSequence == nil {
 						continue
 					}

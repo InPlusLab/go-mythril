@@ -3,7 +3,10 @@ package z3
 // #include <stdlib.h>
 // #include "goZ3Config.h"
 import "C"
-import "unsafe"
+import (
+	"fmt"
+	"unsafe"
+)
 
 type Optimize struct {
 	rawCtx      C.Z3_context
@@ -63,17 +66,19 @@ func (s *Optimize) Assert(args ...*AST) {
 
 // Check checks if the currently set formula is consistent.
 func (s *Optimize) Check(args ...*AST) LBool {
-	len := len(args)
-	if len != 0 {
-		raws := make([]C.Z3_ast, len)
+	length := len(args)
+	if length != 0 {
+		raws := make([]C.Z3_ast, length)
 		for i, arg := range args {
 			raws[i] = arg.rawAST
 		}
-		return LBool(C.Z3_optimize_check(s.rawCtx, s.rawOptimize, C.uint(len),
+		return LBool(C.Z3_optimize_check(s.rawCtx, s.rawOptimize, C.uint(length),
 			(*C.Z3_ast)(unsafe.Pointer(&raws[0]))))
 	} else {
-		tmp := AST{rawCtx: s.rawCtx, rawAST: nil}
-		return LBool(C.Z3_optimize_check(s.rawCtx, s.rawOptimize, 0, &tmp.rawAST))
+		fmt.Println("optimize 1")
+		//tmp := AST{rawCtx: s.rawCtx, rawAST: nil}
+		//return LBool(C.Z3_optimize_check(s.rawCtx, s.rawOptimize, 0, &tmp.rawAST))
+		return LBool(C.Z3_optimize_check(s.rawCtx, s.rawOptimize, 0, nil))
 	}
 }
 
