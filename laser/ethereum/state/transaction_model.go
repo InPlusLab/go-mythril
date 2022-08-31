@@ -47,7 +47,7 @@ type MessageCallTransaction struct {
 	ReturnData    []byte
 }
 
-func NewMessageCallTransaction(code string, contractName string) *MessageCallTransaction {
+func NewMessageCallTransaction(code string, contractName string, inputStr string) *MessageCallTransaction {
 
 	config := z3.NewConfig()
 	ctx := z3.NewContext(config)
@@ -71,7 +71,7 @@ func NewMessageCallTransaction(code string, contractName string) *MessageCallTra
 	//inputStr := "0eecae21"
 
 	// largeTimeStamp: callvalue-10000000000000000000,
-	inputStr := "17c6abfa"
+	//inputStr := "17c6abfa"
 
 	for i := 0; i < len(inputStr); i = i + 2 {
 		val, _ := strconv.ParseInt(inputStr[i:i+2], 16, 10)

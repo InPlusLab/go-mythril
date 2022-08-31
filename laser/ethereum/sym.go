@@ -89,98 +89,115 @@ func (evm *LaserEVM) registerInstrHooks() {
 	//}
 }
 
-func (evm *LaserEVM) NormalSymExec(CreationCode string, contractName string) {
-	fmt.Println("Symbolic Executing: ", CreationCode)
+func (evm *LaserEVM) NormalSymExec(creationCode string, contractName string) {
+	fmt.Println("Symbolic Executing: ", creationCode)
 	fmt.Println("")
-	//tx := state.NewContractCreationTransaction(CreationCode)
-	tx := state.NewMessageCallTransaction(CreationCode, contractName)
-	globalState := tx.InitialGlobalState()
-	evm.WorkList <- globalState
-	id := 0
-LOOP:
-	for {
-		// When there is no newState in channel, exit the iteration
-		if len(evm.WorkList) == 0 {
-			break LOOP
-		}
-		globalState := <-evm.WorkList
-		fmt.Println(id, globalState)
-		fmt.Println(id, "constraints:", globalState.WorldState.Constraints)
-		for _, constraint := range globalState.WorldState.Constraints.ConstraintList {
-			fmt.Println(constraint)
-		}
-		newStates, opcode := evm.ExecuteState(globalState)
-		// evm.ManageCFG(opcode, newStates)
+	evm.executeTransactionNormal(creationCode, contractName)
+}
 
-		for _, newState := range newStates {
-			//if opcode == "STOP" || opcode == "RETURN" {
-			//	modules.CheckPotentialIssues(newState)
-			//}
-			evm.WorkList <- newState
-		}
-		fmt.Println(id, "done", globalState, opcode)
-		fmt.Println("==============================================================================")
-		if opcode == "STOP" || opcode == "RETURN" {
-			modules.CheckPotentialIssues(globalState)
-			for _, detector := range evm.Loader.Modules {
-				issues := detector.GetIssues()
-				for _, issue := range issues {
-					fmt.Println("ContractName:", issue.Contract)
-					fmt.Println("FunctionName:", issue.FunctionName)
-					fmt.Println("Title:", issue.Title)
-					fmt.Println("SWCID:", issue.SWCID)
-					fmt.Println("Address:", issue.Address)
-					fmt.Println("Severity:", issue.Severity)
-				}
+func (evm *LaserEVM) executeTransactionNormal(creationCode string, contractName string) {
+	inputStrArr := support.GetArgsInstance().TransactionSequences
+	for i := 0; i < evm.TransactionCount; i++ {
+		tx := state.NewMessageCallTransaction(creationCode, contractName, inputStrArr[i])
+		globalState := tx.InitialGlobalState()
+		evm.WorkList <- globalState
+		id := 0
+	LOOP:
+		for {
+			// When there is no newState in channel, exit the iteration
+			if len(evm.WorkList) == 0 {
+				break LOOP
 			}
+			globalState := <-evm.WorkList
+			fmt.Println(id, globalState)
+			fmt.Println(id, "constraints:", globalState.WorldState.Constraints)
+			for _, constraint := range globalState.WorldState.Constraints.ConstraintList {
+				fmt.Println(constraint)
+			}
+			newStates, opcode := evm.ExecuteState(globalState)
+			// evm.ManageCFG(opcode, newStates)
+
+			for _, newState := range newStates {
+				//if opcode == "STOP" || opcode == "RETURN" {
+				//	modules.CheckPotentialIssues(newState)
+				//}
+				evm.WorkList <- newState
+			}
+			fmt.Println(id, "done", globalState, opcode)
+			fmt.Println("==============================================================================")
+			if opcode == "STOP" || opcode == "RETURN" {
+				modules.CheckPotentialIssues(globalState)
+				for _, detector := range evm.Loader.Modules {
+					issues := detector.GetIssues()
+					for _, issue := range issues {
+						fmt.Println("+++++++++++++++++++++++++++++++++++")
+						fmt.Println("ContractName:", issue.Contract)
+						fmt.Println("FunctionName:", issue.FunctionName)
+						fmt.Println("Title:", issue.Title)
+						fmt.Println("SWCID:", issue.SWCID)
+						fmt.Println("Address:", issue.Address)
+						fmt.Println("Severity:", issue.Severity)
+					}
+				}
+				fmt.Println("+++++++++++++++++++++++++++++++++++")
+			}
+			id++
 		}
-		id++
+		fmt.Println("normalExec:", i, "tx")
 	}
 }
 
-func (evm *LaserEVM) SymExec(CreationCode string, contractName string) {
-	fmt.Println("Symbolic Executing: ", CreationCode)
-	// TOOD: actually creation code is not for base tx, but for creation tx, just for test here
-	tx := state.NewMessageCallTransaction(CreationCode, contractName)
-	globalState := tx.InitialGlobalState()
-	evm.WorkList <- globalState
-	for i := 0; i < evm.GofuncCount; i++ {
-		go evm.Run(i)
-	}
+func (evm *LaserEVM) SymExec(creationCode string, contractName string) {
+	fmt.Println("Symbolic Executing: ", creationCode)
+	fmt.Println("")
+	evm.executeTransaction(creationCode, contractName)
+}
 
-	latestSignals := make(map[int]bool)
-LOOP:
-	for {
-		/*
-			There are two situations for exiting.
-			1. All goroutines don't generate new globalStates.
-			2. There is no globalState in channel, so all goroutines will be blocked.
-		*/
-
-		// Situation 2
-		fmt.Println("noStatesFlag:", evm.NoStatesFlag)
-		if evm.NoStatesFlag {
-			fmt.Println("break in situation 2")
-			break LOOP
+func (evm *LaserEVM) executeTransaction(creationCode string, contractName string) {
+	inputStrArr := support.GetArgsInstance().TransactionSequences
+	for i := 0; i < evm.TransactionCount; i++ {
+		tx := state.NewMessageCallTransaction(creationCode, contractName, inputStrArr[i])
+		globalState := tx.InitialGlobalState()
+		evm.WorkList <- globalState
+		for i := 0; i < evm.GofuncCount; i++ {
+			go evm.Run(i)
 		}
 
-		// Situation 1
-		signal := <-evm.SignalCh
-		latestSignals[signal.Id] = signal.Finished
-		allFinished := true
-		for i, finished := range latestSignals {
-			fmt.Println(i, finished)
-			if !finished {
-				allFinished = false
+		latestSignals := make(map[int]bool)
+	LOOP:
+		for {
+			/*
+				There are two situations for exiting.
+				1. All goroutines don't generate new globalStates.
+				2. There is no globalState in channel, so all goroutines will be blocked.
+			*/
+
+			// Situation 2
+			fmt.Println("noStatesFlag:", evm.NoStatesFlag)
+			if evm.NoStatesFlag {
+				fmt.Println("break in situation 2")
+				break LOOP
+			}
+
+			// Situation 1
+			signal := <-evm.SignalCh
+			latestSignals[signal.Id] = signal.Finished
+			allFinished := true
+			for i, finished := range latestSignals {
+				fmt.Println(i, finished)
+				if !finished {
+					allFinished = false
+				}
+			}
+			if allFinished {
+				fmt.Println("break in situation 1")
+				break LOOP
 			}
 		}
-		if allFinished {
-			fmt.Println("break in situation 1")
-			break LOOP
-		}
-
+		fmt.Println("Finish", i, len(evm.WorkList))
+		// Reset the flag
+		evm.NoStatesFlag = false
 	}
-	fmt.Println("Finish", len(evm.WorkList))
 }
 
 func (evm *LaserEVM) ExecuteState(globalState *state.GlobalState) ([]*state.GlobalState, string) {
@@ -233,7 +250,6 @@ func (evm *LaserEVM) newNodeState(state *state.GlobalState, edgeType JumpType, c
 }
 
 func readWithSelect(evm *LaserEVM) (*state.GlobalState, error) {
-	//fmt.Println(id)
 	select {
 	case globalState := <-evm.WorkList:
 		return globalState, nil
@@ -277,22 +293,26 @@ func (evm *LaserEVM) Run(id int) {
 			}
 			fmt.Println("signal", id, len(newStates) == 0)
 			fmt.Println("===========================================================================")
-			if opcode == "STOP" || opcode == "RETURN" || opcode == "REVERT" {
+			if opcode == "STOP" || opcode == "RETURN" {
 
 				modules.CheckPotentialIssues(globalState)
 				for _, detector := range evm.Loader.Modules {
 					issues := detector.GetIssues()
 					for _, issue := range issues {
+						fmt.Println("+++++++++++++++++++++++++++++++++++")
 						fmt.Println("ContractName:", issue.Contract)
 						fmt.Println("FunctionName:", issue.FunctionName)
 						fmt.Println("Title:", issue.Title)
 						fmt.Println("SWCID:", issue.SWCID)
 						fmt.Println("Address:", issue.Address)
 						fmt.Println("Severity:", issue.Severity)
+
 					}
 				}
+				fmt.Println("+++++++++++++++++++++++++++++++++++")
 				// when the other goroutines have no globalStates to solve.
 				flag := true
+				fmt.Println("len", len(evm.NoStatesSignal))
 				for i, v := range evm.NoStatesSignal {
 					if i != id {
 						flag = flag && v
@@ -301,7 +321,12 @@ func (evm *LaserEVM) Run(id int) {
 				if flag {
 					fmt.Println("all goroutines have no globalStates")
 					evm.NoStatesFlag = true
-					break
+					// Here, we push a value in channel to trigger the LOOP iteration in symExec.
+					evm.SignalCh <- Signal{
+						Id:       id,
+						Finished: false,
+					}
+					fmt.Println("signalCh push")
 				}
 			}
 		}
