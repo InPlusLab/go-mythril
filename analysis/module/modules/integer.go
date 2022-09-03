@@ -133,7 +133,6 @@ func (dm *IntegerArithmetics) _handel_add(globalState *state.GlobalState) {
 		Operator:         "addition",
 		Constraint:       c,
 	}
-	fmt.Println("handelADD", c.IsTrue())
 	op0.Annotate(annotation)
 }
 func (dm *IntegerArithmetics) _handel_mul(globalState *state.GlobalState) {

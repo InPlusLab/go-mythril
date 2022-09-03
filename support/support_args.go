@@ -3,7 +3,7 @@ package support
 import "sync"
 
 type Args struct {
-	SolverTimeout        int
+	SolverTimeout        uint
 	SparsePruning        bool
 	UnconstrainedStorage bool
 	ParallelSolving      bool

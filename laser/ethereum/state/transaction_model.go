@@ -73,6 +73,9 @@ func NewMessageCallTransaction(code string, contractName string, inputStr string
 	// largeTimeStamp: callvalue-10000000000000000000,
 	//inputStr := "17c6abfa"
 
+	// whiteBetting: callvalue-10000000000000000000
+	//inputStr := "d5214029"
+
 	for i := 0; i < len(inputStr); i = i + 2 {
 		val, _ := strconv.ParseInt(inputStr[i:i+2], 16, 10)
 		calldataList = append(calldataList, ctx.NewBitvecVal(val, 8))

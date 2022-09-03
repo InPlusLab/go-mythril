@@ -24,9 +24,13 @@ func (c *Context) NewBool(ast *AST) *Bool {
 }
 
 func (b *Bool) AsAST() *AST {
+	ctx := &Context{
+		raw: b.rawCtx,
+	}
 	return &AST{
-		rawCtx: b.rawCtx,
-		rawAST: b.rawAST,
+		rawCtx:  b.rawCtx,
+		rawAST:  b.rawAST,
+		rawSort: ctx.BoolSort().rawSort,
 	}
 }
 

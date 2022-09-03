@@ -75,11 +75,11 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	}
 	instr.ExePostHooks(globalState)
 	fmt.Println("PC:", globalState.Mstate.Pc)
-	for _, state := range result {
-		// For debug
-		state.Mstate.Stack.PrintStack()
-		//state.Mstate.Memory.PrintMemory()
-	}
+	//for _, state := range result {
+	//	// For debug
+	//	state.Mstate.Stack.PrintStack()
+	//	//state.Mstate.Memory.PrintMemory()
+	//}
 
 	return result
 }
@@ -1230,7 +1230,8 @@ func (instr *Instruction) timestamp_(globalState *state.GlobalState) []*state.Gl
 func (instr *Instruction) number_(globalState *state.GlobalState) []*state.GlobalState {
 	ret := make([]*state.GlobalState, 0)
 
-	globalState.Mstate.Stack.Append(globalState.Environment.BlockNumber)
+	//globalState.Mstate.Stack.Append(globalState.Environment.BlockNumber)
+	globalState.Mstate.Stack.Append(globalState.Z3ctx.NewBitvec("number", 256))
 
 	ret = append(ret, globalState)
 	return ret
@@ -1345,7 +1346,7 @@ func (instr *Instruction) jump_(globalState *state.GlobalState) []*state.GlobalS
 	opCode := disassembly.InstructionList[index].OpCode
 
 	if opCode.Name != "JUMPDEST" {
-		panic("Skipping JUMP to invalid destination (not JUMPDEST): " + jumpAddr.Value())
+		panic("Skipping JUMP to invalid destination (not JUMPDEST): " + jumpAddr.String())
 	}
 
 	newState := globalState.Copy()

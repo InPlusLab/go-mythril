@@ -10,9 +10,12 @@ import (
 	"go-mythril/laser/smt/z3"
 	"go-mythril/support"
 	"go-mythril/utils"
+	"sync"
 )
 
 type moduleExecFunc func(globalState *state.GlobalState) []*analysis.Issue
+
+var l sync.RWMutex
 
 type Signal struct {
 	Id       int
@@ -32,6 +35,7 @@ type LaserEVM struct {
 	SignalCh       chan Signal
 	NoStatesFlag   bool
 	NoStatesSignal []bool
+	NoStatesCh     chan []bool
 	GofuncCount    int
 	/* Analysis */
 	Loader *module.ModuleLoader
@@ -47,6 +51,7 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		postHook[v.Name] = make([]moduleExecFunc, 0)
 	}
 
+	//noStatesArr := make([]bool, 3)
 	evm := LaserEVM{
 		ExecutionTimeout: ExecutionTimeout,
 		CreateTimeout:    CreateTimeout,
@@ -59,10 +64,12 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 
 		SignalCh:       make(chan Signal),
 		NoStatesFlag:   false,
-		NoStatesSignal: make([]bool, 4),
+		NoStatesSignal: make([]bool, 4, 4),
+		NoStatesCh:     make(chan []bool),
 		GofuncCount:    4,
 		Loader:         moduleLoader,
 	}
+	//evm.NoStatesCh <- noStatesArr
 	evm.registerInstrHooks()
 	return &evm
 }
@@ -110,19 +117,13 @@ func (evm *LaserEVM) executeTransactionNormal(creationCode string, contractName 
 			}
 			globalState := <-evm.WorkList
 			fmt.Println(id, globalState)
-			fmt.Println(id, "constraints:", globalState.WorldState.Constraints)
-			for _, constraint := range globalState.WorldState.Constraints.ConstraintList {
-				fmt.Println(constraint)
-			}
 			newStates, opcode := evm.ExecuteState(globalState)
 			// evm.ManageCFG(opcode, newStates)
 
 			for _, newState := range newStates {
-				//if opcode == "STOP" || opcode == "RETURN" {
-				//	modules.CheckPotentialIssues(newState)
-				//}
 				evm.WorkList <- newState
 			}
+
 			fmt.Println(id, "done", globalState, opcode)
 			fmt.Println("==============================================================================")
 			if opcode == "STOP" || opcode == "RETURN" {
@@ -159,6 +160,7 @@ func (evm *LaserEVM) executeTransaction(creationCode string, contractName string
 		tx := state.NewMessageCallTransaction(creationCode, contractName, inputStrArr[i])
 		globalState := tx.InitialGlobalState()
 		evm.WorkList <- globalState
+
 		for i := 0; i < evm.GofuncCount; i++ {
 			go evm.Run(i)
 		}
@@ -183,8 +185,8 @@ func (evm *LaserEVM) executeTransaction(creationCode string, contractName string
 			signal := <-evm.SignalCh
 			latestSignals[signal.Id] = signal.Finished
 			allFinished := true
-			for i, finished := range latestSignals {
-				fmt.Println(i, finished)
+			for _, finished := range latestSignals {
+				//fmt.Println(i, finished)
 				if !finished {
 					allFinished = false
 				}
@@ -197,6 +199,9 @@ func (evm *LaserEVM) executeTransaction(creationCode string, contractName string
 		fmt.Println("Finish", i, len(evm.WorkList))
 		// Reset the flag
 		evm.NoStatesFlag = false
+		for j := 0; j < evm.GofuncCount; j++ {
+			evm.NoStatesSignal[j] = true
+		}
 	}
 }
 
@@ -249,15 +254,6 @@ func (evm *LaserEVM) newNodeState(state *state.GlobalState, edgeType JumpType, c
 	// default: edge_type=JumpType.UNCONDITIONAL, condition=None
 }
 
-func readWithSelect(evm *LaserEVM) (*state.GlobalState, error) {
-	select {
-	case globalState := <-evm.WorkList:
-		return globalState, nil
-	default:
-		return nil, errors.New("evm.WorkList is empty")
-	}
-}
-
 func (evm *LaserEVM) executeTransactions(address string) {
 
 	for i := 0; i < evm.TransactionCount; i++ {
@@ -273,28 +269,47 @@ func (evm *LaserEVM) executeTransactions(address string) {
 	}
 }
 
+func readWithSelect(evm *LaserEVM) (*state.GlobalState, error) {
+	select {
+	case globalState := <-evm.WorkList:
+		return globalState, nil
+	default:
+		return nil, errors.New("evm.WorkList is empty")
+	}
+}
+
 func (evm *LaserEVM) Run(id int) {
 	fmt.Println("Run")
 	for {
 		globalState, _ := readWithSelect(evm)
+
+		l.Lock()
 		evm.NoStatesSignal[id] = globalState == nil
+		l.Unlock()
+
+		//noStatesArr := <- evm.NoStatesCh
+		//noStatesArr[id] = globalState == nil
+		//evm.NoStatesCh <- noStatesArr
+
 		if globalState != nil {
-			fmt.Println(id, globalState, &globalState)
+			fmt.Println(id, globalState)
 			newStates, opcode := evm.ExecuteState(globalState)
 			//evm.ManageCFG(opcode, newStates)
 			for _, newState := range newStates {
 				evm.WorkList <- newState
-				fmt.Println("append:", len(evm.WorkList))
 			}
-			fmt.Println(id, "done", globalState, opcode, &globalState)
+			fmt.Println(id, "done", globalState, opcode)
 			evm.SignalCh <- Signal{
 				Id:       id,
 				Finished: len(newStates) == 0,
 			}
-			fmt.Println("signal", id, len(newStates) == 0)
+			fmt.Println("produceNoStates:", id, len(newStates) == 0)
+			fmt.Println(id, opcode)
+			for i := 0; i < evm.GofuncCount; i++ {
+				fmt.Println(evm.NoStatesSignal[i])
+			}
 			fmt.Println("===========================================================================")
 			if opcode == "STOP" || opcode == "RETURN" {
-
 				modules.CheckPotentialIssues(globalState)
 				for _, detector := range evm.Loader.Modules {
 					issues := detector.GetIssues()
@@ -311,13 +326,24 @@ func (evm *LaserEVM) Run(id int) {
 				}
 				fmt.Println("+++++++++++++++++++++++++++++++++++")
 				// when the other goroutines have no globalStates to solve.
+
+				l.RLock()
 				flag := true
-				fmt.Println("len", len(evm.NoStatesSignal))
 				for i, v := range evm.NoStatesSignal {
 					if i != id {
 						flag = flag && v
 					}
 				}
+				l.RUnlock()
+
+				//flag := true
+				//noStatesArr := <- evm.NoStatesCh
+				//for i, v := range noStatesArr {
+				//	if i!=id {
+				//		flag = flag && v
+				//	}
+				//}
+
 				if flag {
 					fmt.Println("all goroutines have no globalStates")
 					evm.NoStatesFlag = true
@@ -326,7 +352,6 @@ func (evm *LaserEVM) Run(id int) {
 						Id:       id,
 						Finished: false,
 					}
-					fmt.Println("signalCh push")
 				}
 			}
 		}
