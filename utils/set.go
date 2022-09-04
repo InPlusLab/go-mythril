@@ -3,42 +3,63 @@ package utils
 import (
 	"bytes"
 	"fmt"
+	"sync"
 )
 
 type Set struct {
+	sync.RWMutex
 	m map[interface{}]bool
+	//m sync.Map
 }
 
 func NewSet() *Set {
+	//var myMap sync.Map
 	return &Set{m: make(map[interface{}]bool)}
+	//return &Set{m: myMap}
 }
 
 //添加    true 添加成功 false 添加失败
 func (set *Set) Add(e interface{}) (b bool) {
+	set.Lock()
+	defer set.Unlock()
 	if !set.m[e] {
 		set.m[e] = true
 		return true
 	}
 	return false
+	//set.m.Store(e, true)
+	//return true
 }
 
 //删除
 func (set *Set) Remove(e interface{}) {
+	set.Lock()
+	defer set.Unlock()
 	delete(set.m, e)
+	//set.m.Delete(e)
 }
 
 //清除
 func (set *Set) Clear() {
+	set.Lock()
+	defer set.Unlock()
 	set.m = make(map[interface{}]bool)
 }
 
 //是否包含
 func (set *Set) Contains(e interface{}) bool {
-	return set.m[e]
+	set.RLock()
+	defer set.RUnlock()
+	value := set.m[e]
+	return value
+	//_, ok := set.m.Load(e)
+	//return ok
 }
 
 //获取元素数量
 func (set *Set) Len() int {
+	set.RLock()
+	defer set.RUnlock()
 	return len(set.m)
 }
 
@@ -64,6 +85,9 @@ func (set *Set) Same(other *Set) bool {
 
 //迭代
 func (set *Set) Elements() []interface{} {
+	set.RLock()
+	defer set.RUnlock()
+
 	if set == nil {
 		fmt.Println("TODO: bv annotation")
 	}
@@ -87,7 +111,6 @@ func (set *Set) Elements() []interface{} {
 	if actuallen < initlen {
 		snaphot = snaphot[:actuallen]
 	}
-
 	return snaphot
 }
 
