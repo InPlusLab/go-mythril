@@ -68,8 +68,10 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	instr.ExePreHooks(globalState)
 	result := instr.Mutator(globalState)
 	// has the same function of StateTransition in instructions.go
+	fmt.Println("afterMutator")
 	for _, state := range result {
 		if instr.Opcode != "JUMPI" && instr.Opcode != "JUMP" && instr.Opcode != "RETURNSUB" {
+			fmt.Println("pc++")
 			state.Mstate.Pc++
 		}
 	}
@@ -706,9 +708,9 @@ func (instr *Instruction) callvalue_(globalState *state.GlobalState) []*state.Gl
 	ret := make([]*state.GlobalState, 0)
 
 	mstate := globalState.Mstate
-	//env := globalState.Environment
-	//mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(env.CallValue, 256))
-	mstate.Stack.Append(globalState.Z3ctx.NewBitvec("callValue", 256))
+	env := globalState.Environment
+	mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(env.CallValue, 256))
+	//mstate.Stack.Append(globalState.Z3ctx.NewBitvec("callValue", 256))
 	ret = append(ret, globalState)
 	return ret
 }

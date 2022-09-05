@@ -15,7 +15,7 @@ import (
 
 type moduleExecFunc func(globalState *state.GlobalState) []*analysis.Issue
 
-var l sync.RWMutex
+var l sync.Mutex
 
 type Signal struct {
 	Id       int
@@ -70,7 +70,7 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		Loader:         moduleLoader,
 	}
 	//evm.NoStatesCh <- noStatesArr
-	evm.registerInstrHooks()
+	//evm.registerInstrHooks()
 	return &evm
 }
 
@@ -198,10 +198,10 @@ func (evm *LaserEVM) executeTransaction(creationCode string, contractName string
 		}
 		fmt.Println("Finish", i, len(evm.WorkList))
 		// Reset the flag
-		evm.NoStatesFlag = false
-		for j := 0; j < evm.GofuncCount; j++ {
-			evm.NoStatesSignal[j] = true
-		}
+		//evm.NoStatesFlag = false
+		//for j := 0; j < evm.GofuncCount; j++ {
+		//	evm.NoStatesSignal[j] = true
+		//}
 	}
 }
 
@@ -287,13 +287,10 @@ func (evm *LaserEVM) Run(id int) {
 		evm.NoStatesSignal[id] = globalState == nil
 		l.Unlock()
 
-		//noStatesArr := <- evm.NoStatesCh
-		//noStatesArr[id] = globalState == nil
-		//evm.NoStatesCh <- noStatesArr
-
 		if globalState != nil {
-			fmt.Println(id, globalState)
+			//fmt.Println(id, globalState)
 			newStates, opcode := evm.ExecuteState(globalState)
+			fmt.Println(id, globalState, opcode)
 			//evm.ManageCFG(opcode, newStates)
 			for _, newState := range newStates {
 				evm.WorkList <- newState
@@ -303,38 +300,38 @@ func (evm *LaserEVM) Run(id int) {
 				Id:       id,
 				Finished: len(newStates) == 0,
 			}
-			fmt.Println("produceNoStates:", id, len(newStates) == 0)
-			fmt.Println(id, opcode)
-			for i := 0; i < evm.GofuncCount; i++ {
-				fmt.Println(evm.NoStatesSignal[i])
-			}
+			//fmt.Println("produceNoStates:", id, len(newStates) == 0)
+			//fmt.Println(id, opcode)
+			//for i := 0; i < evm.GofuncCount; i++ {
+			//	fmt.Println(evm.NoStatesSignal[i])
+			//}
 			fmt.Println("===========================================================================")
 			if opcode == "STOP" || opcode == "RETURN" {
-				modules.CheckPotentialIssues(globalState)
-				for _, detector := range evm.Loader.Modules {
-					issues := detector.GetIssues()
-					for _, issue := range issues {
-						fmt.Println("+++++++++++++++++++++++++++++++++++")
-						fmt.Println("ContractName:", issue.Contract)
-						fmt.Println("FunctionName:", issue.FunctionName)
-						fmt.Println("Title:", issue.Title)
-						fmt.Println("SWCID:", issue.SWCID)
-						fmt.Println("Address:", issue.Address)
-						fmt.Println("Severity:", issue.Severity)
-
-					}
-				}
+				//modules.CheckPotentialIssues(globalState)
+				//for _, detector := range evm.Loader.Modules {
+				//	issues := detector.GetIssues()
+				//	for _, issue := range issues {
+				//		fmt.Println("+++++++++++++++++++++++++++++++++++")
+				//		fmt.Println("ContractName:", issue.Contract)
+				//		fmt.Println("FunctionName:", issue.FunctionName)
+				//		fmt.Println("Title:", issue.Title)
+				//		fmt.Println("SWCID:", issue.SWCID)
+				//		fmt.Println("Address:", issue.Address)
+				//		fmt.Println("Severity:", issue.Severity)
+				//
+				//	}
+				//}
 				fmt.Println("+++++++++++++++++++++++++++++++++++")
-				// when the other goroutines have no globalStates to solve.
 
-				l.RLock()
+				// when the other goroutines have no globalStates to solve.
+				l.Lock()
 				flag := true
 				for i, v := range evm.NoStatesSignal {
 					if i != id {
 						flag = flag && v
 					}
 				}
-				l.RUnlock()
+				l.Unlock()
 
 				//flag := true
 				//noStatesArr := <- evm.NoStatesCh

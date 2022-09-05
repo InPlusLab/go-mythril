@@ -94,7 +94,7 @@ func NewMessageCallTransaction(code string, contractName string, inputStr string
 		//Calldata:  NewSymbolicCalldata("txid123", ctx),
 		GasPrice:  10,
 		GasLimit:  100000,
-		CallValue: 0, // 1 ether
+		CallValue: 10, // 1 ether
 		Origin:    ctx.NewBitvecVal(origin, 256),
 		Basefee:   ctx.NewBitvecVal(1000, 256),
 		Ctx:       ctx,

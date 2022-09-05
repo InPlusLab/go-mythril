@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"reflect"
 	"strings"
+	"sync"
 )
 
 type PredictableVariables struct {
@@ -20,6 +21,9 @@ type PredictableVariables struct {
 	Issues      []*analysis.Issue
 	Cache       *utils.Set
 }
+
+var lock sync.Mutex
+
 type PredictableValueAnnotation struct {
 	// Symbol annotation used if a variable is initialized from a predictable environment variable.
 	Operation string
@@ -52,6 +56,8 @@ func NewPredictableVariables() *PredictableVariables {
 	}
 }
 func (dm *PredictableVariables) ResetModule() {
+	lock.Lock()
+	defer lock.Unlock()
 	dm.Issues = make([]*analysis.Issue, 0)
 }
 func (dm *PredictableVariables) Execute(target *state.GlobalState) []*analysis.Issue {
@@ -62,10 +68,14 @@ func (dm *PredictableVariables) Execute(target *state.GlobalState) []*analysis.I
 }
 
 func (dm *PredictableVariables) AddIssue(issue *analysis.Issue) {
+	lock.Lock()
+	defer lock.Unlock()
 	dm.Issues = append(dm.Issues, issue)
 }
 
 func (dm *PredictableVariables) GetIssues() []*analysis.Issue {
+	lock.Lock()
+	defer lock.Unlock()
 	return dm.Issues
 }
 
@@ -86,14 +96,15 @@ func (dm *PredictableVariables) _execute(globalState *state.GlobalState) []*anal
 	for _, issue := range issues {
 		dm.Cache.Add(issue)
 	}
+	lock.Lock()
 	dm.Issues = append(dm.Issues, issues...)
+	lock.Unlock()
 	return nil
 }
 
 func (dm *PredictableVariables) _analyze_state(globalState *state.GlobalState) []*analysis.Issue {
 	issues := make([]*analysis.Issue, 0)
 
-	// TODO: isPrehook() ?
 	if IsPreHook {
 		opcode := globalState.GetCurrentInstruction().OpCode
 		length := globalState.Mstate.Stack.Length()
@@ -104,13 +115,13 @@ func (dm *PredictableVariables) _analyze_state(globalState *state.GlobalState) [
 				fmt.Println("timeStamp: jumpi2")
 				if reflect.TypeOf(annotation).String() == "modules.PredictableValueAnnotation" {
 					fmt.Println("timeStamp: jumpi3")
-					constraints := globalState.WorldState.Constraints
+					//constraints := globalState.WorldState.Constraints.Copy()
 
-					transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
+					//transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
 					fmt.Println("timeStamp: jumpi4")
-					if transactionSequence == nil {
-						continue
-					}
+					//if transactionSequence == nil {
+					//	continue
+					//}
 					description := annotation.(PredictableValueAnnotation).Operation + " is used to determine a control flow decision." +
 						"Note that the values of variables like coinbase, gaslimit, block number and timestamp are " +
 						"predictable and can be manipulated by a malicious miner. Also keep in mind that " +
@@ -124,17 +135,17 @@ func (dm *PredictableVariables) _analyze_state(globalState *state.GlobalState) [
 						swcId = analysis.NewSWCData()["WEAK_RANDOMNESS"]
 					}
 					issue := &analysis.Issue{
-						Contract:            globalState.Environment.ActiveAccount.ContractName,
-						FunctionName:        globalState.Environment.ActiveFuncName,
-						Address:             globalState.GetCurrentInstruction().Address,
-						SWCID:               swcId,
-						Bytecode:            globalState.Environment.Code.Bytecode,
-						Title:               "Dependence on predictable environment variable",
-						Severity:            severity,
-						DescriptionHead:     "A control flow decision is made based on " + annotation.(PredictableValueAnnotation).Operation,
-						DescriptionTail:     description,
-						GasUsed:             []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
-						TransactionSequence: transactionSequence,
+						Contract:        globalState.Environment.ActiveAccount.ContractName,
+						FunctionName:    globalState.Environment.ActiveFuncName,
+						Address:         globalState.GetCurrentInstruction().Address,
+						SWCID:           swcId,
+						Bytecode:        globalState.Environment.Code.Bytecode,
+						Title:           "Dependence on predictable environment variable",
+						Severity:        severity,
+						DescriptionHead: "A control flow decision is made based on " + annotation.(PredictableValueAnnotation).Operation,
+						DescriptionTail: description,
+						GasUsed:         []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
+						//TransactionSequence: transactionSequence,
 					}
 					fmt.Println("timestamp push", issue.Address)
 					issues = append(issues, issue)

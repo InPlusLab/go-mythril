@@ -14,6 +14,11 @@ import (
 )
 
 func GetTransactionSequence(globalState *state.GlobalState, constraints *state.Constraints) map[string]interface{} {
+	//var transactionSequence []state.BaseTransaction
+	//for i, v := range globalState.WorldState.TransactionSequence {
+	//	transactionSequence[i] = v
+	//}
+
 	transactionSequence := globalState.WorldState.TransactionSequence
 	concreteTransactions := make([]*map[string]string, 0)
 	txConstraints, minimize := _set_minimisation_constraints(transactionSequence, constraints.Copy(),

@@ -20,7 +20,7 @@ func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool
 			return nil, false
 		}
 	}
-	//s.SetTimeout(timeout)
+	s.SetTimeout(timeout)
 	for _, constraint := range constraints.ConstraintList {
 		if constraint == nil {
 			fmt.Println("constraint nil")

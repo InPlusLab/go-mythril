@@ -180,10 +180,10 @@ func (m *MachineState) MemExtend(start *z3.Bitvec, size int) {
 }
 
 func (m *MachineState) DeepCopy() *MachineState {
-	memory := &Memory{
-		Msize:     m.Memory.Msize,
-		RawMemory: m.Memory.RawMemory,
-	}
+	//memory := &Memory{
+	//	Msize:     m.Memory.Msize,
+	//	RawMemory: m.Memory.RawMemory,
+	//}
 	//stack := &MachineStack{
 	//	RawStack: make([]*z3.Bitvec, 0),
 	//}
@@ -195,8 +195,8 @@ func (m *MachineState) DeepCopy() *MachineState {
 	return &MachineState{
 		GasLimit: m.GasLimit,
 		Pc:       m.Pc,
-		//Memory:     m.Memory.Copy(),
-		Memory:     memory,
+		Memory:   m.Memory.Copy(),
+		//Memory:     memory,
 		Stack:      m.Stack.Copy(),
 		MinGasUsed: m.MinGasUsed,
 		MaxGasUsed: m.MaxGasUsed,
