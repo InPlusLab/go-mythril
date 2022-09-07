@@ -112,12 +112,14 @@ func (evm *LaserEVM) executeTransactionNormal(creationCode string, contractName 
 	LOOP:
 		for {
 			// When there is no newState in channel, exit the iteration
+			fmt.Println("evm workList:", len(evm.WorkList))
 			if len(evm.WorkList) == 0 {
 				break LOOP
 			}
 			globalState := <-evm.WorkList
-			fmt.Println(id, globalState)
+
 			newStates, opcode := evm.ExecuteState(globalState)
+			fmt.Println(id, globalState, opcode)
 			// evm.ManageCFG(opcode, newStates)
 
 			for _, newState := range newStates {
@@ -288,9 +290,10 @@ func (evm *LaserEVM) Run(id int) {
 		l.Unlock()
 
 		if globalState != nil {
-			//fmt.Println(id, globalState)
+
 			newStates, opcode := evm.ExecuteState(globalState)
 			fmt.Println(id, globalState, opcode)
+			//fmt.Println(id, globalState, opcode)
 			//evm.ManageCFG(opcode, newStates)
 			for _, newState := range newStates {
 				evm.WorkList <- newState
@@ -307,20 +310,20 @@ func (evm *LaserEVM) Run(id int) {
 			//}
 			fmt.Println("===========================================================================")
 			if opcode == "STOP" || opcode == "RETURN" {
-				//modules.CheckPotentialIssues(globalState)
-				//for _, detector := range evm.Loader.Modules {
-				//	issues := detector.GetIssues()
-				//	for _, issue := range issues {
-				//		fmt.Println("+++++++++++++++++++++++++++++++++++")
-				//		fmt.Println("ContractName:", issue.Contract)
-				//		fmt.Println("FunctionName:", issue.FunctionName)
-				//		fmt.Println("Title:", issue.Title)
-				//		fmt.Println("SWCID:", issue.SWCID)
-				//		fmt.Println("Address:", issue.Address)
-				//		fmt.Println("Severity:", issue.Severity)
-				//
-				//	}
-				//}
+				modules.CheckPotentialIssues(globalState)
+				for _, detector := range evm.Loader.Modules {
+					issues := detector.GetIssues()
+					for _, issue := range issues {
+						fmt.Println("+++++++++++++++++++++++++++++++++++")
+						fmt.Println("ContractName:", issue.Contract)
+						fmt.Println("FunctionName:", issue.FunctionName)
+						fmt.Println("Title:", issue.Title)
+						fmt.Println("SWCID:", issue.SWCID)
+						fmt.Println("Address:", issue.Address)
+						fmt.Println("Severity:", issue.Severity)
+
+					}
+				}
 				fmt.Println("+++++++++++++++++++++++++++++++++++")
 
 				// when the other goroutines have no globalStates to solve.
