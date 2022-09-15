@@ -21,10 +21,10 @@ type Symbol struct {
 func (c *Context) Symbol(name string) *Symbol {
 	ns := C.CString(name)
 	defer C.free(unsafe.Pointer(ns))
-
+	symbol := C.Z3_mk_string_symbol(c.raw, ns)
 	return &Symbol{
 		rawCtx:    c.raw,
-		rawSymbol: C.Z3_mk_string_symbol(c.raw, ns),
+		rawSymbol: symbol,
 	}
 }
 

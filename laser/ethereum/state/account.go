@@ -34,6 +34,16 @@ func (acc *Account) Copy() *Account {
 	tmp.Storage = acc.Storage.DeepCopy()
 	return tmp
 }
+func (acc *Account) Translate(ctx *z3.Context) *Account {
+	return &Account{
+		Address:      acc.Address.Translate(ctx),
+		Balances:     acc.Balances.Translate(ctx).(*z3.Array),
+		Storage:      acc.Storage.Translate(ctx),
+		Code:         acc.Code,
+		ContractName: acc.ContractName,
+		Deleted:      acc.Deleted,
+	}
+}
 func (acc *Account) Balance() *z3.Bitvec {
 	return acc.Balances.GetItem(acc.Address)
 }
@@ -59,7 +69,7 @@ func NewStorage(addr *z3.Bitvec, concrete bool) *Storage {
 	if concrete {
 		sstorage = ctx.NewK(256, 256, 0)
 	} else {
-		sstorage = ctx.NewArray("Storage"+addr.String(), 256, 256)
+		sstorage = ctx.NewArray("Storage"+addr.BvString(), 256, 256)
 	}
 
 	return &Storage{
@@ -68,6 +78,19 @@ func NewStorage(addr *z3.Bitvec, concrete bool) *Storage {
 		PrintableStorage:  make(map[*z3.Bitvec]*z3.Bitvec),
 		StorageKeysLoaded: utils.NewSet(),
 		KeysSet:           utils.NewSet(),
+	}
+}
+func (s *Storage) Translate(ctx *z3.Context) *Storage {
+	newPrintableStorage := make(map[*z3.Bitvec]*z3.Bitvec)
+	for i, v := range s.PrintableStorage {
+		newPrintableStorage[i.Translate(ctx)] = v.Translate(ctx)
+	}
+	return &Storage{
+		Address:           s.Address.Translate(ctx),
+		StandardStorage:   s.StandardStorage.Translate(ctx),
+		PrintableStorage:  newPrintableStorage,
+		StorageKeysLoaded: s.StorageKeysLoaded,
+		KeysSet:           s.KeysSet,
 	}
 }
 func (s *Storage) DeepCopy() *Storage {

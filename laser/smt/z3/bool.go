@@ -23,6 +23,15 @@ func (c *Context) NewBool(ast *AST) *Bool {
 	}
 }
 
+// Translate is used to copy ast from one context to another.
+func (b *Bool) Translate(c *Context) *Bool {
+	return &Bool{
+		rawCtx:      c.raw,
+		rawAST:      C.Z3_translate(b.rawCtx, b.rawAST, c.raw),
+		Annotations: b.Annotations.Copy(),
+	}
+}
+
 func (b *Bool) AsAST() *AST {
 	ctx := &Context{
 		raw: b.rawCtx,

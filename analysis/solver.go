@@ -76,7 +76,7 @@ func _get_concrete_state(initialAccounts map[string]*state.Account, minPriceDict
 func _get_concrete_transaction(model *z3.Model, transacton state.BaseTransaction) *map[string]string {
 	// Get concrete values from transaction
 	// String() return #x123, not 0x123
-	address := transacton.GetCalleeAccount().Address.String()
+	address := transacton.GetCalleeAccount().Address.BvString()
 	value := model.Eval(transacton.GetCallValue().AsAST(), true).String()
 	caller := model.Eval(transacton.GetCaller().AsAST(), true).String()
 	caller = "#x" + utils.Zfill(caller[2:], 40)

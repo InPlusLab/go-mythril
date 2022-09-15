@@ -15,9 +15,13 @@ type StateTransition struct {
 }
 
 func transferEther(globalState *state.GlobalState, sender *z3.Bitvec, receiver *z3.Bitvec, value *z3.Bitvec) {
+	fmt.Println("1")
 	globalState.WorldState.Constraints.Add(globalState.WorldState.Balances.GetItem(sender).BvUGe(value))
+	fmt.Println("2")
 	globalState.WorldState.Balances.SetItem(receiver, globalState.WorldState.Balances.GetItem(receiver).BvAdd(value))
+	fmt.Println("3")
 	globalState.WorldState.Balances.SetItem(sender, globalState.WorldState.Balances.GetItem(sender).BvSub(value))
+	fmt.Println("4")
 }
 
 // TODO:
@@ -77,11 +81,11 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	}
 	instr.ExePostHooks(globalState)
 	fmt.Println("PC:", globalState.Mstate.Pc)
-	//for _, state := range result {
-	//	// For debug
-	//	state.Mstate.Stack.PrintStack()
-	//	//state.Mstate.Memory.PrintMemory()
-	//}
+	for _, state := range result {
+		// For debug
+		state.Mstate.Stack.PrintStack()
+		//state.Mstate.Memory.PrintMemory()
+	}
 
 	return result
 }
@@ -302,6 +306,7 @@ func (instr *Instruction) dup_(globalState *state.GlobalState) []*state.GlobalSt
 	value, _ := strconv.ParseInt(globalState.GetCurrentInstruction().OpCode.Name[3:], 10, 64)
 
 	mstate := globalState.Mstate
+	// warning: panic: runtime error: index out of range [-2]
 	mstate.Stack.Append(mstate.Stack.RawStack[mstate.Stack.Length()-int(value)])
 	ret = append(ret, globalState)
 	return ret
@@ -394,11 +399,11 @@ func (instr *Instruction) byte_(globalState *state.GlobalState) []*state.GlobalS
 		fmt.Println("BYTE: Unsupported symbolic byte offset")
 		var op1str string
 		if op1.Symbolic() {
-			op1str = op1.Simplify().String()
+			op1str = op1.Simplify().BvString()
 		} else {
 			op1str = op1.Value()
 		}
-		result = globalState.NewBitvec(op1str+"["+op0.String()+"]", 256)
+		result = globalState.NewBitvec(op1str+"["+op0.BvString()+"]", 256)
 	} else {
 		index, _ := strconv.ParseInt(op0.Value(), 10, 64)
 		offset := int((31 - index) * 8)
@@ -1110,7 +1115,7 @@ func (instr *Instruction) extcodesize_(globalState *state.GlobalState) []*state.
 	if addr.Symbolic() {
 		// TypeError
 		fmt.Println("unsupported symbolic address for EXTCODESIZE")
-		mstate.Stack.Append(globalState.NewBitvec("extcodesize_"+addr.String(), 256))
+		mstate.Stack.Append(globalState.NewBitvec("extcodesize_"+addr.BvString(), 256))
 		ret = append(ret, globalState)
 		return ret
 	}
@@ -1203,7 +1208,7 @@ func (instr *Instruction) blockhash_(globalState *state.GlobalState) []*state.Gl
 
 	mstate := globalState.Mstate
 	blocknumber := mstate.Stack.Pop()
-	mstate.Stack.Append(globalState.NewBitvec("blockhash_block_"+blocknumber.String(), 256))
+	mstate.Stack.Append(globalState.NewBitvec("blockhash_block_"+blocknumber.BvString(), 256))
 
 	ret = append(ret, globalState)
 	return ret
@@ -1348,7 +1353,7 @@ func (instr *Instruction) jump_(globalState *state.GlobalState) []*state.GlobalS
 	opCode := disassembly.InstructionList[index].OpCode
 
 	if opCode.Name != "JUMPDEST" {
-		panic("Skipping JUMP to invalid destination (not JUMPDEST): " + jumpAddr.String())
+		panic("Skipping JUMP to invalid destination (not JUMPDEST): " + jumpAddr.BvString())
 	}
 
 	newState := globalState.Copy()
@@ -1416,7 +1421,7 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 	// True case
 	index := GetInstructionIndex(disassembly.InstructionList, int(jumpAddr))
 	if index == -1 {
-		fmt.Println("Invalid jump destination: " + op0.String())
+		fmt.Println("Invalid jump destination: " + op0.BvString())
 		return ret
 	}
 	instruction := disassembly.InstructionList[index]

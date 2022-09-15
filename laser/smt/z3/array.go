@@ -3,12 +3,15 @@ package z3
 // #include <stdlib.h>
 // #include "goZ3Config.h"
 import "C"
-import "go-mythril/utils"
+import (
+	"go-mythril/utils"
+)
 
 type BaseArray interface {
 	GetItem(bitvec *Bitvec) *Bitvec
 	SetItem(index *Bitvec, value *Bitvec) BaseArray
 	DeepCopy() BaseArray
+	Translate(ctx *Context) BaseArray
 }
 type Array struct {
 	name      string
@@ -76,9 +79,20 @@ func (a *Array) GetCtx() *Context {
 }
 func (a *Array) DeepCopy() BaseArray {
 	return &Array{
-		name:   a.name,
-		rawCtx: a.rawCtx,
-		rawAST: a.rawAST,
+		name:      a.name,
+		rawCtx:    a.rawCtx,
+		rawAST:    a.rawAST,
+		domSize:   a.domSize,
+		rangeSize: a.rangeSize,
+	}
+}
+func (a *Array) Translate(ctx *Context) BaseArray {
+	return &Array{
+		name:      a.name,
+		rawCtx:    ctx.raw,
+		rawAST:    C.Z3_translate(a.rawCtx, a.rawAST, ctx.raw),
+		domSize:   a.domSize,
+		rangeSize: a.rangeSize,
 	}
 }
 
@@ -96,6 +110,7 @@ func (a *K) GetItem(index *Bitvec) *Bitvec {
 		rawCtx:  a.rawCtx,
 		rawAST:  C.Z3_mk_select(a.rawCtx, a.rawAST, index.rawAST),
 		rawSort: C.Z3_mk_bv_sort(a.rawCtx, C.uint(a.rangeSize)),
+		//rawSort: nil,
 		// TODO: maybe wrong
 		symbolic:    index.symbolic,
 		Annotations: utils.NewSet(),
@@ -110,7 +125,18 @@ func (a *K) GetCtx() *Context {
 
 func (a *K) DeepCopy() BaseArray {
 	return &K{
-		rawCtx: a.rawCtx,
-		rawAST: a.rawAST,
+		rawCtx:    a.rawCtx,
+		rawAST:    a.rawAST,
+		domSize:   a.domSize,
+		rangeSize: a.rangeSize,
+	}
+}
+
+func (a *K) Translate(ctx *Context) BaseArray {
+	return &K{
+		rawCtx:    ctx.raw,
+		rawAST:    C.Z3_translate(a.rawCtx, a.rawAST, ctx.raw),
+		domSize:   a.domSize,
+		rangeSize: a.rangeSize,
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"go-mythril/utils"
 	"math/big"
 	"strconv"
+	"unsafe"
 )
 
 type Bitvec struct {
@@ -51,7 +52,10 @@ func (c *Context) NewBitvecVal(value interface{}, size int) *Bitvec {
 		panic("type error for NewBitvecVal")
 	}
 	// Can't use mk_int API here.
-	ast := C.Z3_mk_numeral(c.raw, C.CString(valueStr), c.BvSort(uint(size)).rawSort)
+	tmp := C.CString(valueStr)
+	defer C.free(unsafe.Pointer(tmp))
+	//ast := C.Z3_mk_numeral(c.raw, C.CString(valueStr), c.BvSort(uint(size)).rawSort)
+	ast := C.Z3_mk_numeral(c.raw, tmp, c.BvSort(uint(size)).rawSort)
 	Annotations := utils.NewSet()
 	return &Bitvec{
 		rawCtx:      c.raw,
@@ -117,9 +121,9 @@ func (b *Bitvec) Symbolic() bool {
 	return b.symbolic
 }
 
-// String returns a human-friendly string version of the AST.
-// eg: String(BitVec("x",256)) == "x"
-func (b *Bitvec) String() string {
+// BvString returns a human-friendly string version of the AST.
+// eg: BvString(BitVec("x",256)) == "x"
+func (b *Bitvec) BvString() string {
 	return C.GoString(C.Z3_ast_to_string(b.rawCtx, b.rawAST))
 }
 
@@ -136,11 +140,36 @@ func (b *Bitvec) GetCtx() *Context {
 	}
 }
 
+func (b *Bitvec) Copy() *Bitvec {
+	return &Bitvec{
+		rawCtx:      b.rawCtx,
+		rawAST:      b.rawAST,
+		rawSort:     b.rawSort,
+		symbolic:    b.symbolic,
+		Annotations: b.Annotations.Copy(),
+	}
+}
+
+// Translate is used to copy ast from one context to another.
+func (b *Bitvec) Translate(c *Context) *Bitvec {
+	return &Bitvec{
+		rawCtx: c.raw,
+		rawAST: C.Z3_translate(b.rawCtx, b.rawAST, c.raw),
+		// TODO: sort translate?
+		rawSort:     b.rawSort,
+		symbolic:    b.symbolic,
+		Annotations: b.Annotations.Copy(),
+	}
+}
+
 // Simplify equations
 func (b *Bitvec) Simplify() *Bitvec {
+	ast := C.Z3_simplify(b.rawCtx, b.rawAST)
+	//C.free(unsafe.Pointer(ast))
 	return &Bitvec{
 		rawCtx: b.rawCtx,
-		rawAST: C.Z3_simplify(b.rawCtx, b.rawAST),
+		//rawAST: C.Z3_simplify(b.rawCtx, b.rawAST),
+		rawAST: ast,
 		// TODO: wrong use
 		rawSort:     b.rawSort,
 		symbolic:    b.symbolic,

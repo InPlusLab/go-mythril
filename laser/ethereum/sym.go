@@ -51,7 +51,6 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		postHook[v.Name] = make([]moduleExecFunc, 0)
 	}
 
-	//noStatesArr := make([]bool, 3)
 	evm := LaserEVM{
 		ExecutionTimeout: ExecutionTimeout,
 		CreateTimeout:    CreateTimeout,
@@ -69,7 +68,6 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		GofuncCount:    4,
 		Loader:         moduleLoader,
 	}
-	//evm.NoStatesCh <- noStatesArr
 	//evm.registerInstrHooks()
 	return &evm
 }
@@ -96,16 +94,16 @@ func (evm *LaserEVM) registerInstrHooks() {
 	//}
 }
 
-func (evm *LaserEVM) NormalSymExec(creationCode string, contractName string) {
+func (evm *LaserEVM) NormalSymExec(creationCode string, contractName string, ctx *z3.Context) {
 	fmt.Println("Symbolic Executing: ", creationCode)
 	fmt.Println("")
-	evm.executeTransactionNormal(creationCode, contractName)
+	evm.executeTransactionNormal(creationCode, contractName, ctx)
 }
 
-func (evm *LaserEVM) executeTransactionNormal(creationCode string, contractName string) {
+func (evm *LaserEVM) executeTransactionNormal(creationCode string, contractName string, ctx *z3.Context) {
 	inputStrArr := support.GetArgsInstance().TransactionSequences
 	for i := 0; i < evm.TransactionCount; i++ {
-		tx := state.NewMessageCallTransaction(creationCode, contractName, inputStrArr[i])
+		tx := state.NewMessageCallTransaction(creationCode, contractName, inputStrArr[i], ctx)
 		globalState := tx.InitialGlobalState()
 		evm.WorkList <- globalState
 		id := 0
@@ -150,21 +148,21 @@ func (evm *LaserEVM) executeTransactionNormal(creationCode string, contractName 
 	}
 }
 
-func (evm *LaserEVM) SymExec(creationCode string, contractName string) {
+func (evm *LaserEVM) SymExec(creationCode string, contractName string, ctx *z3.Context, cfg *z3.Config) {
 	fmt.Println("Symbolic Executing: ", creationCode)
 	fmt.Println("")
-	evm.executeTransaction(creationCode, contractName)
+	evm.executeTransaction(creationCode, contractName, ctx, cfg)
 }
 
-func (evm *LaserEVM) executeTransaction(creationCode string, contractName string) {
+func (evm *LaserEVM) executeTransaction(creationCode string, contractName string, ctx *z3.Context, cfg *z3.Config) {
 	inputStrArr := support.GetArgsInstance().TransactionSequences
 	for i := 0; i < evm.TransactionCount; i++ {
-		tx := state.NewMessageCallTransaction(creationCode, contractName, inputStrArr[i])
+		tx := state.NewMessageCallTransaction(creationCode, contractName, inputStrArr[i], ctx)
 		globalState := tx.InitialGlobalState()
 		evm.WorkList <- globalState
 
 		for i := 0; i < evm.GofuncCount; i++ {
-			go evm.Run(i)
+			go evm.Run(i, cfg)
 		}
 
 		latestSignals := make(map[int]bool)
@@ -176,7 +174,7 @@ func (evm *LaserEVM) executeTransaction(creationCode string, contractName string
 				2. There is no globalState in channel, so all goroutines will be blocked.
 			*/
 
-			// Situation 2
+			//Situation 2
 			fmt.Println("noStatesFlag:", evm.NoStatesFlag)
 			if evm.NoStatesFlag {
 				fmt.Println("break in situation 2")
@@ -193,12 +191,12 @@ func (evm *LaserEVM) executeTransaction(creationCode string, contractName string
 					allFinished = false
 				}
 			}
-			if allFinished {
+			if allFinished && len(evm.WorkList) == 0 {
 				fmt.Println("break in situation 1")
 				break LOOP
 			}
 		}
-		fmt.Println("Finish", i, len(evm.WorkList))
+		//fmt.Println("Finish", i, len(evm.WorkList))
 		// Reset the flag
 		//evm.NoStatesFlag = false
 		//for j := 0; j < evm.GofuncCount; j++ {
@@ -280,16 +278,36 @@ func readWithSelect(evm *LaserEVM) (*state.GlobalState, error) {
 	}
 }
 
-func (evm *LaserEVM) Run(id int) {
+func changeStateContext(globalState *state.GlobalState, ctx *z3.Context) {
+	fmt.Println("before changeStateContext")
+	globalState.Z3ctx = ctx
+	// machineState stack & memory
+	newMachineState := globalState.Mstate.Translate(ctx)
+	globalState.Mstate = newMachineState
+	// worldState constraints
+	newWorldState := globalState.WorldState.Translate(ctx)
+	globalState.WorldState = newWorldState
+	// env
+	newEnv := globalState.Environment.Translate(ctx)
+	globalState.Environment = newEnv
+	// lastReturnData
+	fmt.Println("changeStateContext done")
+}
+
+func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 	fmt.Println("Run")
+	ctx := z3.NewContext(cfg)
 	for {
 		globalState, _ := readWithSelect(evm)
 
-		l.Lock()
+		//l.Lock()
 		evm.NoStatesSignal[id] = globalState == nil
-		l.Unlock()
+		//l.Unlock()
 
 		if globalState != nil {
+			if ctx != globalState.Z3ctx {
+				changeStateContext(globalState, ctx)
+			}
 
 			newStates, opcode := evm.ExecuteState(globalState)
 			fmt.Println(id, globalState, opcode)
@@ -355,5 +373,46 @@ func (evm *LaserEVM) Run(id int) {
 				}
 			}
 		}
+
+		/* peilin
+		globalState := <-evm.WorkList
+		//evm.BeginCh <- id
+		fmt.Println(id, globalState)
+		newStates, opcode := evm.ExecuteState(globalState)
+		evm.ManageCFG(opcode, newStates)
+
+		for _, newState := range newStates {
+			evm.WorkList <- newState
+		}
+		fmt.Println(id, "done", globalState, opcode)
+		fmt.Println("======================================================")
+		if opcode == "STOP" || opcode == "RETURN" {
+			modules.CheckPotentialIssues(globalState)
+			for _, detector := range evm.Loader.Modules {
+				issues := detector.GetIssues()
+				for _, issue := range issues {
+					fmt.Println("+++++++++++++++++++++++++++++++++++")
+					fmt.Println("ContractName:", issue.Contract)
+					fmt.Println("FunctionName:", issue.FunctionName)
+					fmt.Println("Title:", issue.Title)
+					fmt.Println("SWCID:", issue.SWCID)
+					fmt.Println("Address:", issue.Address)
+					fmt.Println("Severity:", issue.Severity)
+
+				}
+			}
+			fmt.Println("+++++++++++++++++++++++++++++++++++")
+			// TODO: a better way for exiting
+			//panic("we have already reached the end of code!!!")
+		}
+		// TODO not good for sleep
+		// time.Sleep(100 * time.Millisecond)
+		// evm.EndCh <- id
+		evm.SignalCh <- Signal{
+			Id:       id,
+			Finished: (len(newStates) == 0),
+		}
+		fmt.Println("signal", id, len(newStates) == 0)
+		*/
 	}
 }

@@ -68,7 +68,7 @@ func (m *MachineStack) Copy() *MachineStack {
 		RawStack: make([]*z3.Bitvec, 0),
 	}
 	for _, v := range m.RawStack {
-		stack.Append(v)
+		stack.Append(v.Copy())
 	}
 	return stack
 }
@@ -85,7 +85,7 @@ func (m *MachineStack) PrintStack() {
 	}
 
 	for i := m.Length() - 1; i >= 0; i-- {
-		fmt.Println("PrintStack: ", m.RawStack[i].String(), ' ', m.RawStack[i].Annotations)
+		fmt.Println("PrintStack: ", m.RawStack[i].BvString(), " ")
 		//if m.RawStack[i].Symbolic() {
 		//	if m.RawStack[i].Annotations.Len() != 0 {
 		//		fmt.Println("PrintStack: ", m.RawStack[i].String(), ' ', m.RawStack[i].Annotations)
@@ -131,6 +131,26 @@ func NewMachineState() *MachineState {
 		Depth:      0,
 		MinGasUsed: 0,
 		MaxGasUsed: 0,
+	}
+}
+
+func (m *MachineState) Translate(ctx *z3.Context) *MachineState {
+	newStack := NewMachineStack()
+	for _, v := range m.Stack.RawStack {
+		newV := v.Translate(ctx)
+		newStack.Append(newV)
+	}
+
+	newMemory := m.Memory.CopyTranslate(ctx)
+
+	return &MachineState{
+		GasLimit:   m.GasLimit,
+		Pc:         m.Pc,
+		Stack:      newStack,
+		Memory:     newMemory,
+		Depth:      m.Depth,
+		MinGasUsed: m.MinGasUsed,
+		MaxGasUsed: m.MaxGasUsed,
 	}
 }
 

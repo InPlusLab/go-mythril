@@ -58,6 +58,16 @@ func (c *Config) SetParamValue(k, v string) {
 	C.Z3_set_param_value(c.raw, ck, cv)
 }
 
+func SetGlobalParam(k, v string) {
+	ck := C.CString(k)
+	cv := C.CString(v)
+
+	// We free the strings since they're not actually stored
+	defer C.free(unsafe.Pointer(ck))
+	defer C.free(unsafe.Pointer(cv))
+	C.Z3_global_param_set(ck, cv)
+}
+
 // Z3Value returns the raw internal pointer value. This should only be
 // used if you really understand what you're doing. It may be invalid after
 // Close is called.

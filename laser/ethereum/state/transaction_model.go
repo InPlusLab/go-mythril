@@ -47,10 +47,12 @@ type MessageCallTransaction struct {
 	ReturnData    []byte
 }
 
-func NewMessageCallTransaction(code string, contractName string, inputStr string) *MessageCallTransaction {
+func NewMessageCallTransaction(code string, contractName string, inputStr string, ctx *z3.Context) *MessageCallTransaction {
 
-	config := z3.NewConfig()
-	ctx := z3.NewContext(config)
+	//config := z3.NewConfig()
+	//ctx := z3.NewContext(config)
+	//config.Close()
+	//defer ctx.Close()
 	txcode := disassembler.NewDisasembly(code)
 	calldataList := make([]*z3.Bitvec, 0)
 

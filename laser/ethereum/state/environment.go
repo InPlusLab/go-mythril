@@ -62,3 +62,19 @@ func (env *Environment) Copy() *Environment {
 		Stack:         env.Stack,
 	}
 }
+
+func (env *Environment) Translate(ctx *z3.Context) *Environment {
+	return &Environment{
+		Code:          env.Code,
+		ActiveAccount: env.ActiveAccount.Translate(ctx),
+		Address:       env.Address.Translate(ctx),
+		Sender:        env.Sender.Translate(ctx),
+		Calldata:      env.Calldata.Translate(ctx),
+		GasPrice:      env.GasPrice,
+		CallValue:     env.CallValue,
+		Origin:        env.Origin.Translate(ctx),
+		Basefee:       env.Basefee.Translate(ctx),
+		ChainId:       env.ChainId.Translate(ctx),
+		Stack:         env.Stack,
+	}
+}

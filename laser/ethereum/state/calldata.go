@@ -1,5 +1,6 @@
 package state
 
+import "C"
 import (
 	"go-mythril/laser/smt/z3"
 	"strconv"
@@ -11,6 +12,7 @@ type BaseCalldata interface {
 	Load(item *z3.Bitvec) *z3.Bitvec
 	Size() *z3.Bitvec
 	Concrete(model *z3.Model) []*z3.Bitvec
+	Translate(ctx *z3.Context) BaseCalldata
 }
 
 type ConcreteCalldata struct {
@@ -96,6 +98,18 @@ func (ccd *ConcreteCalldata) Size() *z3.Bitvec {
 	ctx := item.GetCtx()
 	return ctx.NewBitvecVal(len(ccd.ConcreteCalldata), 256)
 }
+func (ccd *ConcreteCalldata) Translate(ctx *z3.Context) BaseCalldata {
+	newCalldata := make([]*z3.Bitvec, 0)
+	for _, v := range ccd.ConcreteCalldata {
+		newV := v.Translate(ctx)
+		newCalldata = append(newCalldata, newV)
+	}
+	return &ConcreteCalldata{
+		TxId:             ccd.TxId,
+		ConcreteCalldata: newCalldata,
+		Calldata:         ccd.Calldata.Translate(ctx).(*z3.K),
+	}
+}
 
 func (bcd *BasicConcreteCalldata) Calldatasize() *z3.Bitvec {
 	return bcd.Size()
@@ -133,7 +147,7 @@ func (scd *SymbolicCalldata) GetWordAt(offset *z3.Bitvec) *z3.Bitvec {
 	//	tmp = tmp.Concat(scd.Load(scd.Ctx.NewBitvecVal(i, 256)))
 	//}
 	//return tmp.Simplify()
-	return scd.Ctx.NewBitvec("SymbolicInput-"+offset.String(), 256)
+	return scd.Ctx.NewBitvec("SymbolicInput-"+offset.BvString(), 256)
 }
 func (scd *SymbolicCalldata) Load(item *z3.Bitvec) *z3.Bitvec {
 	//return z3.If(item.BvSLt(scd.SymSize),
@@ -149,6 +163,14 @@ func (scd *SymbolicCalldata) Concrete(model *z3.Model) []*z3.Bitvec {
 }
 func (scd *SymbolicCalldata) Size() *z3.Bitvec {
 	return scd.SymSize
+}
+func (scd *SymbolicCalldata) Translate(ctx *z3.Context) BaseCalldata {
+	return &SymbolicCalldata{
+		TxId:     scd.TxId,
+		Calldata: scd.Calldata.Translate(ctx).(*z3.Array),
+		SymSize:  scd.SymSize.Translate(ctx),
+		Ctx:      ctx,
+	}
 }
 
 func (bsd *BasicSymbolicCalldata) Calldatasize() *z3.Bitvec {
@@ -166,7 +188,7 @@ func (bsd *BasicSymbolicCalldata) GetWordAt(offset *z3.Bitvec) *z3.Bitvec {
 func (bsd *BasicSymbolicCalldata) Load(item *z3.Bitvec) *z3.Bitvec {
 	symbolicBaseValue := z3.If(item.BvSGe(bsd.SymSize),
 		bsd.Ctx.NewBitvecVal(0, 8),
-		bsd.Ctx.NewBitvec(bsd.TxId+"_calldata_"+item.String(), 8))
+		bsd.Ctx.NewBitvec(bsd.TxId+"_calldata_"+item.BvString(), 8))
 	returnValue := symbolicBaseValue
 	reads := *bsd.Reads
 

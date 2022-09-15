@@ -66,3 +66,23 @@ func (ws *WorldState) PutAccount(acc *Account) {
 	accounts[acc.Address.Value()] = acc
 	acc.Balances = ws.Balances
 }
+
+func (ws *WorldState) Translate(ctx *z3.Context) *WorldState {
+	newConstraints := NewConstraints()
+	for _, v := range ws.Constraints.ConstraintList {
+		newV := v.Translate(ctx)
+		newConstraints.Add(newV)
+	}
+	newAccouts := make(map[string]*Account)
+	for i, v := range ws.Accounts {
+		newAccouts[i] = v.Translate(ctx)
+	}
+
+	return &WorldState{
+		Accounts:            newAccouts,
+		Balances:            ws.Balances.Translate(ctx).(*z3.Array),
+		StartingBalances:    ws.StartingBalances.Translate(ctx).(*z3.Array),
+		Constraints:         newConstraints,
+		TransactionSequence: ws.TransactionSequence,
+	}
+}

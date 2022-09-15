@@ -3,11 +3,10 @@ package utils
 import (
 	"bytes"
 	"fmt"
-	"sync"
 )
 
 type Set struct {
-	sync.RWMutex
+	//sync.RWMutex
 	m map[interface{}]bool
 	//m sync.Map
 }
@@ -18,10 +17,20 @@ func NewSet() *Set {
 	//return &Set{m: myMap}
 }
 
+func (set *Set) Copy() *Set {
+	res := make(map[interface{}]bool)
+	for key, value := range set.m {
+		res[key] = value
+	}
+	return &Set{
+		m: res,
+	}
+}
+
 //添加    true 添加成功 false 添加失败
 func (set *Set) Add(e interface{}) (b bool) {
-	set.Lock()
-	defer set.Unlock()
+	//set.Lock()
+	//defer set.Unlock()
 	if !set.m[e] {
 		set.m[e] = true
 		return true
@@ -33,23 +42,23 @@ func (set *Set) Add(e interface{}) (b bool) {
 
 //删除
 func (set *Set) Remove(e interface{}) {
-	set.Lock()
-	defer set.Unlock()
+	//set.Lock()
+	//defer set.Unlock()
 	delete(set.m, e)
 	//set.m.Delete(e)
 }
 
 //清除
 func (set *Set) Clear() {
-	set.Lock()
-	defer set.Unlock()
+	//set.Lock()
+	//defer set.Unlock()
 	set.m = make(map[interface{}]bool)
 }
 
 //是否包含
 func (set *Set) Contains(e interface{}) bool {
-	set.RLock()
-	defer set.RUnlock()
+	//set.RLock()
+	//defer set.RUnlock()
 	value := set.m[e]
 	return value
 	//_, ok := set.m.Load(e)
@@ -58,8 +67,8 @@ func (set *Set) Contains(e interface{}) bool {
 
 //获取元素数量
 func (set *Set) Len() int {
-	set.RLock()
-	defer set.RUnlock()
+	//set.RLock()
+	//defer set.RUnlock()
 	return len(set.m)
 }
 
@@ -85,8 +94,8 @@ func (set *Set) Same(other *Set) bool {
 
 //迭代
 func (set *Set) Elements() []interface{} {
-	set.RLock()
-	defer set.RUnlock()
+	//set.RLock()
+	//defer set.RUnlock()
 
 	if set == nil {
 		fmt.Println("TODO: bv annotation")

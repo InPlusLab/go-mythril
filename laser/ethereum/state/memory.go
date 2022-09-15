@@ -41,7 +41,7 @@ func (m *Memory) PrintMemory() {
 		for i, v := range keyArr {
 			value, ok := mem[int64(v)]
 			if ok {
-				tmpStr += value.String()[2:]
+				tmpStr += value.BvString()[2:]
 				count++
 			}
 			if count == 16 {
@@ -54,7 +54,7 @@ func (m *Memory) PrintMemory() {
 		if lastIndex < len(keyArr) {
 			str := "0x"
 			for k := lastIndex + 1; k < len(keyArr); k++ {
-				str += mem[int64(keyArr[k])].String()[2:]
+				str += mem[int64(keyArr[k])].BvString()[2:]
 			}
 			fmt.Println("PrintMem:", lastIndex+1, "-", tmpStr)
 		}
@@ -140,6 +140,17 @@ func (m *Memory) Copy() *Memory {
 	rawM := make(map[int64]*z3.Bitvec)
 	for i, v := range *m.RawMemory {
 		rawM[i] = v
+	}
+	return &Memory{
+		Msize:     m.Msize,
+		RawMemory: &rawM,
+	}
+}
+
+func (m *Memory) CopyTranslate(ctx *z3.Context) *Memory {
+	rawM := make(map[int64]*z3.Bitvec)
+	for i, v := range *m.RawMemory {
+		rawM[i] = v.Translate(ctx)
 	}
 	return &Memory{
 		Msize:     m.Msize,
