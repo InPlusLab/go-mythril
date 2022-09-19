@@ -64,9 +64,9 @@ func (loader *ModuleLoader) GetDetectionModules(whiteList []string) []modules.De
 func (loader *ModuleLoader) registerMythrilModules() {
 	loader.Modules = append(loader.Modules,
 		//modules.NewIntegerArithmetics(),
-		//modules.NewTxOrigin(),
+		modules.NewTxOrigin(),
 		//modules.NewPredictableVariables(),
-		modules.NewExternalCalls(),
+		//modules.NewExternalCalls(),
 		//modules.NewStateChangeAfterCall(),
 		//modules.NewArbitraryJump(),
 		//modules.NewArbitraryStorage(),

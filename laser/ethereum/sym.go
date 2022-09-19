@@ -333,7 +333,7 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 				for _, detector := range evm.Loader.Modules {
 					issues := detector.GetIssues()
 					for _, issue := range issues {
-						fmt.Println("+++++++++++++++++++++++++++++++++++")
+						fmt.Println("+++++++++++++++++++++++++++++++++++", id)
 						fmt.Println("ContractName:", issue.Contract)
 						fmt.Println("FunctionName:", issue.FunctionName)
 						fmt.Println("Title:", issue.Title)
@@ -353,14 +353,6 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 					}
 				}
 				l.Unlock()
-
-				//flag := true
-				//noStatesArr := <- evm.NoStatesCh
-				//for i, v := range noStatesArr {
-				//	if i!=id {
-				//		flag = flag && v
-				//	}
-				//}
 
 				if flag {
 					fmt.Println("all goroutines have no globalStates")

@@ -14,7 +14,7 @@ type TxOrigin struct {
 	Description string
 	PreHooks    []string
 	PostHooks   []string
-	Issues      []*analysis.Issue
+	Issues      *utils.SyncIssueSlice
 	Cache       *utils.Set
 }
 type TxOriginAnnotation struct {
@@ -29,13 +29,13 @@ func NewTxOrigin() *TxOrigin {
 		Description: "Check whether control flow decisions are influenced by tx.origin",
 		PreHooks:    []string{"JUMPI"},
 		PostHooks:   []string{"ORIGIN"},
-		Issues:      make([]*analysis.Issue, 0),
+		Issues:      utils.NewSyncIssueSlice(),
 		Cache:       utils.NewSet(),
 	}
 }
 
 func (dm *TxOrigin) ResetModule() {
-	dm.Issues = make([]*analysis.Issue, 0)
+	dm.Issues = utils.NewSyncIssueSlice()
 }
 func (dm *TxOrigin) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)
@@ -45,11 +45,15 @@ func (dm *TxOrigin) Execute(target *state.GlobalState) []*analysis.Issue {
 }
 
 func (dm *TxOrigin) AddIssue(issue *analysis.Issue) {
-	dm.Issues = append(dm.Issues, issue)
+	dm.Issues.Append(issue)
 }
 
 func (dm *TxOrigin) GetIssues() []*analysis.Issue {
-	return dm.Issues
+	list := make([]*analysis.Issue, 0)
+	for _, v := range dm.Issues.Elements() {
+		list = append(list, v.(*analysis.Issue))
+	}
+	return list
 }
 
 func (dm *TxOrigin) GetPreHooks() []string {
@@ -68,9 +72,10 @@ func (dm *TxOrigin) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	for _, issue := range issues {
 		dm.Cache.Add(issue.Address)
 	}
-	dm.Issues = append(dm.Issues, issues...)
+	for _, issue := range issues {
+		dm.Issues.Append(issue)
+	}
 	return nil
-	//return dm._analyze_state(globalState)
 }
 
 func (dm *TxOrigin) _analyze_state(globalState *state.GlobalState) []*analysis.Issue {
@@ -81,6 +86,7 @@ func (dm *TxOrigin) _analyze_state(globalState *state.GlobalState) []*analysis.I
 		fmt.Println("IN jumpi")
 		length := globalState.Mstate.Stack.Length()
 		for _, annotation := range globalState.Mstate.Stack.RawStack[length-2].Annotations.Elements() {
+			fmt.Println("In origin iteration", reflect.TypeOf(annotation).String())
 			if reflect.TypeOf(annotation).String() == "modules.TxOriginAnnotation" {
 				constraints := globalState.WorldState.Constraints.Copy()
 				transactionSequence := analysis.GetTransactionSequence(globalState, constraints)

@@ -9,7 +9,6 @@ import (
 	"math/big"
 	"reflect"
 	"strings"
-	"sync"
 )
 
 type PredictableVariables struct {
@@ -18,11 +17,9 @@ type PredictableVariables struct {
 	Description string
 	PreHooks    []string
 	PostHooks   []string
-	Issues      []*analysis.Issue
+	Issues      *utils.SyncIssueSlice
 	Cache       *utils.Set
 }
-
-var lock sync.Mutex
 
 type PredictableValueAnnotation struct {
 	// Symbol annotation used if a variable is initialized from a predictable environment variable.
@@ -51,14 +48,12 @@ func NewPredictableVariables() *PredictableVariables {
 			"block.gaslimit, block.timestamp or block.number.",
 		PreHooks:  []string{"JUMPI", "BLOCKHASH"},
 		PostHooks: []string{"BLOCKHASH", "COINBASE", "GASLIMIT", "TIMESTAMP", "NUMBER"},
-		Issues:    make([]*analysis.Issue, 0),
+		Issues:    utils.NewSyncIssueSlice(),
 		Cache:     utils.NewSet(),
 	}
 }
 func (dm *PredictableVariables) ResetModule() {
-	lock.Lock()
-	defer lock.Unlock()
-	dm.Issues = make([]*analysis.Issue, 0)
+	dm.Issues = utils.NewSyncIssueSlice()
 }
 func (dm *PredictableVariables) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)
@@ -68,15 +63,15 @@ func (dm *PredictableVariables) Execute(target *state.GlobalState) []*analysis.I
 }
 
 func (dm *PredictableVariables) AddIssue(issue *analysis.Issue) {
-	lock.Lock()
-	defer lock.Unlock()
-	dm.Issues = append(dm.Issues, issue)
+	dm.Issues.Append(issue)
 }
 
 func (dm *PredictableVariables) GetIssues() []*analysis.Issue {
-	lock.Lock()
-	defer lock.Unlock()
-	return dm.Issues
+	list := make([]*analysis.Issue, 0)
+	for _, v := range dm.Issues.Elements() {
+		list = append(list, v.(*analysis.Issue))
+	}
+	return list
 }
 
 func (dm *PredictableVariables) GetPreHooks() []string {
@@ -96,9 +91,10 @@ func (dm *PredictableVariables) _execute(globalState *state.GlobalState) []*anal
 	for _, issue := range issues {
 		dm.Cache.Add(issue)
 	}
-	lock.Lock()
-	dm.Issues = append(dm.Issues, issues...)
-	lock.Unlock()
+	for _, issue := range issues {
+		dm.Issues.Append(issue)
+	}
+
 	return nil
 }
 

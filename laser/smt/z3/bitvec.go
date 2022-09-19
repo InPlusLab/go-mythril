@@ -446,8 +446,7 @@ func (a *Bitvec) BvAnd(a2 *Bitvec) *Bitvec {
 		rawAST:      C.Z3_mk_bvand(a.rawCtx, a.rawAST, a2.rawAST),
 		rawSort:     a.rawSort,
 		symbolic:    a.symbolic || a2.symbolic,
-		Annotations: a.Annotations,
-		//Annotations: a.Annotations.Union(a2.Annotations),
+		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
 
