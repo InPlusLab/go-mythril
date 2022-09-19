@@ -23,6 +23,11 @@ func (c *Context) NewBool(ast *AST) *Bool {
 	}
 }
 
+// BoolString returns a human-friendly string version of the Bool.
+func (b *Bool) BoolString() string {
+	return C.GoString(C.Z3_ast_to_string(b.rawCtx, b.rawAST))
+}
+
 // Translate is used to copy ast from one context to another.
 func (b *Bool) Translate(c *Context) *Bool {
 	return &Bool{

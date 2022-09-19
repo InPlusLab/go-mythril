@@ -241,8 +241,8 @@ func (tx *ContractCreationTransaction) InitialGlobalStateFromEnvironment(worldSt
 	sender := env.Sender
 	receiver := env.ActiveAccount.Address
 	value := tx.Ctx.NewBitvecVal(env.CallValue, 256)
-	constrain := globalState.WorldState.Balances.GetItem(sender).BvUGe(value)
-	globalState.WorldState.Constraints.Add(constrain)
+	//constrain := globalState.WorldState.Balances.GetItem(sender).BvUGe(value)
+	//globalState.WorldState.Constraints.Add(constrain)
 
 	receiverV := globalState.WorldState.Balances.GetItem(receiver)
 	senderV := globalState.WorldState.Balances.GetItem(sender)

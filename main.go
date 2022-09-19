@@ -73,6 +73,8 @@ func main() {
 	//evm.NormalSymExec(blackJackRunttimeBytecode, "Time", ctx)
 	evm.SymExec(blackJackRunttimeBytecode, "Time", ctx, config)
 
+	// analysis
+
 	duration := time.Since(start)
 	fmt.Println("Duration:", duration)
 	fmt.Println("end of code")

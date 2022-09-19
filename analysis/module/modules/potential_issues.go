@@ -5,6 +5,7 @@ import (
 	"go-mythril/analysis"
 	"go-mythril/laser/ethereum/state"
 	"reflect"
+	"sync"
 )
 
 // The implementation should be in /module
@@ -24,6 +25,7 @@ type PotentialIssue struct {
 }
 
 type PotentialIssuesAnnotation struct {
+	sync.RWMutex
 	PotentialIssues []*PotentialIssue
 }
 
@@ -32,16 +34,33 @@ func NewPotentialIssuesAnnotation() *PotentialIssuesAnnotation {
 		PotentialIssues: make([]*PotentialIssue, 0),
 	}
 }
-func (anno PotentialIssuesAnnotation) PersistToWorldState() bool {
+func (anno *PotentialIssuesAnnotation) PersistToWorldState() bool {
 	return false
 }
-func (anno PotentialIssuesAnnotation) PersistOverCalls() bool {
+func (anno *PotentialIssuesAnnotation) PersistOverCalls() bool {
 	return false
+}
+func (anno *PotentialIssuesAnnotation) Append(item ...*PotentialIssue) {
+	anno.Lock()
+	defer anno.Unlock()
+	anno.PotentialIssues = append(anno.PotentialIssues, item...)
+}
+func (anno *PotentialIssuesAnnotation) Elements() []*PotentialIssue {
+	anno.RLock()
+	defer anno.RUnlock()
+	return anno.PotentialIssues
+}
+func (anno PotentialIssuesAnnotation) Replace(arr []*PotentialIssue) {
+	anno.Lock()
+	defer anno.Unlock()
+	anno.PotentialIssues = arr
 }
 
 func GetPotentialIssuesAnnotaion(globalState *state.GlobalState) *PotentialIssuesAnnotation {
 	for _, annotation := range globalState.Annotations {
 		if reflect.TypeOf(annotation).String() == "*modules.PotentialIssuesAnnotation" {
+			annotation.(*PotentialIssuesAnnotation).RLock()
+			defer annotation.(*PotentialIssuesAnnotation).RUnlock()
 			return annotation.(*PotentialIssuesAnnotation)
 		}
 	}
@@ -57,7 +76,7 @@ func CheckPotentialIssues(globalState *state.GlobalState) {
 	*/
 	annotation := GetPotentialIssuesAnnotaion(globalState)
 	unsatPotentialIssues := make([]*PotentialIssue, 0)
-	for _, potentialIssue := range annotation.PotentialIssues {
+	for _, potentialIssue := range annotation.Elements() {
 		tmpConstraint := globalState.WorldState.Constraints.Copy()
 		tmpConstraint.Add(potentialIssue.Constraints.ConstraintList...)
 		transactionSequence := analysis.GetTransactionSequence(globalState, tmpConstraint)
@@ -83,5 +102,6 @@ func CheckPotentialIssues(globalState *state.GlobalState) {
 		}
 		potentialIssue.Detector.AddIssue(issue)
 	}
-	annotation.PotentialIssues = unsatPotentialIssues
+	//annotation.PotentialIssues = unsatPotentialIssues
+	annotation.Replace(unsatPotentialIssues)
 }

@@ -101,16 +101,24 @@ func _set_minimisation_constraints(txSeq []state.BaseTransaction, constraints *s
 	for _, tx := range txSeq {
 		// Set upper bound on calldata size
 		maxCalldataSize := ctx.NewBitvecVal(maxSize, 256)
-		constraints.Add(maxCalldataSize.BvUGe(tx.GetCalldata().Calldatasize()).Simplify())
+
+		if ctx != tx.(*state.MessageCallTransaction).Ctx {
+			constraints.Add(maxCalldataSize.BvUGe(tx.GetCalldata().Calldatasize().Translate(ctx)))
+		} else {
+			constraints.Add(maxCalldataSize.BvUGe(tx.GetCalldata().Calldatasize().Simplify()))
+		}
+
 		// Minimize
 		minimize = append(minimize, tx.GetCalldata().Calldatasize().AsBool())
 		minimize = append(minimize, tx.GetCallValue().AsBool())
 
-		constraints.Add(ctx.NewBitvecVal(tmpValue, 256).BvUGe(worldState.StartingBalances.GetItem(tx.GetCaller())))
+		// TODO:
+		//constraints.Add(ctx.NewBitvecVal(tmpValue, 256).BvUGe(worldState.StartingBalances.GetItem(tx.GetCaller().Translate(ctx))))
 	}
 	for _, account := range worldState.Accounts {
 		// Lazy way to prevent overflows and to ensure "reasonable" balances
 		// Each account starts with less than 100 ETH
+		fmt.Println("accounts!")
 		constraints.Add(ctx.NewBitvecVal(tmpValue, 256).BvUGe(worldState.StartingBalances.GetItem(account.Address)))
 	}
 	return constraints, minimize

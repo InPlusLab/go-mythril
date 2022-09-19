@@ -85,7 +85,7 @@ func (m *MachineStack) PrintStack() {
 	}
 
 	for i := m.Length() - 1; i >= 0; i-- {
-		fmt.Println("PrintStack: ", m.RawStack[i].BvString(), " ")
+		fmt.Println("PrintStack: ", m.RawStack[i], " ")
 		//if m.RawStack[i].Symbolic() {
 		//	if m.RawStack[i].Annotations.Len() != 0 {
 		//		fmt.Println("PrintStack: ", m.RawStack[i].String(), ' ', m.RawStack[i].Annotations)

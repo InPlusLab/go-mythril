@@ -20,12 +20,14 @@ func NewWordState(ctx *z3.Context) *WorldState {
 	// TODO: just test for balance_()
 	caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
 	balances := ctx.NewArray("balance", 256, 256)
-	balances.SetItem(ctx.NewBitvecVal(caller, 256), ctx.NewBitvecVal(1, 256))
+	balances.SetItem(ctx.NewBitvecVal(caller, 256), ctx.NewBitvecVal(100000, 256))
+	startingBalances := ctx.NewArray("balance", 256, 256)
+	startingBalances.SetItem(ctx.NewBitvecVal(caller, 256), ctx.NewBitvecVal(100000, 256))
 	return &WorldState{
 		Accounts: accounts,
 		//Balances:            ctx.NewArray("balance", 256, 256),
 		Balances:            balances,
-		StartingBalances:    ctx.NewArray("balance", 256, 256),
+		StartingBalances:    startingBalances,
 		Constraints:         NewConstraints(),
 		TransactionSequence: make([]BaseTransaction, 0),
 	}

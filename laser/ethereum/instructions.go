@@ -15,13 +15,13 @@ type StateTransition struct {
 }
 
 func transferEther(globalState *state.GlobalState, sender *z3.Bitvec, receiver *z3.Bitvec, value *z3.Bitvec) {
-	fmt.Println("1")
+	fmt.Println("transferEther1")
 	globalState.WorldState.Constraints.Add(globalState.WorldState.Balances.GetItem(sender).BvUGe(value))
-	fmt.Println("2")
+	fmt.Println("transferEther2")
 	globalState.WorldState.Balances.SetItem(receiver, globalState.WorldState.Balances.GetItem(receiver).BvAdd(value))
-	fmt.Println("3")
+	fmt.Println("transferEther3")
 	globalState.WorldState.Balances.SetItem(sender, globalState.WorldState.Balances.GetItem(sender).BvSub(value))
-	fmt.Println("4")
+	fmt.Println("transferEther4")
 }
 
 // TODO:
@@ -86,7 +86,7 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 		state.Mstate.Stack.PrintStack()
 		//state.Mstate.Memory.PrintMemory()
 	}
-
+	fmt.Println("------------------------------------------------------------")
 	return result
 }
 
@@ -1657,6 +1657,7 @@ func (instr *Instruction) stop_(globalState *state.GlobalState) {
 }
 
 func (instr *Instruction) call_(globalState *state.GlobalState) []*state.GlobalState {
+	fmt.Println("call_")
 	ret := make([]*state.GlobalState, 0)
 	//
 	instruction := globalState.GetCurrentInstruction()
@@ -1672,6 +1673,7 @@ func (instr *Instruction) call_(globalState *state.GlobalState) []*state.GlobalS
 		fmt.Println("The call is related to ether transfer between accounts")
 		sender := environment.ActiveAccount.Address
 		receiver := calleeAccount.Address
+		//fmt.Println(sender,receiver,value)
 		transferEther(globalState, sender, receiver, value)
 
 		// TODO: append a success status in stack?

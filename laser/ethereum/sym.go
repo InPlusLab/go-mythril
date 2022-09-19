@@ -68,7 +68,7 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		GofuncCount:    4,
 		Loader:         moduleLoader,
 	}
-	//evm.registerInstrHooks()
+	evm.registerInstrHooks()
 	return &evm
 }
 
@@ -208,7 +208,7 @@ func (evm *LaserEVM) executeTransaction(creationCode string, contractName string
 func (evm *LaserEVM) ExecuteState(globalState *state.GlobalState) ([]*state.GlobalState, string) {
 	instrs := globalState.Environment.Code.InstructionList
 	opcode := instrs[globalState.Mstate.Pc].OpCode.Name
-
+	fmt.Println("opcode:", opcode)
 	preHooks := *evm.InstrPreHook
 	postHooks := *evm.InstrPostHook
 
@@ -291,7 +291,7 @@ func changeStateContext(globalState *state.GlobalState, ctx *z3.Context) {
 	newEnv := globalState.Environment.Translate(ctx)
 	globalState.Environment = newEnv
 	// lastReturnData
-	fmt.Println("changeStateContext done")
+	//fmt.Println("changeStateContext done")
 }
 
 func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
@@ -328,6 +328,7 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 			//}
 			fmt.Println("===========================================================================")
 			if opcode == "STOP" || opcode == "RETURN" {
+
 				modules.CheckPotentialIssues(globalState)
 				for _, detector := range evm.Loader.Modules {
 					issues := detector.GetIssues()
@@ -339,7 +340,6 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 						fmt.Println("SWCID:", issue.SWCID)
 						fmt.Println("Address:", issue.Address)
 						fmt.Println("Severity:", issue.Severity)
-
 					}
 				}
 				fmt.Println("+++++++++++++++++++++++++++++++++++")

@@ -13,7 +13,7 @@ type ExternalCalls struct {
 	SWCID       string
 	Description string
 	PreHooks    []string
-	Issues      []*analysis.Issue
+	Issues      *utils.SyncIssueSlice
 	Cache       *utils.Set
 }
 
@@ -23,12 +23,12 @@ func NewExternalCalls() *ExternalCalls {
 		SWCID:       analysis.NewSWCData()["REENTRANCY"],
 		Description: "Search for external calls with unrestricted gas to a user-specified address.",
 		PreHooks:    []string{"CALL"},
-		Issues:      make([]*analysis.Issue, 0),
+		Issues:      utils.NewSyncIssueSlice(),
 		Cache:       utils.NewSet(),
 	}
 }
 func (dm *ExternalCalls) ResetModule() {
-	dm.Issues = make([]*analysis.Issue, 0)
+	dm.Issues = utils.NewSyncIssueSlice()
 }
 func (dm *ExternalCalls) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)
@@ -38,11 +38,17 @@ func (dm *ExternalCalls) Execute(target *state.GlobalState) []*analysis.Issue {
 }
 
 func (dm *ExternalCalls) AddIssue(issue *analysis.Issue) {
-	dm.Issues = append(dm.Issues, issue)
+	//dm.Issues = append(dm.Issues, issue)
+	dm.Issues.Append(issue)
 }
 
 func (dm *ExternalCalls) GetIssues() []*analysis.Issue {
-	return dm.Issues
+	//return dm.Issues
+	list := make([]*analysis.Issue, 0)
+	for _, v := range dm.Issues.Elements() {
+		list = append(list, v.(*analysis.Issue))
+	}
+	return list
 }
 
 func (dm *ExternalCalls) GetPreHooks() []string {
@@ -56,7 +62,8 @@ func (dm *ExternalCalls) GetPostHooks() []string {
 func (dm *ExternalCalls) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	potentialIssues := dm._analyze_state(globalState)
 	annotation := GetPotentialIssuesAnnotaion(globalState)
-	annotation.PotentialIssues = append(annotation.PotentialIssues, potentialIssues...)
+	//annotation.PotentialIssues = append(annotation.PotentialIssues, potentialIssues...)
+	annotation.Append(potentialIssues...)
 	return nil
 }
 
@@ -73,9 +80,10 @@ func (dm *ExternalCalls) _analyze_state(globalState *state.GlobalState) []*Poten
 	tmpCon.Add(globalState.WorldState.Constraints.ConstraintList...)
 	fmt.Println("Constraints in externalCalls: ")
 	fmt.Println(tmpCon.ConstraintList)
-	for _, con := range tmpCon.ConstraintList {
-		fmt.Println(con.AsAST().String())
-	}
+	//for _, con := range tmpCon.ConstraintList {
+	//	//fmt.Println(con.AsAST().String())
+	//	fmt.Println(con.BoolString())
+	//}
 
 	transactionSequence := analysis.GetTransactionSequence(globalState, tmpCon)
 	if transactionSequence == nil {
@@ -101,5 +109,6 @@ func (dm *ExternalCalls) _analyze_state(globalState *state.GlobalState) []*Poten
 		Constraints:     constraints,
 		Detector:        dm,
 	}
+	fmt.Println("externalCall append")
 	return []*PotentialIssue{issue}
 }
