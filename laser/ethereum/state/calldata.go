@@ -80,10 +80,11 @@ func (ccd *ConcreteCalldata) Calldatasize() *z3.Bitvec {
 }
 func (ccd *ConcreteCalldata) GetWordAt(offset *z3.Bitvec) *z3.Bitvec {
 	tmp := ccd.Calldata.GetItem(offset)
+	ctx := tmp.GetCtx()
 	// OutofIndex check
 	index, _ := strconv.ParseInt(offset.Value(), 10, 64)
 	for i := index + 1; i < index+32; i++ {
-		tmp = tmp.Concat(ccd.Calldata.GetItem(tmp.GetCtx().NewBitvecVal(i, 256)))
+		tmp = tmp.Concat(ccd.Calldata.GetItem(ctx.NewBitvecVal(i, 256)))
 	}
 	return tmp.Simplify()
 }

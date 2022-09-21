@@ -41,7 +41,7 @@ type IntegerArithmetics struct {
 	SWCID                string
 	Description          string
 	PreHooks             []string
-	Issues               []*analysis.Issue
+	Issues               *utils.SyncIssueSlice
 	Cache                *utils.Set
 	OstatesSatisfiable   *utils.Set
 	OstatesUnsatisfiable *utils.Set
@@ -57,7 +57,7 @@ func NewIntegerArithmetics() *IntegerArithmetics {
 			"check if there's a possible state where op1 + op0 > 2^32 - 1",
 		PreHooks: []string{"ADD", "SUB", "MUL", "EXP", "SSTORE",
 			"JUMPI", "STOP", "RETURN", "CALL"},
-		Issues:               make([]*analysis.Issue, 0),
+		Issues:               utils.NewSyncIssueSlice(),
 		Cache:                utils.NewSet(),
 		OstatesSatisfiable:   utils.NewSet(),
 		OstatesUnsatisfiable: utils.NewSet(),
@@ -65,7 +65,7 @@ func NewIntegerArithmetics() *IntegerArithmetics {
 }
 
 func (dm *IntegerArithmetics) ResetModule() {
-	dm.Issues = make([]*analysis.Issue, 0)
+	dm.Issues = utils.NewSyncIssueSlice()
 	dm.OstatesSatisfiable = utils.NewSet()
 	dm.OstatesUnsatisfiable = utils.NewSet()
 }
@@ -78,11 +78,15 @@ func (dm *IntegerArithmetics) Execute(target *state.GlobalState) []*analysis.Iss
 }
 
 func (dm *IntegerArithmetics) AddIssue(issue *analysis.Issue) {
-	dm.Issues = append(dm.Issues, issue)
+	dm.Issues.Append(issue)
 }
 
 func (dm *IntegerArithmetics) GetIssues() []*analysis.Issue {
-	return dm.Issues
+	list := make([]*analysis.Issue, 0)
+	for _, v := range dm.Issues.Elements() {
+		list = append(list, v.(*analysis.Issue))
+	}
+	return list
 }
 
 func (dm *IntegerArithmetics) GetPreHooks() []string {
@@ -104,7 +108,8 @@ func (dm *IntegerArithmetics) _execute(globalState *state.GlobalState) []*analys
 
 	address := getAddressFromState(globalState)
 	if dm.Cache.Contains(address) {
-		return dm.Issues
+		//return dm.Issues
+		return nil
 	}
 	opcode := globalState.GetCurrentInstruction().OpCode.Name
 	funcs := make(map[string][]handelFunc)
@@ -121,8 +126,8 @@ func (dm *IntegerArithmetics) _execute(globalState *state.GlobalState) []*analys
 	for _, f := range funcs[opcode] {
 		f(globalState)
 	}
-
-	return dm.Issues
+	return nil
+	//return dm.Issues
 }
 
 func (dm *IntegerArithmetics) _handel_add(globalState *state.GlobalState) {
@@ -252,11 +257,13 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 			fmt.Println("contains")
 			continue
 		}
+		fmt.Println("1")
 		if !dm.OstatesSatisfiable.Contains(ostate) {
 			constraints := ostate.WorldState.Constraints.DeepCopy()
 			constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
-
+			fmt.Println("11")
 			_, sat := state.GetModel(constraints, nil, nil, false, ostate.Z3ctx)
+			fmt.Println("2")
 			if sat {
 				fmt.Println("sat")
 				dm.OstatesSatisfiable.Add(ostate)
@@ -267,6 +274,7 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 				continue
 			}
 		}
+		fmt.Println("3")
 		fmt.Println("Checking overflow in", globalState.GetCurrentInstruction().OpCode.Name,
 			"at transaction end address", globalState.GetCurrentInstruction().Address, "ostate address",
 			ostate.GetCurrentInstruction().Address)
@@ -307,7 +315,8 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 
 		address := getAddressFromState(ostate)
 		dm.Cache.Add(address)
-		dm.Issues = append(dm.Issues, issue)
+		//dm.Issues = append(dm.Issues, issue)
+		dm.Issues.Append(issue)
 		fmt.Println(dm.Issues)
 	}
 	fmt.Println("handelTxEnd")
