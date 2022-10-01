@@ -30,7 +30,7 @@ func GetCallParameters(globalState *state.GlobalState, withValue bool) (*z3.Bitv
 	calleeAccount := getCalleeAccount(globalState, calleeAddress)
 	fmt.Println("beforeGetCallData", memoryInputOffset, " ", memoryInputSize)
 	callData := GetCallData(globalState, memoryInputOffset, memoryInputSize)
-
+	fmt.Println("afterGetCalldata")
 	ctx := globalState.Z3ctx
 	gas = gas.BvAdd(z3.If(value.BvSGt(ctx.NewBitvecVal(0, 256)), ctx.NewBitvecVal(GAS_CALLSTIPEND, gas.BvSize()), ctx.NewBitvecVal(0, gas.BvSize())))
 
@@ -39,8 +39,10 @@ func GetCallParameters(globalState *state.GlobalState, withValue bool) (*z3.Bitv
 
 func getCalleeAccount(globalState *state.GlobalState, calleeAddress *z3.Bitvec) *state.Account {
 	if calleeAddress.Symbolic() {
+		fmt.Println("1")
 		return state.NewAccount(calleeAddress, globalState.WorldState.Balances, false, disassembler.NewDisasembly(""), "")
 	} else {
+		fmt.Println("2")
 		return globalState.WorldState.AccountsExistOrLoad(calleeAddress)
 	}
 }
@@ -66,10 +68,14 @@ func GetCallData(globalState *state.GlobalState, memStart *z3.Bitvec, memSize *z
 	if memSize.Symbolic() {
 		memSizeV = SYMBOLIC_CALLDATA_SIZE
 	} else {
+		fmt.Println(memSize.BvString())
 		value, _ := strconv.ParseInt(memSize.Value(), 10, 64)
 		memSizeV = value
 	}
+
+	fmt.Println("beforeMemoryGetItems", memStartV, memSizeV)
 	callDataFromMem := mstate.Memory.GetItems(memStartV, memStartV+memSizeV)
+
 	fmt.Println(memStartV, memSizeV)
 	fmt.Println("calldataFromMem:", callDataFromMem, " ", len(callDataFromMem))
 	return state.NewConcreteCalldata(txId, callDataFromMem, globalState.Z3ctx)

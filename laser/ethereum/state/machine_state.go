@@ -33,17 +33,19 @@ func (m *MachineStack) Append(b interface{}) {
 	switch b.(type) {
 	case *z3.Bitvec:
 		var tmp *z3.Bitvec
-		tmp = b.(*z3.Bitvec).Simplify()
-		m.RawStack = append(m.RawStack, tmp)
+		//tmp = b.(*z3.Bitvec).Simplify()
+		tmp = b.(*z3.Bitvec)
+		m.RawStack = append(m.RawStack, tmp.Simplify())
 	case *z3.Bool:
 		ctx := z3.GetBoolCtx(b.(*z3.Bool))
 		trueBv := ctx.NewBitvecVal(1, 256)
 		falseBv := ctx.NewBitvecVal(0, 256)
-		for _, v := range b.(*z3.Bool).Annotations.Elements() {
-			trueBv.Annotate(v)
-			falseBv.Annotate(v)
-		}
+		//for _, v := range b.(*z3.Bool).Annotations.Elements() {
+		//	trueBv.Annotate(v)
+		//	falseBv.Annotate(v)
+		//}
 		tmp := z3.If(b.(*z3.Bool), trueBv, falseBv).Simplify()
+		//tmp := z3.If(b.(*z3.Bool), trueBv, falseBv)
 		m.RawStack = append(m.RawStack, tmp)
 	}
 }

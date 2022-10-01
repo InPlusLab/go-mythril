@@ -71,6 +71,8 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 
 	instr.ExePreHooks(globalState)
 	result := instr.Mutator(globalState)
+	fmt.Println("PC:", globalState.Mstate.Pc)
+	fmt.Println("Address:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name)
 	// has the same function of StateTransition in instructions.go
 	fmt.Println("afterMutator")
 	for _, state := range result {
@@ -80,10 +82,15 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 		}
 	}
 	instr.ExePostHooks(globalState)
-	fmt.Println("PC:", globalState.Mstate.Pc)
+
 	for _, state := range result {
 		// For debug
 		state.Mstate.Stack.PrintStack()
+		//for i, con := range state.WorldState.Constraints.ConstraintList {
+		//	if i==3{
+		//		fmt.Println("PrintCons:", con.BoolString())
+		//	}
+		//}
 		//state.Mstate.Memory.PrintMemory()
 	}
 	fmt.Println("------------------------------------------------------------")
@@ -1394,6 +1401,8 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 
 	negated := condition.Eq(zero).Simplify()
 	condi := condition.Eq(zero).Not().Simplify()
+	//negated := condition.Eq(zero)
+	//condi := condition.Eq(zero).Not()
 	negatedCond := !negated.IsFalse()
 	positiveCond := !condi.IsFalse()
 

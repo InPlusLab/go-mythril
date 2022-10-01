@@ -205,7 +205,7 @@ func (dm *IntegerArithmetics) _handel_jumpi(globalState *state.GlobalState) {
 	value := stack.RawStack[stack.Length()-2]
 	stateAnnotation := getOverflowUnderflowStateAnnotation(globalState)
 	fmt.Println("handel_jumpi", value.Annotations.Len())
-	fmt.Println(stateAnnotation, " ", stateAnnotation.OverflowingStateAnnotations.Len())
+	//fmt.Println(stateAnnotation, " ", stateAnnotation.OverflowingStateAnnotations.Len())
 	for _, annotation := range value.Annotations.Elements() {
 		fmt.Println(reflect.TypeOf(annotation).String(), "addAnnoJumpi")
 		if reflect.TypeOf(annotation).String() == "modules.OverUnderflowAnnotation" {
@@ -257,13 +257,19 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 			fmt.Println("contains")
 			continue
 		}
-		fmt.Println("1")
+
+		if ostate.Z3ctx != globalState.Z3ctx {
+			ostate.Translate(globalState.Z3ctx)
+		}
+
 		if !dm.OstatesSatisfiable.Contains(ostate) {
+			fmt.Println("1")
 			constraints := ostate.WorldState.Constraints.DeepCopy()
-			constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
-			fmt.Println("11")
-			_, sat := state.GetModel(constraints, nil, nil, false, ostate.Z3ctx)
+			constraints.Add(annotation.(OverUnderflowAnnotation).Constraint.Translate(ostate.Z3ctx))
+			//constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
 			fmt.Println("2")
+			_, sat := state.GetModel(constraints, nil, nil, false, ostate.Z3ctx)
+			fmt.Println("3")
 			if sat {
 				fmt.Println("sat")
 				dm.OstatesSatisfiable.Add(ostate)
@@ -274,15 +280,17 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 				continue
 			}
 		}
-		fmt.Println("3")
+
 		fmt.Println("Checking overflow in", globalState.GetCurrentInstruction().OpCode.Name,
 			"at transaction end address", globalState.GetCurrentInstruction().Address, "ostate address",
 			ostate.GetCurrentInstruction().Address)
 
 		constraints := globalState.WorldState.Constraints.DeepCopy()
-		constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
+		constraints.Add(annotation.(OverUnderflowAnnotation).Constraint.Translate(globalState.Z3ctx))
+		//constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
 
 		transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
+		fmt.Println("5")
 		if transactionSequence == nil {
 			// UnsatError
 			fmt.Println("unsaterror for getTxSeq")
@@ -316,6 +324,7 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 		address := getAddressFromState(ostate)
 		dm.Cache.Add(address)
 		//dm.Issues = append(dm.Issues, issue)
+		fmt.Println("integerOverflow push:", address)
 		dm.Issues.Append(issue)
 		fmt.Println(dm.Issues)
 	}

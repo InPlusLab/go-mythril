@@ -77,8 +77,14 @@ func CheckPotentialIssues(globalState *state.GlobalState) {
 	annotation := GetPotentialIssuesAnnotaion(globalState)
 	unsatPotentialIssues := make([]*PotentialIssue, 0)
 	for _, potentialIssue := range annotation.Elements() {
+		fmt.Println("addPotentialIssues")
 		tmpConstraint := globalState.WorldState.Constraints.Copy()
-		tmpConstraint.Add(potentialIssue.Constraints.ConstraintList...)
+		//tmpConstraint.Add(potentialIssue.Constraints.ConstraintList...)
+		// should translate the context here
+		for _, con := range potentialIssue.Constraints.ConstraintList {
+			tmpConstraint.Add(con.Translate(globalState.Z3ctx))
+		}
+
 		transactionSequence := analysis.GetTransactionSequence(globalState, tmpConstraint)
 		if transactionSequence == nil {
 			fmt.Println("unsatEror")

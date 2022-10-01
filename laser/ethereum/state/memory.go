@@ -102,6 +102,7 @@ func (m *Memory) GetItems(start int64, stop int64) []*z3.Bitvec {
 	mem := *m.RawMemory
 	//length := stop - start
 	for i := start; i <= stop; i++ {
+		fmt.Println("beforeMem[i]")
 		value, ok := mem[i]
 		if ok {
 			items = append(items, value)

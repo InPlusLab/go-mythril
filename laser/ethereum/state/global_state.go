@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"go-mythril/disassembler"
 	"go-mythril/laser/smt/z3"
 	"reflect"
@@ -61,6 +62,38 @@ func (globalState *GlobalState) Copy() *GlobalState {
 		//Annotations: make([]StateAnnotation, 0),
 	}
 }
+
+func (globalState *GlobalState) Translate(ctx *z3.Context) {
+	fmt.Println("before changeStateContext")
+	globalState.Z3ctx = ctx
+	// machineState stack & memory
+	newMachineState := globalState.Mstate.Translate(ctx)
+	globalState.Mstate = newMachineState
+	// worldState constraints
+	newWorldState := globalState.WorldState.Translate(ctx)
+	globalState.WorldState = newWorldState
+	// env
+	newEnv := globalState.Environment.Translate(ctx)
+	globalState.Environment = newEnv
+	// lastReturnData
+	//fmt.Println("changeStateContext done")
+}
+
+//func changeStateContext(globalState *state.GlobalState, ctx *z3.Context) {
+//	fmt.Println("before changeStateContext")
+//	globalState.Z3ctx = ctx
+//	// machineState stack & memory
+//	newMachineState := globalState.Mstate.Translate(ctx)
+//	globalState.Mstate = newMachineState
+//	// worldState constraints
+//	newWorldState := globalState.WorldState.Translate(ctx)
+//	globalState.WorldState = newWorldState
+//	// env
+//	newEnv := globalState.Environment.Translate(ctx)
+//	globalState.Environment = newEnv
+//	// lastReturnData
+//	//fmt.Println("changeStateContext done")
+//}
 
 func (globalState *GlobalState) GetCurrentInstruction() *disassembler.EvmInstruction {
 	instructions := globalState.Environment.Code.InstructionList

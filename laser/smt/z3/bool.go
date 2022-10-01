@@ -30,6 +30,11 @@ func (b *Bool) BoolString() string {
 
 // Translate is used to copy ast from one context to another.
 func (b *Bool) Translate(c *Context) *Bool {
+	// use in integer.go
+	if b.rawCtx == c.raw {
+		return b
+	}
+
 	return &Bool{
 		rawCtx:      c.raw,
 		rawAST:      C.Z3_translate(b.rawCtx, b.rawAST, c.raw),
@@ -38,14 +43,12 @@ func (b *Bool) Translate(c *Context) *Bool {
 }
 
 func (b *Bool) AsAST() *AST {
-	ctx := &Context{
-		raw: b.rawCtx,
-	}
-	return &AST{
+	ast := &AST{
 		rawCtx:  b.rawCtx,
 		rawAST:  b.rawAST,
-		rawSort: ctx.BoolSort().rawSort,
+		rawSort: C.Z3_mk_bool_sort(b.rawCtx),
 	}
+	return ast.Simplify()
 }
 
 func (b *Bool) IsTrue() bool {

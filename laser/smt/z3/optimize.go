@@ -25,7 +25,7 @@ func (c *Context) NewOptimize() *Optimize {
 }
 
 // SetTimeout sets the timeout of the optimize, timeout is in milliseconds.
-func (s *Optimize) SetTimeout(time uint) {
+func (s *Optimize) SetTimeout(time int) {
 	ctx := s.rawCtx
 	params := C.Z3_mk_params(ctx)
 
@@ -77,9 +77,9 @@ func (s *Optimize) Check(args ...*AST) LBool {
 		return LBool(C.Z3_optimize_check(s.rawCtx, s.rawOptimize, C.uint(length),
 			(*C.Z3_ast)(unsafe.Pointer(&raws[0]))))
 	} else {
-		fmt.Println("optimize 1")
+		fmt.Println("optimize check")
 		//tmp := AST{rawCtx: s.rawCtx, rawAST: nil}
-		fmt.Println("optimize 2")
+		//fmt.Println("optimize 2")
 		return LBool(C.Z3_optimize_check(s.rawCtx, s.rawOptimize, C.uint(0), nil))
 		//return LBool(C.Z3_optimize_check(s.rawCtx, s.rawOptimize, 0, nil))
 	}

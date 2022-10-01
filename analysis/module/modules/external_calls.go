@@ -68,9 +68,11 @@ func (dm *ExternalCalls) _execute(globalState *state.GlobalState) []*analysis.Is
 }
 
 func (dm *ExternalCalls) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
+
 	gas := globalState.Mstate.Stack.RawStack[globalState.Mstate.Stack.Length()-1]
 	to := globalState.Mstate.Stack.RawStack[globalState.Mstate.Stack.Length()-2]
 	address := globalState.GetCurrentInstruction().Address
+	fmt.Println("In CALL issue:", address)
 	ACTORS := transaction.NewActors(globalState.Z3ctx)
 
 	constraints := state.NewConstraints()
@@ -78,13 +80,9 @@ func (dm *ExternalCalls) _analyze_state(globalState *state.GlobalState) []*Poten
 
 	tmpCon := constraints.Copy()
 	tmpCon.Add(globalState.WorldState.Constraints.ConstraintList...)
-	fmt.Println("Constraints in externalCalls: ")
-	fmt.Println(tmpCon.ConstraintList)
-	//for _, con := range tmpCon.ConstraintList {
-	//	//fmt.Println(con.AsAST().String())
-	//	fmt.Println(con.BoolString())
-	//}
+	fmt.Println("Constraints in externalCalls: ", tmpCon.ConstraintList)
 
+	//transactionSequence := analysis.GetTransactionSequenceTmp(globalState, tmpCon, address)
 	transactionSequence := analysis.GetTransactionSequence(globalState, tmpCon)
 	if transactionSequence == nil {
 		// UnsatError
@@ -109,6 +107,6 @@ func (dm *ExternalCalls) _analyze_state(globalState *state.GlobalState) []*Poten
 		Constraints:     constraints,
 		Detector:        dm,
 	}
-	fmt.Println("externalCall append")
+	fmt.Println("externalCall push:", address)
 	return []*PotentialIssue{issue}
 }

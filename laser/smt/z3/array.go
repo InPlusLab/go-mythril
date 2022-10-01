@@ -29,6 +29,7 @@ type K struct {
 
 func (c *Context) NewArray(n string, dom int, vRange int) *Array {
 	// In mythril, domain and range of array are bv type.
+	//ast := C.Z3_mk_const(c.raw, c.Symbol(n).rawSymbol, c.ArraySort(c.BvSort(uint(dom)), c.BvSort(uint(vRange))).rawSort)
 	ast := C.Z3_mk_const(c.raw, c.Symbol(n).rawSymbol, c.ArraySort(c.BvSort(uint(dom)), c.BvSort(uint(vRange))).rawSort)
 	return &Array{
 		name:      n,

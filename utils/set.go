@@ -1,10 +1,65 @@
 package utils
 
-import (
-	"bytes"
-	"fmt"
-)
+import "sync"
 
+type Set struct {
+	Map sync.Map
+}
+
+func NewSet() *Set {
+	var myMap sync.Map
+	return &Set{
+		Map: myMap,
+	}
+}
+
+func (set *Set) Copy() *Set {
+	res := NewSet()
+	for _, item := range set.Elements() {
+		res.Add(item)
+	}
+	return res
+}
+
+func (set *Set) Add(e interface{}) (b bool) {
+	_, exist := set.Map.LoadOrStore(e, true)
+	return !exist
+}
+
+func (set *Set) Remove(e interface{}) {
+	set.Map.Delete(e)
+}
+
+func (set *Set) Contains(e interface{}) bool {
+	_, ok := set.Map.Load(e)
+	return ok
+}
+
+func (set *Set) Elements() []interface{} {
+	res := make([]interface{}, 0)
+	set.Map.Range(func(k, v interface{}) bool {
+		res = append(res, k)
+		return true
+	})
+	return res
+}
+
+func (set *Set) Len() int {
+	return len(set.Elements())
+}
+
+func (set *Set) Union(other *Set) *Set {
+	res := NewSet()
+	for _, item := range set.Elements() {
+		res.Add(item)
+	}
+	for _, item := range other.Elements() {
+		res.Add(item)
+	}
+	return res
+}
+
+/*
 type Set struct {
 	//sync.RWMutex
 	m map[interface{}]bool
@@ -156,3 +211,4 @@ func (set *Set) Union(other *Set) *Set {
 	}
 	return res
 }
+*/

@@ -114,7 +114,7 @@ func (dm *TxOrigin) _analyze_state(globalState *state.GlobalState) []*analysis.I
 					TransactionSequence: transactionSequence,
 				}
 				// TODO: globalState.annotate
-				fmt.Println("success append Issue")
+				fmt.Println("origin push:", globalState.GetCurrentInstruction().Address)
 				issues = append(issues, issue)
 			}
 		}

@@ -116,6 +116,19 @@ func (evm *LaserEVM) executeTransactionNormal(creationCode string, contractName 
 			}
 			globalState := <-evm.WorkList
 
+			//file, err := os.OpenFile("D:/desktop/golang1.txt",  os.O_WRONLY|os.O_APPEND, 0666)
+			//if err != nil {
+			//	fmt.Println("file open fail", err)
+			//}
+			//defer file.Close()
+			//write := bufio.NewWriter(file)
+			//write.WriteString(strconv.Itoa(id) + " constraints:\r\n")
+			//for i, con := range globalState.WorldState.Constraints.ConstraintList {
+			//	write.WriteString( strconv.Itoa(i) + con.BoolString() + "\r\n")
+			//}
+			//write.WriteString("+++++++++++++++++++++++++++++++++\r\n")
+			//write.Flush()
+
 			newStates, opcode := evm.ExecuteState(globalState)
 			fmt.Println(id, globalState, opcode)
 			// evm.ManageCFG(opcode, newStates)
@@ -278,22 +291,6 @@ func readWithSelect(evm *LaserEVM) (*state.GlobalState, error) {
 	}
 }
 
-func changeStateContext(globalState *state.GlobalState, ctx *z3.Context) {
-	fmt.Println("before changeStateContext")
-	globalState.Z3ctx = ctx
-	// machineState stack & memory
-	newMachineState := globalState.Mstate.Translate(ctx)
-	globalState.Mstate = newMachineState
-	// worldState constraints
-	newWorldState := globalState.WorldState.Translate(ctx)
-	globalState.WorldState = newWorldState
-	// env
-	newEnv := globalState.Environment.Translate(ctx)
-	globalState.Environment = newEnv
-	// lastReturnData
-	//fmt.Println("changeStateContext done")
-}
-
 func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 	fmt.Println("Run")
 	ctx := z3.NewContext(cfg)
@@ -306,7 +303,7 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 
 		if globalState != nil {
 			if ctx != globalState.Z3ctx {
-				changeStateContext(globalState, ctx)
+				globalState.Translate(ctx)
 			}
 
 			newStates, opcode := evm.ExecuteState(globalState)
@@ -332,6 +329,7 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 				modules.CheckPotentialIssues(globalState)
 				for _, detector := range evm.Loader.Modules {
 					issues := detector.GetIssues()
+					fmt.Println("number of issues:", len(issues))
 					for _, issue := range issues {
 						fmt.Println("+++++++++++++++++++++++++++++++++++", id)
 						fmt.Println("ContractName:", issue.Contract)
@@ -342,6 +340,7 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 						fmt.Println("Severity:", issue.Severity)
 					}
 				}
+
 				fmt.Println("+++++++++++++++++++++++++++++++++++")
 
 				// when the other goroutines have no globalStates to solve.

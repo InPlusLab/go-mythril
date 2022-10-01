@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"bufio"
 	"encoding/hex"
 	"fmt"
 	"go-mythril/disassembler"
@@ -9,9 +10,71 @@ import (
 	"go-mythril/laser/smt/z3"
 	"go-mythril/utils"
 	"math/big"
+	"os"
 	"strconv"
 	"strings"
 )
+
+func GetTransactionSequenceTmp(globalState *state.GlobalState, constraints *state.Constraints, address int) map[string]interface{} {
+	transactionSequence := globalState.WorldState.TransactionSequence
+	concreteTransactions := make([]*map[string]string, 0)
+	txConstraints, minimize := _set_minimisation_constraints(transactionSequence, constraints.Copy(),
+		make([]*z3.Bool, 0), 5000, globalState.WorldState, globalState.Z3ctx)
+
+	if address == 336 {
+		file, err := os.OpenFile("D:/desktop/golang2.txt", os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			fmt.Println("file open fail", err)
+		}
+		defer file.Close()
+		write := bufio.NewWriter(file)
+		write.WriteString("txConstraints:\r\n")
+		for i, con := range txConstraints.ConstraintList {
+			write.WriteString(strconv.Itoa(i) + con.BoolString() + "\r\n")
+		}
+		write.WriteString("minimize:\r\n")
+		for _, m := range minimize {
+			write.WriteString(m.BoolString() + "\r\n")
+		}
+		write.WriteString("+++++++++++++++++++++++++++++++++\r\n")
+		write.Flush()
+	}
+
+	model, ok := state.GetModel(txConstraints, minimize, make([]*z3.Bool, 0), false, globalState.Z3ctx)
+	if !ok {
+		// UnsatError
+		fmt.Println("unsat in getTxSeq")
+		return nil
+	}
+
+	initialWorldState := transactionSequence[0].GetWorldState()
+	initialAccounts := initialWorldState.Accounts
+	for _, transaction := range transactionSequence {
+		concreteTx := _get_concrete_transaction(model, transaction)
+		concreteTransactions = append(concreteTransactions, concreteTx)
+	}
+	minPriceDict := make(map[string]int)
+	ctx := globalState.Z3ctx
+
+	for address, _ := range initialAccounts {
+		minPriceDict[address] = model.Eval(
+			initialWorldState.StartingBalances.GetItem(ctx.NewBitvecVal(address, 256)).AsAST(), true).Int()
+	}
+	concreteInitialState := _get_concrete_state(initialAccounts, &minPriceDict)
+	switch transactionSequence[0].(type) {
+	case *state.ContractCreationTransaction:
+		code := transactionSequence[0].(*state.ContractCreationTransaction).Code
+		_replace_with_actual_sha(concreteTransactions, model, code, globalState.Z3ctx)
+	default:
+		_replace_with_actual_sha(concreteTransactions, model, nil, globalState.Z3ctx)
+	}
+	_add_calldata_placeholder(concreteTransactions, transactionSequence)
+
+	steps := make(map[string]interface{})
+	steps["initialState"] = concreteInitialState
+	steps["steps"] = concreteTransactions
+	return steps
+}
 
 func GetTransactionSequence(globalState *state.GlobalState, constraints *state.Constraints) map[string]interface{} {
 	//var transactionSequence []state.BaseTransaction

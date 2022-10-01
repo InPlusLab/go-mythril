@@ -54,7 +54,7 @@ func (ws *WorldState) Copy() *WorldState {
 
 func (ws *WorldState) AccountsExistOrLoad(addr *z3.Bitvec) *Account {
 	accounts := ws.Accounts
-	acc, ok := accounts[addr.Value()]
+	acc, ok := accounts[addr.Simplify().Value()]
 	if ok {
 		return acc
 	} else {

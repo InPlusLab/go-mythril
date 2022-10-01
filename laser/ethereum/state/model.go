@@ -3,7 +3,6 @@ package state
 import (
 	"fmt"
 	"go-mythril/laser/smt/z3"
-	"go-mythril/support"
 )
 
 // TODO: implementation of LRU cache
@@ -11,7 +10,9 @@ import (
 func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool,
 	enforceExecutionTime bool, ctx *z3.Context) (*z3.Model, bool) {
 	s := ctx.NewOptimize()
-	timeout := support.NewArgs().SolverTimeout
+	defer s.Close()
+	//timeout := support.NewArgs().SolverTimeout
+	timeout := 30000
 	if enforceExecutionTime {
 		// GetTimeHandlerInstance().TimeRemaining()-500
 		//timeout = min(timeout, GetTimeHandlerInstance().TimeRemaining()-500)
@@ -21,6 +22,7 @@ func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool
 		}
 	}
 	s.SetTimeout(timeout)
+	//s.RLimit(timeout)
 	for _, constraint := range constraints.ConstraintList {
 		if constraint == nil {
 			fmt.Println("constraint nil")

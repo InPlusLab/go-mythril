@@ -105,11 +105,13 @@ func (b *Bitvec) AsBool() *Bool {
 // why? 2022.05.06
 // Because it only succeeds if the value can fit in a machine int.
 func (b *Bitvec) Value() string {
+	fmt.Println("value")
 	if b == nil {
 		return ""
 	}
 	if !b.symbolic {
-		value := C.GoString(C.Z3_get_numeral_string(b.rawCtx, b.rawAST))
+		tmp := b.Simplify()
+		value := C.GoString(C.Z3_get_numeral_string(tmp.rawCtx, tmp.rawAST))
 		return value
 	} else {
 		return ""
@@ -164,12 +166,9 @@ func (b *Bitvec) Translate(c *Context) *Bitvec {
 
 // Simplify equations
 func (b *Bitvec) Simplify() *Bitvec {
-	ast := C.Z3_simplify(b.rawCtx, b.rawAST)
-	//C.free(unsafe.Pointer(ast))
 	return &Bitvec{
 		rawCtx: b.rawCtx,
-		//rawAST: C.Z3_simplify(b.rawCtx, b.rawAST),
-		rawAST: ast,
+		rawAST: C.Z3_simplify(b.rawCtx, b.rawAST),
 		// TODO: wrong use
 		rawSort:     b.rawSort,
 		symbolic:    b.symbolic,
