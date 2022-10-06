@@ -72,7 +72,7 @@ func main() {
 	//Config.Close()
 	defer ctx.Close()
 
-	z3.SetGlobalParam("parallel.enable", "true")
+	//z3.SetGlobalParam("parallel.enable", "true")
 
 	start := time.Now()
 	evm.NormalSymExec(blackJackRunttimeBytecode, "Time", ctx)

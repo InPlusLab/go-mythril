@@ -17,9 +17,9 @@ type PredictableVariables struct {
 	Description string
 	PreHooks    []string
 	PostHooks   []string
-	Issues      *utils.SyncIssueSlice
-	//Issues []*analysis.Issue
-	Cache *utils.Set
+	//Issues      *utils.SyncIssueSlice
+	Issues []*analysis.Issue
+	Cache  *utils.Set
 }
 
 type PredictableValueAnnotation struct {
@@ -49,14 +49,14 @@ func NewPredictableVariables() *PredictableVariables {
 			"block.gaslimit, block.timestamp or block.number.",
 		PreHooks:  []string{"JUMPI", "BLOCKHASH"},
 		PostHooks: []string{"BLOCKHASH", "COINBASE", "GASLIMIT", "TIMESTAMP", "NUMBER"},
-		Issues:    utils.NewSyncIssueSlice(),
-		//Issues: make([]*analysis.Issue, 0),
-		Cache: utils.NewSet(),
+		//Issues:    utils.NewSyncIssueSlice(),
+		Issues: make([]*analysis.Issue, 0),
+		Cache:  utils.NewSet(),
 	}
 }
 func (dm *PredictableVariables) ResetModule() {
-	dm.Issues = utils.NewSyncIssueSlice()
-	//dm.Issues = make([]*analysis.Issue, 0)
+	//dm.Issues = utils.NewSyncIssueSlice()
+	dm.Issues = make([]*analysis.Issue, 0)
 }
 func (dm *PredictableVariables) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)
@@ -66,18 +66,18 @@ func (dm *PredictableVariables) Execute(target *state.GlobalState) []*analysis.I
 }
 
 func (dm *PredictableVariables) AddIssue(issue *analysis.Issue) {
-	dm.Issues.Append(issue)
-	//dm.Issues = append(dm.Issues, issue)
+	//dm.Issues.Append(issue)
+	dm.Issues = append(dm.Issues, issue)
 }
 
 func (dm *PredictableVariables) GetIssues() []*analysis.Issue {
 	list := make([]*analysis.Issue, 0)
-	for _, v := range dm.Issues.Elements() {
-		list = append(list, v.(*analysis.Issue))
-	}
-	//for _, v := range dm.Issues {
-	//	list = append(list, v)
+	//for _, v := range dm.Issues.Elements() {
+	//	list = append(list, v.(*analysis.Issue))
 	//}
+	for _, v := range dm.Issues {
+		list = append(list, v)
+	}
 	return list
 }
 
@@ -98,8 +98,8 @@ func (dm *PredictableVariables) _execute(globalState *state.GlobalState) []*anal
 		dm.Cache.Add(issue)
 	}
 	for _, issue := range issues {
-		dm.Issues.Append(issue)
-		//dm.Issues = append(dm.Issues, issue)
+		//dm.Issues.Append(issue)
+		dm.Issues = append(dm.Issues, issue)
 	}
 
 	return nil
@@ -114,7 +114,10 @@ func (dm *PredictableVariables) _analyze_state(globalState *state.GlobalState) [
 		if opcode.Name == "JUMPI" {
 			// Look for predictable state variables in jump condition
 			for _, annotation := range globalState.Mstate.Stack.RawStack[length-2].Annotations.Elements() {
+				addr := globalState.GetCurrentInstruction().Address
+				fmt.Println("addr:", addr)
 				if reflect.TypeOf(annotation).String() == "modules.PredictableValueAnnotation" {
+
 					constraints := globalState.WorldState.Constraints.Copy()
 
 					transactionSequence := analysis.GetTransactionSequence(globalState, constraints)

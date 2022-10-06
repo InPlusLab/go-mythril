@@ -12,7 +12,9 @@ func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool
 	s := ctx.NewOptimize()
 	defer s.Close()
 	//timeout := support.NewArgs().SolverTimeout
-	timeout := 30000
+	//timeout := 30000
+	//timeout := 1000000000
+	timeout := 1000000000
 	if enforceExecutionTime {
 		// GetTimeHandlerInstance().TimeRemaining()-500
 		//timeout = min(timeout, GetTimeHandlerInstance().TimeRemaining()-500)
@@ -21,8 +23,8 @@ func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool
 			return nil, false
 		}
 	}
-	s.SetTimeout(timeout)
-	//s.RLimit(timeout)
+	//s.SetTimeout(timeout)
+	s.RLimit(timeout)
 	for _, constraint := range constraints.ConstraintList {
 		if constraint == nil {
 			fmt.Println("constraint nil")

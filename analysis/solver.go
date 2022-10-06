@@ -21,14 +21,14 @@ func GetTransactionSequenceTmp(globalState *state.GlobalState, constraints *stat
 	txConstraints, minimize := _set_minimisation_constraints(transactionSequence, constraints.Copy(),
 		make([]*z3.Bool, 0), 5000, globalState.WorldState, globalState.Z3ctx)
 
-	if address == 336 {
-		file, err := os.OpenFile("D:/desktop/golang2.txt", os.O_WRONLY|os.O_APPEND, 0666)
+	if address == 336 || address == 323 {
+		file, err := os.OpenFile("D:/desktop/golang336.txt", os.O_WRONLY|os.O_APPEND, 0666)
 		if err != nil {
 			fmt.Println("file open fail", err)
 		}
 		defer file.Close()
 		write := bufio.NewWriter(file)
-		write.WriteString("txConstraints:\r\n")
+		write.WriteString("TxConstraints-" + strconv.Itoa(address) + "\r\n")
 		for i, con := range txConstraints.ConstraintList {
 			write.WriteString(strconv.Itoa(i) + con.BoolString() + "\r\n")
 		}
