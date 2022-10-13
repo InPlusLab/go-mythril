@@ -7,6 +7,7 @@ import (
 	"go-mythril/analysis/module"
 	"go-mythril/analysis/module/modules"
 	"go-mythril/laser/ethereum/state"
+	"go-mythril/laser/ethereum/transaction"
 	"go-mythril/laser/smt/z3"
 	"go-mythril/support"
 	"go-mythril/utils"
@@ -103,9 +104,7 @@ func (evm *LaserEVM) NormalSymExec(creationCode string, contractName string, ctx
 func (evm *LaserEVM) executeTransactionNormal(creationCode string, contractName string, ctx *z3.Context) {
 	inputStrArr := support.GetArgsInstance().TransactionSequences
 	for i := 0; i < evm.TransactionCount; i++ {
-		tx := state.NewMessageCallTransaction(creationCode, contractName, inputStrArr[i], ctx)
-		globalState := tx.InitialGlobalState()
-		evm.WorkList <- globalState
+		ExecuteMessageCall(evm, creationCode, contractName, inputStrArr[i], ctx)
 		id := 0
 	LOOP:
 		for {
@@ -170,10 +169,7 @@ func (evm *LaserEVM) SymExec(creationCode string, contractName string, ctx *z3.C
 func (evm *LaserEVM) executeTransaction(creationCode string, contractName string, ctx *z3.Context, cfg *z3.Config) {
 	inputStrArr := support.GetArgsInstance().TransactionSequences
 	for i := 0; i < evm.TransactionCount; i++ {
-		tx := state.NewMessageCallTransaction(creationCode, contractName, inputStrArr[i], ctx)
-		globalState := tx.InitialGlobalState()
-		evm.WorkList <- globalState
-
+		ExecuteMessageCall(evm, creationCode, contractName, inputStrArr[i], ctx)
 		for i := 0; i < evm.GofuncCount; i++ {
 			go evm.Run(i, cfg)
 		}
@@ -197,6 +193,7 @@ func (evm *LaserEVM) executeTransaction(creationCode string, contractName string
 			// Situation 1
 			signal := <-evm.SignalCh
 			latestSignals[signal.Id] = signal.Finished
+			fmt.Println(signal.Id, signal.Finished)
 			allFinished := true
 			for _, finished := range latestSignals {
 				//fmt.Println(i, finished)
@@ -204,7 +201,11 @@ func (evm *LaserEVM) executeTransaction(creationCode string, contractName string
 					allFinished = false
 				}
 			}
-			if allFinished && len(evm.WorkList) == 0 {
+			fmt.Println("situation 1", allFinished)
+			// TODO: 2022.10.12- Situation: goroutine 0-2 don't generate new states at the last execution.
+			// TODO: 2022.10.12- Now goroutine 3 don't generate new states, and then it get a state in channel to execute.
+			// TODO: 2022.10.12- But now it has broken in situation 1.
+			if allFinished && len(evm.WorkList) == 0 && evm.NoStatesSignal[signal.Id] {
 				fmt.Println("break in situation 1")
 				break LOOP
 			}
@@ -296,7 +297,10 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 	ctx := z3.NewContext(cfg)
 	for {
 		globalState, _ := readWithSelect(evm)
-
+		//evm.SignalCh <- Signal{
+		//	Id:       id,
+		//	Finished: false,
+		//}
 		//l.Lock()
 		evm.NoStatesSignal[id] = globalState == nil
 		//l.Unlock()
@@ -307,17 +311,21 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 			}
 
 			newStates, opcode := evm.ExecuteState(globalState)
+			fmt.Println("last", len(newStates) == 0)
+
 			fmt.Println(id, globalState, opcode)
 			//fmt.Println(id, globalState, opcode)
 			//evm.ManageCFG(opcode, newStates)
 			for _, newState := range newStates {
 				evm.WorkList <- newState
 			}
-			fmt.Println(id, "done", globalState, opcode)
 			evm.SignalCh <- Signal{
 				Id:       id,
 				Finished: len(newStates) == 0,
 			}
+
+			fmt.Println(id, "done", globalState, opcode)
+
 			//fmt.Println("produceNoStates:", id, len(newStates) == 0)
 			//fmt.Println(id, opcode)
 			//for i := 0; i < evm.GofuncCount; i++ {
@@ -406,4 +414,17 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 		fmt.Println("signal", id, len(newStates) == 0)
 		*/
 	}
+}
+
+func ExecuteMessageCall(evm *LaserEVM, creationCode string, contractName string, inputStr string, ctx *z3.Context) {
+	tx := state.NewMessageCallTransaction(creationCode, contractName, inputStr, ctx)
+	setupGlobalStateForExecution(evm, tx)
+}
+
+func setupGlobalStateForExecution(evm *LaserEVM, tx state.BaseTransaction) {
+	globalState := tx.InitialGlobalState()
+	ACTORS := transaction.NewActors(globalState.Z3ctx)
+	constraint := tx.GetCaller().Eq(ACTORS.GetCreator()).Or(tx.GetCaller().Eq(ACTORS.GetAttacker()), tx.GetCaller().Eq(ACTORS.GetSomeGuy()))
+	globalState.WorldState.Constraints.Add(constraint)
+	evm.WorkList <- globalState
 }

@@ -15,8 +15,8 @@ type Actors struct {
 
 func NewActors(ctx *z3.Context) *Actors {
 	creator := "AFFEAFFEAFFEAFFEAFFEAFFEAFFEAFFEAFFEAFFE"
-	//attacker := "DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF"
-	attacker := "5B38Da6a701c568545dCfcB03FcB875f56beddC4"
+	attacker := "DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF"
+	//attacker := "5B38Da6a701c568545dCfcB03FcB875f56beddC4"
 	someguy := "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 	creatorBv, _ := new(big.Int).SetString(creator, 16)
 	attackerBv, _ := new(big.Int).SetString(attacker, 16)
@@ -41,3 +41,17 @@ func (a *Actors) GetCreator() *z3.Bitvec {
 func (a *Actors) GetAttacker() *z3.Bitvec {
 	return a.Addresses["ATTACKER"]
 }
+func (a *Actors) GetSomeGuy() *z3.Bitvec {
+	return a.Addresses["SOMEGUY"]
+}
+
+// the implementation is in sym.go because of circle import in golang.
+//func ExecuteMessageCall(evm *ethereum.LaserEVM, creationCode string, contractName string, inputStr string, ctx *z3.Context) {
+//	tx := state.NewMessageCallTransaction(creationCode, contractName, inputStr, ctx)
+//	setupGlobalStateForExecution(evm, tx)
+//}
+//
+//func setupGlobalStateForExecution(evm *ethereum.LaserEVM, tx state.BaseTransaction) {
+//	globalState := tx.InitialGlobalState()
+//	evm.WorkList <- globalState
+//}

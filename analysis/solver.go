@@ -104,7 +104,7 @@ func GetTransactionSequence(globalState *state.GlobalState, constraints *state.C
 
 	for address, _ := range initialAccounts {
 		minPriceDict[address] = model.Eval(
-			initialWorldState.StartingBalances.GetItem(ctx.NewBitvecVal(address, 256)).AsAST(), true).Int()
+			initialWorldState.StartingBalances.GetItem(ctx.NewBitvec(address, 256)).AsAST(), true).Int()
 	}
 	concreteInitialState := _get_concrete_state(initialAccounts, &minPriceDict)
 	switch transactionSequence[0].(type) {
@@ -165,24 +165,19 @@ func _set_minimisation_constraints(txSeq []state.BaseTransaction, constraints *s
 		// Set upper bound on calldata size
 		maxCalldataSize := ctx.NewBitvecVal(maxSize, 256)
 
-		if ctx != tx.(*state.MessageCallTransaction).Ctx {
-			constraints.Add(maxCalldataSize.BvUGe(tx.GetCalldata().Calldatasize().Translate(ctx)))
-		} else {
-			constraints.Add(maxCalldataSize.BvUGe(tx.GetCalldata().Calldatasize().Simplify()))
-		}
+		constraints.Add(maxCalldataSize.BvUGe(tx.GetCalldata().Calldatasize().Translate(ctx)))
 
 		// Minimize
-		minimize = append(minimize, tx.GetCalldata().Calldatasize().AsBool())
-		minimize = append(minimize, tx.GetCallValue().AsBool())
+		minimize = append(minimize, tx.GetCalldata().Calldatasize().Translate(ctx).AsBool())
+		minimize = append(minimize, tx.GetCallValue().Translate(ctx).AsBool())
 
 		// TODO:
-		//constraints.Add(ctx.NewBitvecVal(tmpValue, 256).BvUGe(worldState.StartingBalances.GetItem(tx.GetCaller().Translate(ctx))))
+		constraints.Add(ctx.NewBitvecVal(tmpValue, 256).BvUGe(worldState.StartingBalances.GetItem(tx.GetCaller().Translate(ctx))))
 	}
 	for _, account := range worldState.Accounts {
 		// Lazy way to prevent overflows and to ensure "reasonable" balances
 		// Each account starts with less than 100 ETH
-		fmt.Println("accounts!")
-		constraints.Add(ctx.NewBitvecVal(tmpValue, 256).BvUGe(worldState.StartingBalances.GetItem(account.Address)))
+		constraints.Add(ctx.NewBitvecVal(tmpValue, 256).BvUGe(worldState.StartingBalances.GetItem(account.Address)).Translate(ctx))
 	}
 	return constraints, minimize
 }

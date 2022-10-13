@@ -80,9 +80,9 @@ func (dm *ExternalCalls) _analyze_state(globalState *state.GlobalState) []*Poten
 
 	tmpCon := constraints.Copy()
 	tmpCon.Add(globalState.WorldState.Constraints.ConstraintList...)
-	fmt.Println("Constraints in externalCalls: ", tmpCon.ConstraintList)
 
 	//transactionSequence := analysis.GetTransactionSequenceTmp(globalState, tmpCon, address)
+	fmt.Println("externalCall getTxSeq:", address)
 	transactionSequence := analysis.GetTransactionSequence(globalState, tmpCon)
 	if transactionSequence == nil {
 		// UnsatError

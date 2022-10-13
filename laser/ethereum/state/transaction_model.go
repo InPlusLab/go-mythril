@@ -83,24 +83,29 @@ func NewMessageCallTransaction(code string, contractName string, inputStr string
 		calldataList = append(calldataList, ctx.NewBitvecVal(val, 8))
 	}
 
-	caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
+	//caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
+	txId := GetNextTransactionId()
+	caller := ctx.NewBitvec("sender_"+txId, 256)
 	origin, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
 	tx := &MessageCallTransaction{
 		WorldState: NewWordState(ctx),
 		Code:       txcode,
 		// TODO: For test here.
-		CalleeAccount: NewAccount(ctx.NewBitvecVal(caller, 256),
+		//CalleeAccount: NewAccount(ctx.NewBitvecVal(caller, 256),
+		//	ctx.NewArray("balances", 256, 256), false, txcode, contractName),
+		CalleeAccount: NewAccount(caller,
 			ctx.NewArray("balances", 256, 256), false, txcode, contractName),
-		Caller:   ctx.NewBitvecVal(caller, 256),
-		Calldata: NewConcreteCalldata("txid123", calldataList, ctx),
-		//Calldata:  NewSymbolicCalldata("txid123", ctx),
+		//Caller:   ctx.NewBitvecVal(caller, 256),
+		Caller: caller,
+		//Calldata: NewConcreteCalldata(txId, calldataList, ctx),
+		Calldata:  NewSymbolicCalldata(txId, ctx),
 		GasPrice:  10,
 		GasLimit:  100000,
 		CallValue: 0, // 1 ether
 		Origin:    ctx.NewBitvecVal(origin, 256),
 		Basefee:   ctx.NewBitvecVal(1000, 256),
 		Ctx:       ctx,
-		Id:        GetNextTransactionId(),
+		Id:        txId,
 	}
 	// TODO: maybe wrong?
 	tx.WorldState.TransactionSequence = append(tx.WorldState.TransactionSequence, tx)
@@ -113,17 +118,17 @@ func (tx *MessageCallTransaction) InitialGlobalStateFromEnvironment(worldState *
 	globalState.Environment.ActiveFuncName = activeFunc
 
 	// make sure the value of sender is enough
-	//sender := env.Sender
-	//receiver := env.ActiveAccount.Address
+	sender := env.Sender
+	receiver := env.ActiveAccount.Address
 	//value := tx.Ctx.NewBitvecVal(env.CallValue, 256)
-	//
-	//constrain := globalState.WorldState.Balances.GetItem(sender).BvUGe(value)
-	//globalState.WorldState.Constraints.Add(constrain)
-	//
-	//receiverV := globalState.WorldState.Balances.GetItem(receiver)
-	//senderV := globalState.WorldState.Balances.GetItem(sender)
-	//globalState.WorldState.Balances.SetItem(receiver, receiverV.BvAdd(value).Simplify())
-	//globalState.WorldState.Balances.SetItem(sender, senderV.BvSub(value).Simplify())
+	value := tx.GetCallValue()
+	constrain := globalState.WorldState.Balances.GetItem(sender).BvUGe(value)
+	globalState.WorldState.Constraints.Add(constrain)
+
+	receiverV := globalState.WorldState.Balances.GetItem(receiver)
+	senderV := globalState.WorldState.Balances.GetItem(sender)
+	globalState.WorldState.Balances.SetItem(receiver, receiverV.BvAdd(value).Simplify())
+	globalState.WorldState.Balances.SetItem(sender, senderV.BvSub(value).Simplify())
 
 	return globalState
 }
@@ -161,7 +166,8 @@ func (tx *MessageCallTransaction) GetCalldata() BaseCalldata {
 }
 
 func (tx *MessageCallTransaction) GetCallValue() *z3.Bitvec {
-	return tx.Ctx.NewBitvecVal(tx.CallValue, 256)
+	//return tx.Ctx.NewBitvecVal(tx.CallValue, 256)
+	return tx.Ctx.NewBitvec("call_value"+tx.GetId(), 256)
 }
 
 func (tx *MessageCallTransaction) GetWorldState() *WorldState {
@@ -298,7 +304,8 @@ func (tx *ContractCreationTransaction) GetCalldata() BaseCalldata {
 }
 
 func (tx *ContractCreationTransaction) GetCallValue() *z3.Bitvec {
-	return tx.Ctx.NewBitvecVal(tx.CallValue, 256)
+	//return tx.Ctx.NewBitvecVal(tx.CallValue, 256)
+	return tx.Ctx.NewBitvec("call_value"+tx.GetId(), 256)
 }
 
 func (tx *ContractCreationTransaction) GetWorldState() *WorldState {

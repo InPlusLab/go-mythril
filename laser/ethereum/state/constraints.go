@@ -37,8 +37,10 @@ func (c *Constraints) IsPossible() bool {
 }
 
 func (c *Constraints) Add(constraints ...*z3.Bool) bool {
+	//fmt.Println("addCons!")
 	for _, constraint := range constraints {
 		//fmt.Println("addConstraints:", constraint.AsAST().String())
+		//fmt.Println(constraint.BoolString())
 		c.ConstraintList = append(c.ConstraintList, constraint)
 	}
 	return true

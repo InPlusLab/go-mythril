@@ -154,6 +154,9 @@ func (b *Bitvec) Copy() *Bitvec {
 
 // Translate is used to copy ast from one context to another.
 func (b *Bitvec) Translate(c *Context) *Bitvec {
+	if b.rawCtx == c.raw {
+		return b
+	}
 	return &Bitvec{
 		rawCtx: c.raw,
 		rawAST: C.Z3_translate(b.rawCtx, b.rawAST, c.raw),

@@ -98,6 +98,7 @@ func (ccd *ConcreteCalldata) Size() *z3.Bitvec {
 	item := ccd.ConcreteCalldata[0]
 	ctx := item.GetCtx()
 	return ctx.NewBitvecVal(len(ccd.ConcreteCalldata), 256)
+	//return ctx.NewBitvec(ccd.TxId+"_calldatasize", 256)
 }
 func (ccd *ConcreteCalldata) Translate(ctx *z3.Context) BaseCalldata {
 	newCalldata := make([]*z3.Bitvec, 0)
@@ -141,20 +142,21 @@ func (scd *SymbolicCalldata) Calldatasize() *z3.Bitvec {
 	return scd.Size()
 }
 func (scd *SymbolicCalldata) GetWordAt(offset *z3.Bitvec) *z3.Bitvec {
-	//tmp := scd.Load(offset)
-	//// OutofIndex check
-	//index, _ := strconv.ParseInt(offset.Value(), 10, 64)
-	//for i := index + 1; i < index+32; i++ {
-	//	tmp = tmp.Concat(scd.Load(scd.Ctx.NewBitvecVal(i, 256)))
-	//}
-	//return tmp.Simplify()
-	return scd.Ctx.NewBitvec("SymbolicInput-"+offset.BvString(), 256)
+	tmp := scd.Load(offset)
+	// OutofIndex check
+	index, _ := strconv.ParseInt(offset.Value(), 10, 64)
+	for i := index + 1; i < index+32; i++ {
+		tmp = tmp.Concat(scd.Load(scd.Ctx.NewBitvecVal(i, 256)))
+	}
+	return tmp.Simplify()
+	//return scd.Ctx.NewBitvec("SymbolicInput-"+offset.BvString(), 256)
 }
 func (scd *SymbolicCalldata) Load(item *z3.Bitvec) *z3.Bitvec {
 	//return z3.If(item.BvSLt(scd.SymSize),
 	//	scd.Calldata.GetItem(item).Simplify(),
 	//	scd.Ctx.NewBitvecVal(0, 8)).Simplify()
-	return scd.Calldata.GetItem(item).Simplify()
+	//return scd.Calldata.GetItem(item).Simplify()
+	return z3.If(item.BvSLt(scd.Size()), scd.Calldata.GetItem(item), scd.Ctx.NewBitvecVal(0, 8)).Simplify()
 }
 
 // TODO: z3.model should be changed. In Mythril, model.py is a list of models.

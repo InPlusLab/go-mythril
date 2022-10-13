@@ -722,7 +722,7 @@ func (instr *Instruction) callvalue_(globalState *state.GlobalState) []*state.Gl
 	mstate := globalState.Mstate
 	//env := globalState.Environment
 	//mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(env.CallValue, 256))
-	mstate.Stack.Append(globalState.Z3ctx.NewBitvec("callValue", 256))
+	mstate.Stack.Append(globalState.Z3ctx.NewBitvec("call_value"+globalState.CurrentTransaction().GetId(), 256))
 	ret = append(ret, globalState)
 	return ret
 }
@@ -735,7 +735,7 @@ func (instr *Instruction) calldataload_(globalState *state.GlobalState) []*state
 	op0 := mstate.Stack.Pop()
 	value := env.Calldata.GetWordAt(op0)
 	fmt.Println("calldataload_:", value)
-	mstate.Stack.Append(value)
+	mstate.Stack.Append(value.Translate(globalState.Z3ctx))
 
 	ret = append(ret, globalState)
 	return ret
@@ -1666,7 +1666,6 @@ func (instr *Instruction) stop_(globalState *state.GlobalState) {
 }
 
 func (instr *Instruction) call_(globalState *state.GlobalState) []*state.GlobalState {
-	fmt.Println("call_")
 	ret := make([]*state.GlobalState, 0)
 	//
 	instruction := globalState.GetCurrentInstruction()
@@ -1685,9 +1684,8 @@ func (instr *Instruction) call_(globalState *state.GlobalState) []*state.GlobalS
 		//fmt.Println(sender,receiver,value)
 		transferEther(globalState, sender, receiver, value)
 
-		// TODO: append a success status in stack?
-		//globalState.Mstate.Stack.Append(globalState.NewBitvec("retval_"+ strconv.Itoa(instruction.Address), 256))
-		globalState.Mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(1, 256))
+		globalState.Mstate.Stack.Append(globalState.NewBitvec("retval_"+strconv.Itoa(instruction.Address), 256))
+		//globalState.Mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(1, 256))
 		ret = append(ret, globalState)
 		return ret
 	}
