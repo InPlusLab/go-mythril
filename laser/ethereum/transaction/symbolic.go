@@ -15,8 +15,8 @@ type Actors struct {
 
 func NewActors(ctx *z3.Context) *Actors {
 	creator := "AFFEAFFEAFFEAFFEAFFEAFFEAFFEAFFEAFFEAFFE"
-	attacker := "DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF"
-	//attacker := "5B38Da6a701c568545dCfcB03FcB875f56beddC4"
+	//attacker := "DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF"
+	attacker := "Ab8483F64d9C6d1EcF9b849Ae677dD3315835cb2"
 	someguy := "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 	creatorBv, _ := new(big.Int).SetString(creator, 16)
 	attackerBv, _ := new(big.Int).SetString(attacker, 16)

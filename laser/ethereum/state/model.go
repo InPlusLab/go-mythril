@@ -10,24 +10,24 @@ import (
 func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool,
 	enforceExecutionTime bool, ctx *z3.Context) (*z3.Model, bool) {
 
-	fmt.Println("Constraints:")
-	for i, constraint := range constraints.ConstraintList {
-		fmt.Println(i, "-", constraint.BoolString())
-	}
-	fmt.Println("Minimize:")
-	for i, e := range minimize {
-		fmt.Println(i, "-", e.BoolString())
-	}
-	for i, e := range maximize {
-		fmt.Println(i, "-", e.BoolString())
-	}
+	//fmt.Println("Constraints:")
+	//for i, constraint := range constraints.ConstraintList {
+	//	fmt.Println(i, "-", constraint.BoolString())
+	//}
+	//fmt.Println("Minimize:")
+	//for i, e := range minimize {
+	//	fmt.Println(i, "-", e.BoolString())
+	//}
+	//for i, e := range maximize {
+	//	fmt.Println(i, "-", e.BoolString())
+	//}
 
 	s := ctx.NewOptimize()
 	defer s.Close()
 	//timeout := support.NewArgs().SolverTimeout
 	//timeout := 1000000000
-	timeout := 100000000
-	//timeout := 30000
+	//timeout := 100000000
+	timeout := 30000
 	if enforceExecutionTime {
 		// GetTimeHandlerInstance().TimeRemaining()-500
 		//timeout = min(timeout, GetTimeHandlerInstance().TimeRemaining()-500)
@@ -36,8 +36,8 @@ func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool
 			return nil, false
 		}
 	}
-	//s.SetTimeout(timeout)
-	s.RLimit(timeout)
+	s.SetTimeout(timeout)
+	//s.RLimit(timeout)
 	for _, constraint := range constraints.ConstraintList {
 		if constraint == nil {
 			fmt.Println("constraint nil")

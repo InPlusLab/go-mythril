@@ -35,6 +35,7 @@ func (m *MachineStack) Append(b interface{}) {
 		var tmp *z3.Bitvec
 		//tmp = b.(*z3.Bitvec).Simplify()
 		tmp = b.(*z3.Bitvec)
+		fmt.Println("stacksize:", tmp.Simplify().BvSize())
 		m.RawStack = append(m.RawStack, tmp.Simplify())
 	case *z3.Bool:
 		ctx := z3.GetBoolCtx(b.(*z3.Bool))

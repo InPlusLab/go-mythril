@@ -12,7 +12,7 @@ type ArbitraryJump struct {
 	SWCID       string
 	Description string
 	PreHooks    []string
-	Issues      []*analysis.Issue
+	Issues      *utils.SyncIssueSlice
 	Cache       *utils.Set
 }
 
@@ -22,13 +22,13 @@ func NewArbitraryJump() *ArbitraryJump {
 		SWCID:       analysis.NewSWCData()["ARBITRARY_JUMP"],
 		Description: "",
 		PreHooks:    []string{"JUMP", "JUMPI"},
-		Issues:      make([]*analysis.Issue, 0),
+		Issues:      utils.NewSyncIssueSlice(),
 		Cache:       utils.NewSet(),
 	}
 }
 
 func (dm *ArbitraryJump) ResetModule() {
-	dm.Issues = make([]*analysis.Issue, 0)
+	dm.Issues = utils.NewSyncIssueSlice()
 }
 
 func (dm *ArbitraryJump) Execute(target *state.GlobalState) []*analysis.Issue {
@@ -39,11 +39,15 @@ func (dm *ArbitraryJump) Execute(target *state.GlobalState) []*analysis.Issue {
 }
 
 func (dm *ArbitraryJump) AddIssue(issue *analysis.Issue) {
-	dm.Issues = append(dm.Issues, issue)
+	dm.Issues.Append(issue)
 }
 
 func (dm *ArbitraryJump) GetIssues() []*analysis.Issue {
-	return dm.Issues
+	list := make([]*analysis.Issue, 0)
+	for _, v := range dm.Issues.Elements() {
+		list = append(list, v.(*analysis.Issue))
+	}
+	return list
 }
 
 func (dm *ArbitraryJump) GetPreHooks() []string {
@@ -59,8 +63,11 @@ func (dm *ArbitraryJump) _execute(globalState *state.GlobalState) []*analysis.Is
 		return nil
 	}
 	issues := dm._analyze_state(globalState)
-	dm.Issues = append(dm.Issues, issues...)
-	return dm.Issues
+	for _, issue := range issues {
+		fmt.Println("arbitraryJump push")
+		dm.Issues.Append(issue)
+	}
+	return nil
 }
 
 func (dm *ArbitraryJump) _analyze_state(globalState *state.GlobalState) []*analysis.Issue {

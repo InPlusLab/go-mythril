@@ -139,6 +139,7 @@ func (evm *LaserEVM) executeTransactionNormal(creationCode string, contractName 
 			fmt.Println(id, "done", globalState, opcode)
 			fmt.Println("==============================================================================")
 			if opcode == "STOP" || opcode == "RETURN" {
+				//if len(newStates) == 0 {
 				modules.CheckPotentialIssues(globalState)
 				for _, detector := range evm.Loader.Modules {
 					issues := detector.GetIssues()
@@ -332,8 +333,8 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 			//	fmt.Println(evm.NoStatesSignal[i])
 			//}
 			fmt.Println("===========================================================================")
-			if opcode == "STOP" || opcode == "RETURN" {
-
+			//if opcode == "STOP" || opcode == "RETURN" {
+			if len(newStates) == 0 {
 				modules.CheckPotentialIssues(globalState)
 				for _, detector := range evm.Loader.Modules {
 					issues := detector.GetIssues()

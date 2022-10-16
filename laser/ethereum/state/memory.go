@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go-mythril/laser/smt/z3"
 	"sort"
+	"strconv"
 )
 
 // No of iterations to perform when iteration size is symbolic
@@ -27,37 +28,35 @@ func NewMemory() *Memory {
 // For debug
 func (m *Memory) PrintMemory() {
 	mem := *m.RawMemory
+	fmt.Println(mem)
 	if len(mem) == 0 {
 		fmt.Println("PrintMemory: null")
 	} else {
+
 		keyArr := make([]int, 0)
 		for i, _ := range mem {
 			keyArr = append(keyArr, int(i))
 		}
 		sort.Ints(keyArr)
 		tmpStr := "0x"
-		count := 0
-		lastIndex := 0
+		head := keyArr[0]
 		for i, v := range keyArr {
-			value, ok := mem[int64(v)]
-			if ok {
-				tmpStr += value.BvString()[2:]
-				count++
-			}
-			if count == 16 {
-				fmt.Println("PrintMem:", v-15, "-", tmpStr)
+			if v < head+16 {
+				value, ok := mem[int64(v)]
+				if ok {
+					tmpStr += value.BvString()[2:]
+				}
+			} else {
+				fmt.Println("PrintMem", strconv.FormatInt(int64(head), 16), ":", tmpStr)
+				head = keyArr[i]
+				value, ok := mem[int64(v)]
 				tmpStr = "0x"
-				count = 0
-				lastIndex = i
+				if ok {
+					tmpStr += value.BvString()[2:]
+				}
 			}
 		}
-		if lastIndex < len(keyArr) {
-			str := "0x"
-			for k := lastIndex + 1; k < len(keyArr); k++ {
-				str += mem[int64(keyArr[k])].BvString()[2:]
-			}
-			fmt.Println("PrintMem:", lastIndex+1, "-", tmpStr)
-		}
+		fmt.Println("PrintMem", strconv.FormatInt(int64(head), 16), ":", tmpStr)
 	}
 }
 
@@ -72,8 +71,15 @@ func (m *Memory) Extend(size int) {
 func (m *Memory) GetWordAt(index int64) *z3.Bitvec {
 	mem := *m.RawMemory
 	result := mem[index]
+	fmt.Println("result:", result)
+	ctx := result.GetCtx()
+
 	for i := index + 1; i < index+32; i++ {
-		result = result.Concat(mem[i])
+		if mem[i] != nil {
+			result = result.Concat(mem[i])
+		} else {
+			result = result.Concat(ctx.NewBitvecVal(0, 8))
+		}
 	}
 	result = result.Simplify()
 	if result.BvSize() != 256 {
@@ -102,7 +108,6 @@ func (m *Memory) GetItems(start int64, stop int64) []*z3.Bitvec {
 	mem := *m.RawMemory
 	//length := stop - start
 	for i := start; i <= stop; i++ {
-		fmt.Println("beforeMem[i]")
 		value, ok := mem[i]
 		if ok {
 			items = append(items, value)
@@ -116,10 +121,14 @@ func (m *Memory) GetItems(start int64, stop int64) []*z3.Bitvec {
 func (m *Memory) GetItems2Bytes(start int64, stop int64) []byte {
 	bvarr := m.GetItems(start, stop)
 	str := ""
+	fmt.Println("11")
 	for _, item := range bvarr {
+		// TODO: array getItm symbolic false
 		str += item.Value()
 	}
+	fmt.Println("33")
 	bytecode, _ := hex.DecodeString(str)
+	fmt.Println("44")
 	return bytecode
 }
 

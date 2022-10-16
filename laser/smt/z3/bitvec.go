@@ -8,6 +8,7 @@ import (
 	"go-mythril/utils"
 	"math/big"
 	"strconv"
+	"strings"
 	"unsafe"
 )
 
@@ -105,16 +106,15 @@ func (b *Bitvec) AsBool() *Bool {
 // why? 2022.05.06
 // Because it only succeeds if the value can fit in a machine int.
 func (b *Bitvec) Value() string {
-	fmt.Println("value")
 	if b == nil {
 		return ""
 	}
-	if !b.symbolic {
+	if !strings.Contains(b.BvString(), "_") && !b.symbolic {
 		tmp := b.Simplify()
 		value := C.GoString(C.Z3_get_numeral_string(tmp.rawCtx, tmp.rawAST))
 		return value
 	} else {
-		return ""
+		return "??"
 	}
 }
 
@@ -479,10 +479,13 @@ func (a *Bitvec) BvXOr(a2 *Bitvec) *Bitvec {
 // Concat gets the concatenation of bv a & bv a2
 // created by chz
 func (a *Bitvec) Concat(a2 *Bitvec) *Bitvec {
+	bvSize1 := a.BvSize()
+	bvSize2 := a2.BvSize()
 	return &Bitvec{
-		rawCtx:      a.rawCtx,
-		rawAST:      C.Z3_mk_concat(a.rawCtx, a.rawAST, a2.rawAST),
-		rawSort:     a.rawSort,
+		rawCtx:  a.rawCtx,
+		rawAST:  C.Z3_mk_concat(a.rawCtx, a.rawAST, a2.rawAST),
+		rawSort: C.Z3_mk_bv_sort(a.rawCtx, C.uint(bvSize1+bvSize2)),
+		//rawSort: a.rawSort,
 		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
@@ -492,9 +495,10 @@ func (a *Bitvec) Concat(a2 *Bitvec) *Bitvec {
 // created by chz
 func (a *Bitvec) Extract(high int, low int) *Bitvec {
 	return &Bitvec{
-		rawCtx:      a.rawCtx,
-		rawAST:      C.Z3_mk_extract(a.rawCtx, C.uint(high), C.uint(low), a.rawAST),
-		rawSort:     a.rawSort,
+		rawCtx:  a.rawCtx,
+		rawAST:  C.Z3_mk_extract(a.rawCtx, C.uint(high), C.uint(low), a.rawAST),
+		rawSort: C.Z3_mk_bv_sort(a.rawCtx, C.uint(high-low+1)),
+		//rawSort: a.rawSort,
 		symbolic:    a.symbolic,
 		Annotations: a.Annotations,
 	}

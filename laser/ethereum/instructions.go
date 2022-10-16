@@ -83,16 +83,16 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	}
 	instr.ExePostHooks(globalState)
 
-	//for _, state := range result {
-	//	// For debug
-	//	state.Mstate.Stack.PrintStack()
-	//	//for i, con := range state.WorldState.Constraints.ConstraintList {
-	//	//	if i==3{
-	//	//		fmt.Println("PrintCons:", con.BoolString())
-	//	//	}
-	//	//}
-	//	//state.Mstate.Memory.PrintMemory()
-	//}
+	for _, state := range result {
+		// For debug
+		state.Mstate.Stack.PrintStack()
+		//for i, con := range state.WorldState.Constraints.ConstraintList {
+		//	if i==3{
+		//		fmt.Println("PrintCons:", con.BoolString())
+		//	}
+		//}
+		//state.Mstate.Memory.PrintMemory()
+	}
 	fmt.Println("------------------------------------------------------------")
 	return result
 }
@@ -1295,6 +1295,7 @@ func (instr *Instruction) mstore_(globalState *state.GlobalState) []*state.Globa
 	// TODO: exception
 	mstate.MemExtend(mstart, 32)
 	mstartV, _ := strconv.ParseInt(mstart.Value(), 10, 64)
+	fmt.Println("mstoreSize:", value.BvSize())
 	mstate.Memory.WriteWordAt(mstartV, value)
 	ret = append(ret, globalState)
 	return ret
@@ -1322,10 +1323,8 @@ func (instr *Instruction) sload_(globalState *state.GlobalState) []*state.Global
 	mstate := globalState.Mstate
 	index := mstate.Stack.Pop()
 	// TODO: DynLoader to get the storage ?
-	caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
-	globalState.Environment.ActiveAccount.Storage.SetItem(index, globalState.Z3ctx.NewBitvecVal(caller, 256))
-
-	mstate.Stack.Append(globalState.Environment.ActiveAccount.Storage.GetItem(index))
+	//globalState.Environment.ActiveAccount.Storage.SetItem(index, globalState.Z3ctx.NewBitvecVal(0, 256))
+	mstate.Stack.Append(globalState.Environment.ActiveAccount.Storage.GetItem(index).Translate(globalState.Z3ctx))
 
 	ret = append(ret, globalState)
 	return ret
@@ -1350,16 +1349,31 @@ func (instr *Instruction) jump_(globalState *state.GlobalState) []*state.GlobalS
 	disassembly := globalState.Environment.Code
 	jumpAddr := mstate.Stack.Pop()
 	if jumpAddr.Symbolic() {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Catch-Invalid jump argument (symbolic address)")
+			}
+		}()
 		panic("Invalid jump argument (symbolic address)")
 	}
 	jumpAddrV, _ := strconv.ParseInt(jumpAddr.Value(), 10, 64)
 	index := GetInstructionIndex(disassembly.InstructionList, int(jumpAddrV))
 	if index == -1 {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Catch-JUMP to invalid address")
+			}
+		}()
 		panic("JUMP to invalid address")
 	}
 	opCode := disassembly.InstructionList[index].OpCode
 
 	if opCode.Name != "JUMPDEST" {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Catch-Skipping JUMP to invalid destination (not JUMPDEST): " + jumpAddr.BvString())
+			}
+		}()
 		panic("Skipping JUMP to invalid destination (not JUMPDEST): " + jumpAddr.BvString())
 	}
 
@@ -1507,6 +1521,7 @@ func (instr *Instruction) msize_(globalState *state.GlobalState) []*state.Global
 func (instr *Instruction) gas_(globalState *state.GlobalState) []*state.GlobalState {
 	ret := make([]*state.GlobalState, 0)
 	globalState.Mstate.Stack.Append(globalState.NewBitvec("gas", 256))
+	//globalState.Mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(6431, 256))
 	ret = append(ret, globalState)
 	return ret
 }
@@ -1604,10 +1619,15 @@ func (instr *Instruction) return_(globalState *state.GlobalState) {
 	} else {
 		lenV, _ := strconv.ParseInt(length.Value(), 10, 64)
 		mstate.MemExtend(offset, int(lenV))
+		fmt.Println("1")
 		CheckGasUsageLimit(globalState)
+		fmt.Println("2")
 		offsetV, _ := strconv.ParseInt(offset.Value(), 10, 64)
+		fmt.Println("3")
 		returnData = mstate.Memory.GetItems2Bytes(offsetV, offsetV+lenV)
+		fmt.Println("4")
 	}
+	fmt.Println("5")
 	globalState.CurrentTransaction().End(globalState, returnData)
 }
 
@@ -1703,10 +1723,35 @@ func (instr *Instruction) callcode_(globalState *state.GlobalState) []*state.Glo
 	return ret
 }
 
-// TODO
 func (instr *Instruction) delegatecall_(globalState *state.GlobalState) []*state.GlobalState {
 	ret := make([]*state.GlobalState, 0)
 
+	instruction := globalState.GetCurrentInstruction()
+	environment := globalState.Environment
+	length := globalState.Mstate.Stack.Length()
+	memoryOutSize := globalState.Mstate.Stack.RawStack[length-6]
+	memoryOutOffset := globalState.Mstate.Stack.RawStack[length-5]
+
+	_, calleeAccount, callData, value, gas, _, _ := GetCallParameters(globalState, false)
+
+	fmt.Println("delegateCall_:", memoryOutSize, memoryOutOffset, callData, gas)
+
+	if calleeAccount != nil && len(calleeAccount.Code.Bytecode) == 0 {
+		fmt.Println("The call is related to ether transfer between accounts")
+		sender := environment.ActiveAccount.Address
+		receiver := calleeAccount.Address
+		//fmt.Println(sender,receiver,value)
+		transferEther(globalState, sender, receiver, value)
+
+		globalState.Mstate.Stack.Append(globalState.NewBitvec("retval_"+strconv.Itoa(instruction.Address), 256))
+		//globalState.Mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(1, 256))
+		ret = append(ret, globalState)
+		return ret
+	} else {
+		// TODO: TransactionStartSignal
+		fmt.Println("delegateCallNewTx")
+	}
+	// TODO: valueError
 	ret = append(ret, globalState)
 	return ret
 }

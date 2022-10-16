@@ -15,7 +15,7 @@ type ArbitraryDelegateCall struct {
 	SWCID       string
 	Description string
 	PreHooks    []string
-	Issues      []*analysis.Issue
+	Issues      *utils.SyncIssueSlice
 	Cache       *utils.Set
 }
 
@@ -25,13 +25,13 @@ func NewArbitraryDelegateCall() *ArbitraryDelegateCall {
 		SWCID:       analysis.NewSWCData()["DELEGATECALL_TO_UNTRUSTED_CONTRACT"],
 		Description: "Check for invocations of delegatecall to a user-supplied address.",
 		PreHooks:    []string{"DELEGATECALL"},
-		Issues:      make([]*analysis.Issue, 0),
+		Issues:      utils.NewSyncIssueSlice(),
 		Cache:       utils.NewSet(),
 	}
 }
 
 func (dm *ArbitraryDelegateCall) ResetModule() {
-	dm.Issues = make([]*analysis.Issue, 0)
+	dm.Issues = utils.NewSyncIssueSlice()
 }
 
 func (dm *ArbitraryDelegateCall) Execute(target *state.GlobalState) []*analysis.Issue {
@@ -42,11 +42,15 @@ func (dm *ArbitraryDelegateCall) Execute(target *state.GlobalState) []*analysis.
 }
 
 func (dm *ArbitraryDelegateCall) AddIssue(issue *analysis.Issue) {
-	dm.Issues = append(dm.Issues, issue)
+	dm.Issues.Append(issue)
 }
 
 func (dm *ArbitraryDelegateCall) GetIssues() []*analysis.Issue {
-	return dm.Issues
+	list := make([]*analysis.Issue, 0)
+	for _, v := range dm.Issues.Elements() {
+		list = append(list, v.(*analysis.Issue))
+	}
+	return list
 }
 
 func (dm *ArbitraryDelegateCall) GetPreHooks() []string {
@@ -63,7 +67,8 @@ func (dm *ArbitraryDelegateCall) _execute(globalState *state.GlobalState) []*ana
 	}
 	potentialIssues := dm._analyze_state(globalState)
 	annotation := GetPotentialIssuesAnnotaion(globalState)
-	annotation.PotentialIssues = append(annotation.PotentialIssues, potentialIssues...)
+	//annotation.PotentialIssues = append(annotation.PotentialIssues, potentialIssues...)
+	annotation.Append(potentialIssues...)
 	return nil
 }
 
@@ -94,13 +99,14 @@ func (dm *ArbitraryDelegateCall) _analyze_state(globalState *state.GlobalState) 
 		Contract:        globalState.Environment.ActiveAccount.ContractName,
 		FunctionName:    globalState.Environment.ActiveFuncName,
 		Address:         address,
-		SWCID:           analysis.NewSWCData()["ELEGATECALL_TO_UNTRUSTED_CONTRACT"],
+		SWCID:           analysis.NewSWCData()["DELEGATECALL_TO_UNTRUSTED_CONTRACT"],
 		Bytecode:        globalState.Environment.Code.Bytecode,
 		Title:           "Delegatecall to user-supplied address",
 		Severity:        "High",
 		DescriptionHead: descriptionHead,
 		DescriptionTail: descriptionTail,
 		Constraints:     constraints,
+		Detector:        dm,
 	}
 	issueArr = append(issueArr, potentialIssue)
 	return issueArr
