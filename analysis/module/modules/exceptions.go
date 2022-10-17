@@ -14,7 +14,7 @@ type Exceptions struct {
 	SWCID       string
 	Description string
 	PreHooks    []string
-	Issues      []*analysis.Issue
+	Issues      *utils.SyncIssueSlice
 	Cache       *utils.Set
 }
 
@@ -38,13 +38,13 @@ func NewExceptions() *Exceptions {
 		SWCID:       analysis.NewSWCData()["ASSERT_VIOLATION"],
 		Description: "Checks whether any exception states are reachable.",
 		PreHooks:    []string{"INVALID", "JUMP", "REVERT"},
-		Issues:      make([]*analysis.Issue, 0),
+		Issues:      utils.NewSyncIssueSlice(),
 		Cache:       utils.NewSet(),
 	}
 }
 
 func (dm *Exceptions) ResetModule() {
-	dm.Issues = make([]*analysis.Issue, 0)
+	dm.Issues = utils.NewSyncIssueSlice()
 }
 func (dm *Exceptions) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)
@@ -54,11 +54,15 @@ func (dm *Exceptions) Execute(target *state.GlobalState) []*analysis.Issue {
 }
 
 func (dm *Exceptions) AddIssue(issue *analysis.Issue) {
-	dm.Issues = append(dm.Issues, issue)
+	dm.Issues.Append(issue)
 }
 
 func (dm *Exceptions) GetIssues() []*analysis.Issue {
-	return dm.Issues
+	list := make([]*analysis.Issue, 0)
+	for _, v := range dm.Issues.Elements() {
+		list = append(list, v.(*analysis.Issue))
+	}
+	return list
 }
 
 func (dm *Exceptions) GetPreHooks() []string {
@@ -70,20 +74,17 @@ func (dm *Exceptions) GetPostHooks() []string {
 }
 
 func (dm *Exceptions) _execute(globalState *state.GlobalState) []*analysis.Issue {
-	for _, v := range dm.Cache.Elements() {
-		if reflect.TypeOf(v).String() == "map[int]string" {
-			if v.(map[int]string)[globalState.GetCurrentInstruction().Address] == globalState.Environment.ActiveFuncName {
-				return nil
-			}
-		}
+	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
+		return nil
 	}
 	issues := dm._analyze_state(globalState)
 	for _, issue := range issues {
-		addrFuncMap := make(map[int]string)
-		addrFuncMap[issue.Address] = issue.FunctionName
-		dm.Cache.Add(addrFuncMap)
+		dm.Cache.Add(issue.Address)
 	}
-	dm.Issues = append(dm.Issues, issues...)
+	for _, issue := range issues {
+		fmt.Println("exceptions push")
+		dm.Issues.Append(issue)
+	}
 	return nil
 }
 
@@ -137,9 +138,14 @@ func is_assertion_failure(globalState *state.GlobalState) bool {
 	stackLength := state.Stack.Length()
 	offset := state.Stack.RawStack[stackLength-1]
 	length := state.Stack.RawStack[stackLength-2]
+	fmt.Println("offset:", offset.BvString())
+	fmt.Println("length:", length.BvString())
 	offsetV, _ := strconv.ParseInt(offset.Value(), 10, 64)
 	lengthV, _ := strconv.ParseInt(length.Value(), 10, 64)
 	returnData := state.Memory.GetItems(offsetV, offsetV+lengthV)
+	if len(returnData) < 4 {
+		return false
+	}
 	// The function signature of Panic(uint256)
 	PANIC_SIGNATURE := []int{78, 72, 123, 113}
 	flag := true

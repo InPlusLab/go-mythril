@@ -16,7 +16,7 @@ type EtherThief struct {
 	SWCID       string
 	Description string
 	PostHooks   []string
-	Issues      []*analysis.Issue
+	Issues      *utils.SyncIssueSlice
 	Cache       *utils.Set
 }
 
@@ -26,13 +26,13 @@ func NewEtherThief() *EtherThief {
 		SWCID:       analysis.NewSWCData()["UNPROTECTED_ETHER_WITHDRAWAL"],
 		Description: DESCRIPTION,
 		PostHooks:   []string{"CALL", "STATICCALL"},
-		Issues:      make([]*analysis.Issue, 0),
+		Issues:      utils.NewSyncIssueSlice(),
 		Cache:       utils.NewSet(),
 	}
 }
 
 func (dm *EtherThief) ResetModule() {
-	dm.Issues = make([]*analysis.Issue, 0)
+	dm.Issues = utils.NewSyncIssueSlice()
 }
 func (dm *EtherThief) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)
@@ -42,11 +42,15 @@ func (dm *EtherThief) Execute(target *state.GlobalState) []*analysis.Issue {
 }
 
 func (dm *EtherThief) AddIssue(issue *analysis.Issue) {
-	dm.Issues = append(dm.Issues, issue)
+	dm.Issues.Append(issue)
 }
 
 func (dm *EtherThief) GetIssues() []*analysis.Issue {
-	return dm.Issues
+	list := make([]*analysis.Issue, 0)
+	for _, v := range dm.Issues.Elements() {
+		list = append(list, v.(*analysis.Issue))
+	}
+	return list
 }
 
 func (dm *EtherThief) GetPreHooks() []string {
@@ -63,7 +67,7 @@ func (dm *EtherThief) _execute(globalState *state.GlobalState) []*analysis.Issue
 	}
 	potentialIssues := dm._analyze_state(globalState)
 	annotation := GetPotentialIssuesAnnotaion(globalState)
-	annotation.PotentialIssues = append(annotation.PotentialIssues, potentialIssues...)
+	annotation.Append(potentialIssues...)
 	return nil
 }
 
@@ -92,6 +96,7 @@ func (dm *EtherThief) _analyze_state(globalState *state.GlobalState) []*Potentia
 			"from the contract account. Verify the business logic carefully and make sure that appropriate " +
 			"security controls are in place to prevent unexpected loss of funds.",
 		Constraints: constraints,
+		Detector:    dm,
 	}
 	if sat {
 		return []*PotentialIssue{potentialIssue}

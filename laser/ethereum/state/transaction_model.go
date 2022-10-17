@@ -86,7 +86,7 @@ func NewMessageCallTransaction(code string, contractName string, inputStr string
 	//caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
 	txId := GetNextTransactionId()
 	caller := ctx.NewBitvec("sender_"+txId, 256)
-	origin, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
+	origin := ctx.NewBitvec("origin", 256)
 	tx := &MessageCallTransaction{
 		WorldState: NewWordState(ctx),
 		Code:       txcode,
@@ -96,13 +96,13 @@ func NewMessageCallTransaction(code string, contractName string, inputStr string
 		CalleeAccount: NewAccount(caller,
 			ctx.NewArray("balances", 256, 256), false, txcode, contractName),
 		//Caller:   ctx.NewBitvecVal(caller, 256),
-		Caller:   caller,
-		Calldata: NewConcreteCalldata(txId, calldataList, ctx),
-		//Calldata:  NewSymbolicCalldata(txId, ctx),
+		Caller: caller,
+		//Calldata: NewConcreteCalldata(txId, calldataList, ctx),
+		Calldata:  NewSymbolicCalldata(txId, ctx),
 		GasPrice:  10,
 		GasLimit:  100000,
 		CallValue: 0, // 1 ether
-		Origin:    ctx.NewBitvecVal(origin, 256),
+		Origin:    origin,
 		Basefee:   ctx.NewBitvecVal(1000, 256),
 		Ctx:       ctx,
 		Id:        txId,

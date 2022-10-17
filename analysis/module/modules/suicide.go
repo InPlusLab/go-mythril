@@ -6,7 +6,6 @@ import (
 	"go-mythril/laser/ethereum/state"
 	"go-mythril/laser/ethereum/transaction"
 	"go-mythril/utils"
-	"math/big"
 )
 
 type AccidentallyKillable struct {
@@ -14,7 +13,7 @@ type AccidentallyKillable struct {
 	SWCID       string
 	Description string
 	PreHooks    []string
-	Issues      []*analysis.Issue
+	Issues      *utils.SyncIssueSlice
 	Cache       *utils.Set
 }
 
@@ -25,13 +24,13 @@ func NewAccidentallyKillable() *AccidentallyKillable {
 		Description: "Check if the contact can be 'accidentally' killed by anyone." +
 			"For kill-able contracts, also check whether it is possible to direct the contract balance to the attacker.",
 		PreHooks: []string{"SELFDESTRUCT"},
-		Issues:   make([]*analysis.Issue, 0),
+		Issues:   utils.NewSyncIssueSlice(),
 		Cache:    utils.NewSet(),
 	}
 }
 
 func (dm *AccidentallyKillable) ResetModule() {
-	dm.Issues = make([]*analysis.Issue, 0)
+	dm.Issues = utils.NewSyncIssueSlice()
 }
 
 func (dm *AccidentallyKillable) Execute(target *state.GlobalState) []*analysis.Issue {
@@ -42,11 +41,15 @@ func (dm *AccidentallyKillable) Execute(target *state.GlobalState) []*analysis.I
 }
 
 func (dm *AccidentallyKillable) AddIssue(issue *analysis.Issue) {
-	dm.Issues = append(dm.Issues, issue)
+	dm.Issues.Append(issue)
 }
 
 func (dm *AccidentallyKillable) GetIssues() []*analysis.Issue {
-	return dm.Issues
+	list := make([]*analysis.Issue, 0)
+	for _, v := range dm.Issues.Elements() {
+		list = append(list, v.(*analysis.Issue))
+	}
+	return list
 }
 
 func (dm *AccidentallyKillable) GetPreHooks() []string {
@@ -65,8 +68,11 @@ func (dm *AccidentallyKillable) _execute(globalState *state.GlobalState) []*anal
 	for _, issue := range issues {
 		dm.Cache.Add(issue.Address)
 	}
-	dm.Issues = append(dm.Issues, issues...)
-	return dm.Issues
+	for _, issue := range issues {
+		fmt.Println("suicide push")
+		dm.Issues.Append(issue)
+	}
+	return nil
 }
 
 func (dm *AccidentallyKillable) _analyze_state(globalState *state.GlobalState) []*analysis.Issue {
@@ -77,12 +83,13 @@ func (dm *AccidentallyKillable) _analyze_state(globalState *state.GlobalState) [
 
 	descriptionHead := "Any sender can cause the contract to self-destruct."
 	constraints := state.NewConstraints()
-	actors := transaction.NewActors(globalState.Z3ctx)
-	attackerV, _ := new(big.Int).SetString(actors.Attacker, 16)
+	ACTORS := transaction.NewActors(globalState.Z3ctx)
+	attacker := ACTORS.GetAttacker()
+
 	for _, tx := range globalState.WorldState.TransactionSequence {
 		switch tx.(type) {
 		case *state.MessageCallTransaction:
-			constraints.Add((tx.GetCaller().Eq(globalState.Z3ctx.NewBitvecVal(attackerV, 256))).And(
+			constraints.Add((tx.GetCaller().Eq(attacker)).And(
 				tx.GetCaller().Eq(tx.GetOrigin())))
 		}
 	}
@@ -92,7 +99,7 @@ func (dm *AccidentallyKillable) _analyze_state(globalState *state.GlobalState) [
 
 	tmpCon := globalState.WorldState.Constraints.Copy()
 	tmpCon.Add(constraints.ConstraintList...)
-	tmpCon.Add(to.Eq(globalState.Z3ctx.NewBitvecVal(attackerV, 256)))
+	tmpCon.Add(to.Eq(attacker))
 	transactionSequence = analysis.GetTransactionSequence(globalState, tmpCon)
 	if transactionSequence == nil {
 		tmpCon2 := globalState.WorldState.Constraints.Copy()

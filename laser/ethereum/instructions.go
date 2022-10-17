@@ -91,7 +91,7 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 		//		fmt.Println("PrintCons:", con.BoolString())
 		//	}
 		//}
-		//state.Mstate.Memory.PrintMemory()
+		state.Mstate.Memory.PrintMemory()
 	}
 	fmt.Println("------------------------------------------------------------")
 	return result
@@ -967,9 +967,10 @@ func (instr *Instruction) sha3_(globalState *state.GlobalState) []*state.GlobalS
 		ret = append(ret, globalState)
 		return ret
 	}
-
-	result := function_managers.NewKeccakFunctionManager(globalState.Z3ctx).CreateKeccak()
+	//fmt.Println("here:", data.BvString())
+	result, cons := function_managers.NewKeccakFunctionManager(globalState.Z3ctx).CreateKeccak(data)
 	mstate.Stack.Append(result)
+	globalState.WorldState.Constraints.Add(cons)
 	ret = append(ret, globalState)
 	return ret
 }
@@ -1715,10 +1716,34 @@ func (instr *Instruction) call_(globalState *state.GlobalState) []*state.GlobalS
 	return ret
 }
 
-// TODO
 func (instr *Instruction) callcode_(globalState *state.GlobalState) []*state.GlobalState {
 	ret := make([]*state.GlobalState, 0)
 
+	instruction := globalState.GetCurrentInstruction()
+	environment := globalState.Environment
+	length := globalState.Mstate.Stack.Length()
+	memoryOutSize := globalState.Mstate.Stack.RawStack[length-7]
+	memoryOutOffset := globalState.Mstate.Stack.RawStack[length-6]
+
+	calleeAddres, calleeAccount, callData, value, gas, memoryOutOffset, memoryOutSize := GetCallParameters(globalState, true)
+	fmt.Println("call_", memoryOutSize, memoryOutOffset, calleeAddres, callData, gas, instruction)
+
+	if calleeAccount != nil && len(calleeAccount.Code.Bytecode) == 0 {
+		fmt.Println("The call is related to ether transfer between accounts")
+		sender := environment.ActiveAccount.Address
+		receiver := calleeAccount.Address
+		//fmt.Println(sender,receiver,value)
+		transferEther(globalState, sender, receiver, value)
+
+		globalState.Mstate.Stack.Append(globalState.NewBitvec("retval_"+strconv.Itoa(instruction.Address), 256))
+		//globalState.Mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(1, 256))
+		ret = append(ret, globalState)
+		return ret
+	} else {
+		// TODO: TransactionStartSignal
+		fmt.Println("callCodeNewTx")
+	}
+	// TODO: valueError
 	ret = append(ret, globalState)
 	return ret
 }
@@ -1756,16 +1781,34 @@ func (instr *Instruction) delegatecall_(globalState *state.GlobalState) []*state
 	return ret
 }
 
-// TODO
 func (instr *Instruction) staticcall_(globalState *state.GlobalState) []*state.GlobalState {
 	ret := make([]*state.GlobalState, 0)
 
-	/*	instruction := globalState.GetCurrentInstruction()
-		env := globalState.Environment
-		stack := globalState.Mstate.Stack
-		memoryOutSize := stack.RawStack[stack.Length()-6]
-		memoryOutOffset := stack.RawStack[stack.Length()-5]*/
+	instruction := globalState.GetCurrentInstruction()
+	environment := globalState.Environment
+	stack := globalState.Mstate.Stack
+	memoryOutSize := stack.RawStack[stack.Length()-6]
+	memoryOutOffset := stack.RawStack[stack.Length()-5]
 
+	calleeAddres, calleeAccount, callData, value, gas, memoryOutOffset, memoryOutSize := GetCallParameters(globalState, false)
+	fmt.Println("call_", memoryOutSize, memoryOutOffset, calleeAddres, callData, gas, instruction)
+
+	if calleeAccount != nil && len(calleeAccount.Code.Bytecode) == 0 {
+		fmt.Println("The call is related to ether transfer between accounts")
+		sender := environment.ActiveAccount.Address
+		receiver := calleeAccount.Address
+		//fmt.Println(sender,receiver,value)
+		transferEther(globalState, sender, receiver, value)
+
+		globalState.Mstate.Stack.Append(globalState.NewBitvec("retval_"+strconv.Itoa(instruction.Address), 256))
+		//globalState.Mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(1, 256))
+		ret = append(ret, globalState)
+		return ret
+	} else {
+		// TODO: nativeCall & TransactionStartSignal
+		fmt.Println("delegateCallNewTx")
+	}
+	// TODO: valueError
 	ret = append(ret, globalState)
 	return ret
 }

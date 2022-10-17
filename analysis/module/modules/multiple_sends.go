@@ -13,7 +13,7 @@ type MultipleSends struct {
 	SWCID       string
 	Description string
 	PreHooks    []string
-	Issues      []*analysis.Issue
+	Issues      *utils.SyncIssueSlice
 	Cache       *utils.Set
 }
 
@@ -34,12 +34,12 @@ func NewMultipleSends() *MultipleSends {
 		SWCID:       analysis.NewSWCData()["MULTIPLE_SENDS"],
 		Description: "Check for multiple sends in a single transaction",
 		PreHooks:    []string{"CALL", "DELEGATECALL", "STATICCALL", "CALLCODE", "RETURN", "STOP"},
-		Issues:      make([]*analysis.Issue, 0),
+		Issues:      utils.NewSyncIssueSlice(),
 		Cache:       utils.NewSet(),
 	}
 }
 func (dm *MultipleSends) ResetModule() {
-	dm.Issues = make([]*analysis.Issue, 0)
+	dm.Issues = utils.NewSyncIssueSlice()
 }
 func (dm *MultipleSends) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)
@@ -49,11 +49,15 @@ func (dm *MultipleSends) Execute(target *state.GlobalState) []*analysis.Issue {
 }
 
 func (dm *MultipleSends) AddIssue(issue *analysis.Issue) {
-	dm.Issues = append(dm.Issues, issue)
+	dm.Issues.Append(issue)
 }
 
 func (dm *MultipleSends) GetIssues() []*analysis.Issue {
-	return dm.Issues
+	list := make([]*analysis.Issue, 0)
+	for _, v := range dm.Issues.Elements() {
+		list = append(list, v.(*analysis.Issue))
+	}
+	return list
 }
 
 func (dm *MultipleSends) GetPreHooks() []string {
@@ -72,7 +76,10 @@ func (dm *MultipleSends) _execute(globalState *state.GlobalState) []*analysis.Is
 	for _, issue := range issues {
 		dm.Cache.Add(issue.Address)
 	}
-	dm.Issues = append(dm.Issues, issues...)
+	for _, issue := range issues {
+		fmt.Println("multipleSends push")
+		dm.Issues.Append(issue)
+	}
 	return nil
 }
 

@@ -71,7 +71,7 @@ func (loader *ModuleLoader) registerMythrilModules() {
 		//modules.NewStateChangeAfterCall(),
 		//modules.NewArbitraryJump(),
 		//modules.NewArbitraryStorage(),
-		modules.NewArbitraryDelegateCall(),
+		//modules.NewArbitraryDelegateCall(),
 		//modules.NewPredictableVariables(),
 
 		//modules.NewEtherThief(),
@@ -80,7 +80,7 @@ func (loader *ModuleLoader) registerMythrilModules() {
 		//modules.NewIntegerArithmetics(),
 		//modules.NewMultipleSends(),
 		//modules.NewStateChangeAfterCall(),
-		//modules.NewAccidentallyKillable(),
+		modules.NewAccidentallyKillable(),
 		//modules.NewUncheckedRetval(),
 		//modules.NewUserAssertions(),
 	)
