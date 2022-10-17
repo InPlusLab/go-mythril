@@ -89,8 +89,8 @@ func (dm *AccidentallyKillable) _analyze_state(globalState *state.GlobalState) [
 	for _, tx := range globalState.WorldState.TransactionSequence {
 		switch tx.(type) {
 		case *state.MessageCallTransaction:
-			constraints.Add((tx.GetCaller().Eq(attacker)).And(
-				tx.GetCaller().Eq(tx.GetOrigin())))
+			constraints.Add((tx.GetCaller().Translate(globalState.Z3ctx).Eq(attacker)).And(
+				tx.GetCaller().Translate(globalState.Z3ctx).Eq(tx.GetOrigin().Translate(globalState.Z3ctx))))
 		}
 	}
 

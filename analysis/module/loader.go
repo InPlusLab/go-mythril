@@ -80,8 +80,8 @@ func (loader *ModuleLoader) registerMythrilModules() {
 		//modules.NewIntegerArithmetics(),
 		//modules.NewMultipleSends(),
 		//modules.NewStateChangeAfterCall(),
-		modules.NewAccidentallyKillable(),
-		//modules.NewUncheckedRetval(),
+		//modules.NewAccidentallyKillable(),
+		modules.NewUncheckedRetval(),
 		//modules.NewUserAssertions(),
 	)
 }

@@ -30,7 +30,7 @@ type UncheckedRetval struct {
 	Description string
 	PreHooks    []string
 	PostHooks   []string
-	Issues      []*analysis.Issue
+	Issues      *utils.SyncIssueSlice
 	Cache       *utils.Set
 }
 
@@ -46,13 +46,13 @@ func NewUncheckedRetval() *UncheckedRetval {
 			"    c.call.value(0)(bytes4(sha3(\"ping(uint256)\")),1)",
 		PreHooks:  []string{"STOP", "RETURN"},
 		PostHooks: []string{"CALL", "DELEGATECALL", "STATICCALL", "CALLCODE"},
-		Issues:    make([]*analysis.Issue, 0),
+		Issues:    utils.NewSyncIssueSlice(),
 		Cache:     utils.NewSet(),
 	}
 }
 
 func (dm *UncheckedRetval) ResetModule() {
-	dm.Issues = make([]*analysis.Issue, 0)
+	dm.Issues = utils.NewSyncIssueSlice()
 }
 func (dm *UncheckedRetval) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)
@@ -62,11 +62,15 @@ func (dm *UncheckedRetval) Execute(target *state.GlobalState) []*analysis.Issue 
 }
 
 func (dm *UncheckedRetval) AddIssue(issue *analysis.Issue) {
-	dm.Issues = append(dm.Issues, issue)
+	dm.Issues.Append(issue)
 }
 
 func (dm *UncheckedRetval) GetIssues() []*analysis.Issue {
-	return dm.Issues
+	list := make([]*analysis.Issue, 0)
+	for _, v := range dm.Issues.Elements() {
+		list = append(list, v.(*analysis.Issue))
+	}
+	return list
 }
 
 func (dm *UncheckedRetval) GetPreHooks() []string {
@@ -85,7 +89,10 @@ func (dm *UncheckedRetval) _execute(globalState *state.GlobalState) []*analysis.
 	for _, issue := range issues {
 		dm.Cache.Add(issue.Address)
 	}
-	dm.Issues = append(dm.Issues, issues...)
+	for _, issue := range issues {
+		fmt.Println("uncheckedRetval push")
+		dm.Issues.Append(issue)
+	}
 	return nil
 }
 
