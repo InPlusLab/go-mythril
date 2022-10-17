@@ -14,7 +14,8 @@ type RetVal struct {
 	Retval  *z3.Bitvec
 }
 type UncheckedRetvalAnnotation struct {
-	RetVals []RetVal
+	//RetVals []*RetVal
+	RetVals *utils.Set
 }
 
 func (anno UncheckedRetvalAnnotation) PersistToWorldState() bool {
@@ -101,7 +102,7 @@ func (dm *UncheckedRetval) _analyze_state(globalState *state.GlobalState) []*ana
 	annotations := globalState.GetAnnotations(reflect.TypeOf(UncheckedRetvalAnnotation{}))
 	if len(annotations) == 0 {
 		globalState.Annotate(UncheckedRetvalAnnotation{
-			RetVals: make([]RetVal, 0),
+			RetVals: utils.NewSet(),
 		})
 		annotations = globalState.GetAnnotations(reflect.TypeOf(UncheckedRetvalAnnotation{}))
 	}
@@ -110,12 +111,12 @@ func (dm *UncheckedRetval) _analyze_state(globalState *state.GlobalState) []*ana
 	if instruction.OpCode.Name == "STOP" || instruction.OpCode.Name == "RETURN" {
 		issues := make([]*analysis.Issue, 0)
 
-		for _, retval := range retvals {
+		for _, retval := range retvals.Elements() {
 			txCon := globalState.WorldState.Constraints.Copy()
-			txCon.Add(retval.Retval.Eq(globalState.Z3ctx.NewBitvecVal(1, 256)))
+			txCon.Add(retval.(*RetVal).Retval.Translate(globalState.Z3ctx).Eq(globalState.Z3ctx.NewBitvecVal(1, 256)))
 			tx := analysis.GetTransactionSequence(globalState, txCon)
 			tmpCon := globalState.WorldState.Constraints.Copy()
-			tmpCon.Add(retval.Retval.Eq(globalState.Z3ctx.NewBitvecVal(0, 256)))
+			tmpCon.Add(retval.(*RetVal).Retval.Translate(globalState.Z3ctx).Eq(globalState.Z3ctx.NewBitvecVal(0, 256)))
 			transactionSequence := analysis.GetTransactionSequence(globalState, tmpCon)
 			if tx == nil || transactionSequence == nil {
 				// UnsatError
@@ -129,7 +130,7 @@ func (dm *UncheckedRetval) _analyze_state(globalState *state.GlobalState) []*ana
 			issue := &analysis.Issue{
 				Contract:            globalState.Environment.ActiveAccount.ContractName,
 				FunctionName:        globalState.Environment.ActiveFuncName,
-				Address:             retval.Address,
+				Address:             retval.(*RetVal).Address,
 				Bytecode:            globalState.Environment.Code.Bytecode,
 				Title:               "Unchecked return value from external call.",
 				SWCID:               analysis.NewSWCData()["UNCHECKED_RET_VAL"],
@@ -150,7 +151,8 @@ func (dm *UncheckedRetval) _analyze_state(globalState *state.GlobalState) []*ana
 			panic("error! In unchecked_retval analyzeState method!")
 		}
 		returnValue := globalState.Mstate.Stack.RawStack[globalState.Mstate.Stack.Length()-1]
-		retvals = append(retvals, RetVal{
+
+		retvals.Add(&RetVal{
 			Address: instruction.Address - 1,
 			Retval:  returnValue,
 		})
