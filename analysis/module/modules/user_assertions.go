@@ -15,7 +15,7 @@ type UserAssertions struct {
 	SWCID       string
 	Description string
 	PreHooks    []string
-	Issues      []*analysis.Issue
+	Issues      *utils.SyncIssueSlice
 	Cache       *utils.Set
 }
 
@@ -25,13 +25,13 @@ func NewUserAssertions() *UserAssertions {
 		SWCID:       analysis.NewSWCData()["ASSERT_VIOLATION"],
 		Description: "Search for reachable user-supplied exceptions. Report a warning if an log message is emitted: 'emit AssertionFailed(string)",
 		PreHooks:    []string{"LOG1", "MSTORE"},
-		Issues:      make([]*analysis.Issue, 0),
+		Issues:      utils.NewSyncIssueSlice(),
 		Cache:       utils.NewSet(),
 	}
 }
 
 func (dm *UserAssertions) ResetModule() {
-	dm.Issues = make([]*analysis.Issue, 0)
+	dm.Issues = utils.NewSyncIssueSlice()
 }
 func (dm *UserAssertions) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)
@@ -41,11 +41,15 @@ func (dm *UserAssertions) Execute(target *state.GlobalState) []*analysis.Issue {
 }
 
 func (dm *UserAssertions) AddIssue(issue *analysis.Issue) {
-	dm.Issues = append(dm.Issues, issue)
+	dm.Issues.Append(issue)
 }
 
 func (dm *UserAssertions) GetIssues() []*analysis.Issue {
-	return dm.Issues
+	list := make([]*analysis.Issue, 0)
+	for _, v := range dm.Issues.Elements() {
+		list = append(list, v.(*analysis.Issue))
+	}
+	return list
 }
 
 func (dm *UserAssertions) GetPreHooks() []string {
@@ -61,7 +65,10 @@ func (dm *UserAssertions) _execute(globalState *state.GlobalState) []*analysis.I
 	for _, issue := range issues {
 		dm.Cache.Add(issue.Address)
 	}
-	dm.Issues = append(dm.Issues, issues...)
+	for _, issue := range issues {
+		fmt.Println("userAssertions push")
+		dm.Issues.Append(issue)
+	}
 	return nil
 }
 
@@ -76,11 +83,17 @@ func (dm *UserAssertions) _analyze_state(globalState *state.GlobalState) []*anal
 			return make([]*analysis.Issue, 0)
 		}
 		mstorePattern := "cafecafecafecafecafecafecafecafecafecafecafecafecafecafecafe"
-		// TODO: value may be big
+
 		valueInt, _ := strconv.Atoi(value.Value())
-		if !(strings.Contains(utils.ToHexStr(valueInt)[:126], mstorePattern)) {
+		srcStr := utils.ToHexStr(valueInt)
+		if len(srcStr) >= 126 {
+			if !(strings.Contains(utils.ToHexStr(valueInt)[:126], mstorePattern)) {
+				return make([]*analysis.Issue, 0)
+			}
+		} else {
 			return make([]*analysis.Issue, 0)
 		}
+
 		message = "Failed property id" + value.Extract(15, 0).Value()
 	} else {
 		topic := globalState.Mstate.Stack.RawStack[stackLen-3]

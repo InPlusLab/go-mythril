@@ -81,7 +81,7 @@ func (loader *ModuleLoader) registerMythrilModules() {
 		//modules.NewMultipleSends(),
 		//modules.NewStateChangeAfterCall(),
 		//modules.NewAccidentallyKillable(),
-		modules.NewUncheckedRetval(),
-		//modules.NewUserAssertions(),
+		//modules.NewUncheckedRetval(),
+		modules.NewUserAssertions(),
 	)
 }
