@@ -68,6 +68,10 @@ func (dm *MultipleSends) GetPostHooks() []string {
 	return make([]string, 0)
 }
 
+func (dm *MultipleSends) GetCache() *utils.Set {
+	return dm.Cache
+}
+
 func (dm *MultipleSends) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil

@@ -82,6 +82,10 @@ func (dm *UncheckedRetval) GetPostHooks() []string {
 	return dm.PostHooks
 }
 
+func (dm *UncheckedRetval) GetCache() *utils.Set {
+	return dm.Cache
+}
+
 func (dm *UncheckedRetval) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil

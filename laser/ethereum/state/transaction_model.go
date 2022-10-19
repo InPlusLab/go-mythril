@@ -83,10 +83,14 @@ func NewMessageCallTransaction(code string, contractName string, inputStr string
 		calldataList = append(calldataList, ctx.NewBitvecVal(val, 8))
 	}
 
-	//caller, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
+	//callerStr, _ := new(big.Int).SetString("5B38Da6a701c568545dCfcB03FcB875f56beddC4", 16)
 	txId := GetNextTransactionId()
 	caller := ctx.NewBitvec("sender_"+txId, 256)
+	//caller := ctx.NewBitvecVal(callerStr, 256)
 	origin := ctx.NewBitvec("origin", 256)
+	//accAddrStr, _ := new(big.Int).SetString("4a9c121080f6d9250fc0143f41b595fd172e31bf", 16)
+	//accAddr := ctx.NewBitvecVal(accAddrStr, 256)
+
 	tx := &MessageCallTransaction{
 		WorldState: NewWordState(ctx),
 		Code:       txcode,

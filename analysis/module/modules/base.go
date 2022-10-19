@@ -3,6 +3,7 @@ package modules
 import (
 	"go-mythril/analysis"
 	"go-mythril/laser/ethereum/state"
+	"go-mythril/utils"
 )
 
 type DetectionModule interface {
@@ -12,5 +13,6 @@ type DetectionModule interface {
 	GetIssues() []*analysis.Issue
 	GetPreHooks() []string
 	GetPostHooks() []string
+	GetCache() *utils.Set
 	_execute(target *state.GlobalState) []*analysis.Issue
 }

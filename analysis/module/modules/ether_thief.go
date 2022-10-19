@@ -61,6 +61,10 @@ func (dm *EtherThief) GetPostHooks() []string {
 	return dm.PostHooks
 }
 
+func (dm *EtherThief) GetCache() *utils.Set {
+	return dm.Cache
+}
+
 func (dm *EtherThief) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil
@@ -77,9 +81,9 @@ func (dm *EtherThief) _analyze_state(globalState *state.GlobalState) []*Potentia
 	instruction := Gstate.GetCurrentInstruction()
 	constraints := Gstate.WorldState.Constraints.Copy()
 
-	constraints.Add(Gstate.WorldState.Balances.GetItem(ACTORS.GetAttacker()).BvUGt(Gstate.WorldState.StartingBalances.GetItem(ACTORS.GetAttacker())),
-		Gstate.Environment.Sender.Eq(ACTORS.GetAttacker()),
-		Gstate.CurrentTransaction().GetCaller().Eq(Gstate.CurrentTransaction().GetOrigin()))
+	constraints.Add(Gstate.WorldState.Balances.GetItem(ACTORS.GetAttacker().Translate(Gstate.Z3ctx)).BvUGt(Gstate.WorldState.StartingBalances.GetItem(ACTORS.GetAttacker().Translate(Gstate.Z3ctx))),
+		Gstate.Environment.Sender.Translate(Gstate.Z3ctx).Eq(ACTORS.GetAttacker().Translate(Gstate.Z3ctx)),
+		Gstate.CurrentTransaction().GetCaller().Translate(Gstate.Z3ctx).Eq(Gstate.CurrentTransaction().GetOrigin().Translate(Gstate.Z3ctx)))
 	// Pre-solve so we only add potential issues if the attacker's balance is increased.
 	_, sat := state.GetModel(constraints, nil, nil, true, globalState.Z3ctx)
 	potentialIssue := &PotentialIssue{
@@ -99,9 +103,20 @@ func (dm *EtherThief) _analyze_state(globalState *state.GlobalState) []*Potentia
 		Detector:    dm,
 	}
 	if sat {
+		fmt.Println("etherThief success")
+		fmt.Println("constraints:")
+		for i, v := range constraints.ConstraintList {
+			fmt.Println(i, "-", v.BoolString())
+		}
 		return []*PotentialIssue{potentialIssue}
 	} else {
 		// UnsatError
+		fmt.Println("etherThief fail")
+		fmt.Println("constraints:")
+		for i, v := range constraints.ConstraintList {
+			fmt.Println(i, "-", v.BoolString())
+			fmt.Println(i, "-", v.Simplify().BoolString())
+		}
 		return make([]*PotentialIssue, 0)
 	}
 }

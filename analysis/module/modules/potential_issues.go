@@ -92,21 +92,29 @@ func CheckPotentialIssues(globalState *state.GlobalState) {
 			unsatPotentialIssues = append(unsatPotentialIssues, potentialIssue)
 			continue
 		}
-		// TODO: potentialIssue.detetor.cache.add( potentialIssue.address )
-		issue := &analysis.Issue{
-			Contract:            potentialIssue.Contract,
-			FunctionName:        potentialIssue.FunctionName,
-			Address:             potentialIssue.Address,
-			Title:               potentialIssue.Title,
-			Bytecode:            potentialIssue.Bytecode,
-			SWCID:               potentialIssue.SWCID,
-			GasUsed:             []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
-			Severity:            potentialIssue.Severity,
-			DescriptionHead:     potentialIssue.DescriptionHead,
-			DescriptionTail:     potentialIssue.DescriptionTail,
-			TransactionSequence: transactionSequence,
+
+		// de-duplication: because CheckPotentialIssues() will be triggered more than one time.
+		if potentialIssue.Detector.GetCache().Contains(potentialIssue.Address) {
+			continue
+		} else {
+			issue := &analysis.Issue{
+				Contract:            potentialIssue.Contract,
+				FunctionName:        potentialIssue.FunctionName,
+				Address:             potentialIssue.Address,
+				Title:               potentialIssue.Title,
+				Bytecode:            potentialIssue.Bytecode,
+				SWCID:               potentialIssue.SWCID,
+				GasUsed:             []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
+				Severity:            potentialIssue.Severity,
+				DescriptionHead:     potentialIssue.DescriptionHead,
+				DescriptionTail:     potentialIssue.DescriptionTail,
+				TransactionSequence: transactionSequence,
+			}
+			potentialIssue.Detector.AddIssue(issue)
+
+			potentialIssue.Detector.GetCache().Add(potentialIssue.Address)
 		}
-		potentialIssue.Detector.AddIssue(issue)
+
 	}
 	//annotation.PotentialIssues = unsatPotentialIssues
 	annotation.Replace(unsatPotentialIssues)

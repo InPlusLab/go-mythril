@@ -60,6 +60,10 @@ func (dm *AccidentallyKillable) GetPostHooks() []string {
 	return make([]string, 0)
 }
 
+func (dm *AccidentallyKillable) GetCache() *utils.Set {
+	return dm.Cache
+}
+
 func (dm *AccidentallyKillable) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil

@@ -59,6 +59,10 @@ func (dm *ExternalCalls) GetPostHooks() []string {
 	return make([]string, 0)
 }
 
+func (dm *ExternalCalls) GetCache() *utils.Set {
+	return dm.Cache
+}
+
 func (dm *ExternalCalls) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	potentialIssues := dm._analyze_state(globalState)
 	annotation := GetPotentialIssuesAnnotaion(globalState)

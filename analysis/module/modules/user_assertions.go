@@ -60,6 +60,10 @@ func (dm *UserAssertions) GetPostHooks() []string {
 	return make([]string, 0)
 }
 
+func (dm *UserAssertions) GetCache() *utils.Set {
+	return dm.Cache
+}
+
 func (dm *UserAssertions) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	issues := dm._analyze_state(globalState)
 	for _, issue := range issues {

@@ -97,6 +97,10 @@ func (dm *IntegerArithmetics) GetPostHooks() []string {
 	return make([]string, 0)
 }
 
+func (dm *IntegerArithmetics) GetCache() *utils.Set {
+	return dm.Cache
+}
+
 func (dm *IntegerArithmetics) _get_args(state *state.GlobalState) (*z3.Bitvec, *z3.Bitvec) {
 	stack := state.Mstate.Stack
 	op0 := stack.RawStack[stack.Length()-1]

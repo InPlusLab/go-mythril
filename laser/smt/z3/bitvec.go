@@ -107,7 +107,6 @@ func (b *Bitvec) AsBool() *Bool {
 // why? 2022.05.06
 // Because it only succeeds if the value can fit in a machine int.
 func (b *Bitvec) Value() string {
-	fmt.Println("bvValue")
 	if b == nil {
 		return ""
 	}

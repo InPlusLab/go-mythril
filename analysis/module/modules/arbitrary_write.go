@@ -58,13 +58,16 @@ func (dm *ArbitraryStorage) GetPostHooks() []string {
 	return make([]string, 0)
 }
 
+func (dm *ArbitraryStorage) GetCache() *utils.Set {
+	return dm.Cache
+}
+
 func (dm *ArbitraryStorage) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil
 	}
 	potentialIssues := dm._analyze_state(globalState)
 	annotation := GetPotentialIssuesAnnotaion(globalState)
-	//annotation.PotentialIssues = append(annotation.PotentialIssues, potentialIssues...)
 	annotation.Append(potentialIssues...)
 	return nil
 }

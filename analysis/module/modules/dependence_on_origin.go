@@ -64,6 +64,10 @@ func (dm *TxOrigin) GetPostHooks() []string {
 	return dm.PostHooks
 }
 
+func (dm *TxOrigin) GetCache() *utils.Set {
+	return dm.Cache
+}
+
 func (dm *TxOrigin) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil

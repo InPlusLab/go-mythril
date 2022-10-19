@@ -89,6 +89,10 @@ func (dm *PredictableVariables) GetPostHooks() []string {
 	return dm.PostHooks
 }
 
+func (dm *PredictableVariables) GetCache() *utils.Set {
+	return dm.Cache
+}
+
 func (dm *PredictableVariables) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil

@@ -27,13 +27,14 @@ func NewWordState(ctx *z3.Context) *WorldState {
 	//balances.SetItem(ACTORS.GetAttacker(), ctx.NewBitvec("initBalance",256))
 	//balances.SetItem(ACTORS.GetSomeGuy(), ctx.NewBitvec("initBalance",256))
 
-	startingBalances := balances.DeepCopy()
+	//startingBalances := balances.DeepCopy()
+	startingBalances := ctx.NewArray("startingBalance", 256, 256)
 
 	ws := &WorldState{
 		Accounts: accounts,
 		//Balances:            ctx.NewArray("balance", 256, 256),
 		Balances:            balances,
-		StartingBalances:    startingBalances.(*z3.Array),
+		StartingBalances:    startingBalances,
 		Constraints:         NewConstraints(),
 		TransactionSequence: make([]BaseTransaction, 0),
 	}
