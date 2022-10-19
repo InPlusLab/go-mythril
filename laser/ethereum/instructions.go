@@ -85,7 +85,7 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 
 	for _, state := range result {
 		// For debug
-		state.Mstate.Stack.PrintStack()
+		state.Mstate.Stack.PrintStackOneLine()
 		//for i, con := range state.WorldState.Constraints.ConstraintList {
 		//	if i==3{
 		//		fmt.Println("PrintCons:", con.BoolString())
@@ -720,9 +720,9 @@ func (instr *Instruction) callvalue_(globalState *state.GlobalState) []*state.Gl
 	ret := make([]*state.GlobalState, 0)
 
 	mstate := globalState.Mstate
-	//env := globalState.Environment
-	//mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(env.CallValue, 256))
-	mstate.Stack.Append(globalState.Z3ctx.NewBitvec("call_value"+globalState.CurrentTransaction().GetId(), 256))
+	env := globalState.Environment
+	mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(env.CallValue, 256))
+	//mstate.Stack.Append(globalState.Z3ctx.NewBitvec("call_value"+globalState.CurrentTransaction().GetId(), 256))
 	ret = append(ret, globalState)
 	return ret
 }
@@ -944,40 +944,35 @@ func (instr *Instruction) sha3_(globalState *state.GlobalState) []*state.GlobalS
 	var length int
 	if op1.Symbolic() {
 		length = 64
-		fmt.Println("sha3#1")
 		globalState.WorldState.Constraints.Add(op1.Eq(globalState.Z3ctx.NewBitvecVal(length, 256)))
 	} else {
-		fmt.Println("sha3#2")
 		lengthV, _ := strconv.Atoi(op1.Value())
 		length = lengthV
 	}
-	fmt.Println("sha3#3")
 	instr._sha3_gas_helper(globalState, length)
-	fmt.Println("sha3#4")
+
 	mstate.MemExtend(index, length)
 	indexV, _ := strconv.ParseInt(index.Value(), 10, 64)
 	dataList := mstate.Memory.GetItems(indexV, indexV+int64(length))
 	var data *z3.Bitvec
 	if len(dataList) > 1 {
-		fmt.Println("sha3#5")
 		data = dataList[0].Translate(globalState.Z3ctx)
 		for i := 1; i < len(dataList); i++ {
-			fmt.Println("sha3#6")
-			data = data.Concat(dataList[i].Translate(globalState.Z3ctx))
-			fmt.Println("sha3#6-1")
+			data = data.Concat(dataList[i].Translate(globalState.Z3ctx)).Simplify()
 		}
 	} else if len(dataList) == 1 {
-		data = dataList[0].Translate(globalState.Z3ctx)
+		data = dataList[0].Translate(globalState.Z3ctx).Simplify()
 	} else {
-		fmt.Println("sha3#7")
+		fmt.Println("getEmptyKeccakHash")
 		result := function_managers.NewKeccakFunctionManager(globalState.Z3ctx).GetEmptyKeccakHash()
 		mstate.Stack.Append(result)
 		ret = append(ret, globalState)
 		return ret
 	}
-	//fmt.Println("here:", data.BvString())
-	fmt.Println("sha3#8")
+	fmt.Println("getRealHash")
+	fmt.Println("data:", data.BvString(), data.BvSize())
 	result, cons := function_managers.NewKeccakFunctionManager(globalState.Z3ctx).CreateKeccak(data)
+	fmt.Println("result:", result.BvString())
 	mstate.Stack.Append(result)
 	globalState.WorldState.Constraints.Add(cons)
 	ret = append(ret, globalState)
@@ -1332,7 +1327,7 @@ func (instr *Instruction) sload_(globalState *state.GlobalState) []*state.Global
 
 	mstate := globalState.Mstate
 	index := mstate.Stack.Pop()
-	fmt.Println("index:", index)
+	fmt.Println("index:", index.BvString())
 	// TODO: DynLoader to get the storage ?
 	//globalState.Environment.ActiveAccount.Storage.SetItem(index, globalState.Z3ctx.NewBitvecVal(0, 256))
 	mstate.Stack.Append(globalState.Environment.ActiveAccount.Storage.GetItem(index).Translate(globalState.Z3ctx))
@@ -1349,6 +1344,10 @@ func (instr *Instruction) sstore_(globalState *state.GlobalState) []*state.Globa
 	value := mstate.Stack.Pop()
 
 	globalState.Environment.ActiveAccount.Storage.SetItem(index, value)
+
+	//fmt.Println("afterSetItem:", globalState.Environment.ActiveAccount.Storage.GetItem(index).BvString())
+	//myindex := globalState.Z3ctx.NewBitvecVal(0, 256)
+	//fmt.Println("afterSetItem2:", globalState.Environment.ActiveAccount.Storage.GetItem(myindex).BvString())
 
 	ret = append(ret, globalState)
 	return ret

@@ -119,6 +119,12 @@ func (b *Bitvec) Value() string {
 	}
 }
 
+func (b *Bitvec) ValueInt() int {
+	var dst C.int
+	C.Z3_get_numeral_int(b.rawCtx, b.rawAST, &dst)
+	return int(dst)
+}
+
 // Symbolic tells whether this bv is symbolic
 func (b *Bitvec) Symbolic() bool {
 	return b.symbolic

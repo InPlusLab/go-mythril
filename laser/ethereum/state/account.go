@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"go-mythril/disassembler"
 	"go-mythril/laser/smt/z3"
 	"go-mythril/utils"
@@ -121,22 +122,37 @@ func (s *Storage) GetItem(item *z3.Bitvec) *z3.Bitvec {
 	itemV, _ := strconv.ParseInt(s.Address.Value(), 10, 64)
 	storageKeysLoaded := s.StorageKeysLoaded
 	inKeysLoaded := storageKeysLoaded.Contains(itemV)
+	// TODO: dynLoader
 	if !item.Symbolic() && itemV != 0 && !inKeysLoaded {
-		// TODO: dynLoader
+		fmt.Println("#1")
+
 		value := ctx.NewBitvecVal(0, 256)
 		for _, key := range s.KeysSet.Elements() {
-			value = z3.If(key.(*z3.Bitvec).Eq(item), storage.GetItem(item), value)
+			value = z3.If(key.(*z3.Bitvec).Eq(item), storage.GetItem(item).Simplify(), value)
 		}
+		fmt.Println("#2")
 		// storage.SetItem(item, value)
 		s.StorageKeysLoaded.Add(itemV)
 		s.PrintableStorage[item] = value
 	}
 	// TODO: maybe wrong
-	result := storage.GetItem(item)
+	//fmt.Println("#3")
+	result := storage.GetItem(item).Simplify()
+	fmt.Println("#4")
 	if strings.Contains(result.BvString(), "_") {
+		fmt.Println("#5", result.BvString())
 		return ctx.NewBitvecVal(0, 256)
 	}
-	return storage.GetItem(item).Simplify()
+	fmt.Println("#6")
+
+	//itemStr := item.BvString()
+	//for k, v := range s.PrintableStorage {
+	//	if k.BvString() == itemStr {
+	//		return v.Translate(ctx)
+	//	}
+	//}
+
+	return result
 }
 func (s *Storage) SetItem(key *z3.Bitvec, value *z3.Bitvec) {
 	printableStorage := s.PrintableStorage
