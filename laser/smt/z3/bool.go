@@ -11,6 +11,7 @@ import (
 type Bool struct {
 	rawCtx      C.Z3_context
 	rawAST      C.Z3_ast
+	symbolic    bool
 	Annotations *utils.Set
 }
 
@@ -38,6 +39,7 @@ func (b *Bool) Translate(c *Context) *Bool {
 	return &Bool{
 		rawCtx:      c.raw,
 		rawAST:      C.Z3_translate(b.rawCtx, b.rawAST, c.raw),
+		symbolic:    b.symbolic,
 		Annotations: b.Annotations.Copy(),
 	}
 }
@@ -65,6 +67,7 @@ func (b *Bool) Not() *Bool {
 	return &Bool{
 		rawCtx:      b.rawCtx,
 		rawAST:      C.Z3_mk_not(b.rawCtx, b.rawAST),
+		symbolic:    b.symbolic,
 		Annotations: b.Annotations,
 	}
 }
@@ -73,6 +76,7 @@ func (b *Bool) Simplify() *Bool {
 	return &Bool{
 		rawCtx:      b.rawCtx,
 		rawAST:      C.Z3_simplify(b.rawCtx, b.rawAST),
+		symbolic:    b.symbolic,
 		Annotations: b.Annotations,
 	}
 }
@@ -81,6 +85,7 @@ func (b *Bool) Copy() *Bool {
 	return &Bool{
 		rawCtx:      b.rawCtx,
 		rawAST:      b.rawAST,
+		symbolic:    b.symbolic,
 		Annotations: b.Annotations,
 	}
 }
@@ -115,10 +120,12 @@ func (b *AST) Substitute(args ...*AST) *AST {
 func (a *Bool) And(args ...*Bool) *Bool {
 	raws := make([]C.Z3_ast, len(args)+1)
 	raws[0] = a.rawAST
+	symbolicSym := a.symbolic
 	annotations := a.Annotations
 	for i, arg := range args {
 		raws[i+1] = arg.rawAST
 		annotations.Union(arg.Annotations)
+		symbolicSym = symbolicSym || arg.symbolic
 	}
 
 	return &Bool{
@@ -127,6 +134,7 @@ func (a *Bool) And(args ...*Bool) *Bool {
 			a.rawCtx,
 			C.uint(len(raws)),
 			(*C.Z3_ast)(unsafe.Pointer(&raws[0]))),
+		symbolic:    symbolicSym,
 		Annotations: annotations,
 	}
 }
@@ -134,10 +142,12 @@ func (a *Bool) And(args ...*Bool) *Bool {
 func (a *Bool) Or(args ...*Bool) *Bool {
 	raws := make([]C.Z3_ast, len(args)+1)
 	raws[0] = a.rawAST
+	symbolicSym := a.symbolic
 	annotations := a.Annotations
 	for i, arg := range args {
 		raws[i+1] = arg.rawAST
 		annotations.Union(arg.Annotations)
+		symbolicSym = symbolicSym || arg.symbolic
 	}
 	return &Bool{
 		rawCtx: a.rawCtx,
@@ -145,6 +155,7 @@ func (a *Bool) Or(args ...*Bool) *Bool {
 			a.rawCtx,
 			C.uint(len(raws)),
 			(*C.Z3_ast)(unsafe.Pointer(&raws[0]))),
+		symbolic:    symbolicSym,
 		Annotations: annotations,
 	}
 }

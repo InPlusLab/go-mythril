@@ -29,6 +29,10 @@ func (c *Context) Close() error {
 	return nil
 }
 
+func (c *Context) GetRaw() C.Z3_context {
+	return c.raw
+}
+
 // Z3Value returns the internal structure for this Context.
 func (c *Context) Z3Value() C.Z3_context {
 	return c.raw

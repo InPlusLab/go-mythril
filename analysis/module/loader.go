@@ -79,9 +79,9 @@ func (loader *ModuleLoader) registerMythrilModules() {
 		//modules.NewExternalCalls(),
 		//modules.NewIntegerArithmetics(),
 		//modules.NewMultipleSends(),
-		//modules.NewStateChangeAfterCall(),
+		modules.NewStateChangeAfterCall(),
 		//modules.NewAccidentallyKillable(),
 		//modules.NewUncheckedRetval(),
-		modules.NewUserAssertions(),
+		//modules.NewUserAssertions(),
 	)
 }

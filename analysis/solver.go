@@ -86,6 +86,7 @@ func GetTransactionSequence(globalState *state.GlobalState, constraints *state.C
 	concreteTransactions := make([]*map[string]string, 0)
 	txConstraints, minimize := _set_minimisation_constraints(transactionSequence, constraints.Copy(),
 		make([]*z3.Bool, 0), 5000, globalState.WorldState, globalState.Z3ctx)
+
 	model, ok := state.GetModel(txConstraints, minimize, make([]*z3.Bool, 0), false, globalState.Z3ctx)
 	if !ok {
 		// UnsatError

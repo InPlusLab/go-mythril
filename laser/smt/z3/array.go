@@ -4,6 +4,7 @@ package z3
 // #include "goZ3Config.h"
 import "C"
 import (
+	"fmt"
 	"go-mythril/utils"
 )
 
@@ -64,6 +65,9 @@ func (a *Array) SetItem(index *Bitvec, value *Bitvec) BaseArray {
 }
 
 func (a *Array) GetItem(index *Bitvec) *Bitvec {
+	// TODO: why?
+	ctx := a.GetCtx()
+	index = index.Translate(ctx)
 	return &Bitvec{
 		rawCtx:  a.rawCtx,
 		rawAST:  C.Z3_mk_select(a.rawCtx, a.rawAST, index.rawAST),
@@ -107,6 +111,7 @@ func (a *K) SetItem(index *Bitvec, value *Bitvec) BaseArray {
 }
 
 func (a *K) GetItem(index *Bitvec) *Bitvec {
+	fmt.Println("K GetItem")
 	return &Bitvec{
 		rawCtx:  a.rawCtx,
 		rawAST:  C.Z3_mk_select(a.rawCtx, a.rawAST, index.rawAST),

@@ -86,12 +86,16 @@ func (s *Storage) Translate(ctx *z3.Context) *Storage {
 	for i, v := range s.PrintableStorage {
 		newPrintableStorage[i.Translate(ctx)] = v.Translate(ctx)
 	}
+	newKeysSet := utils.NewSet()
+	for _, v := range s.KeysSet.Elements() {
+		newKeysSet.Add(v.(*z3.Bitvec).Translate(ctx))
+	}
 	return &Storage{
 		Address:           s.Address.Translate(ctx),
 		StandardStorage:   s.StandardStorage.Translate(ctx),
 		PrintableStorage:  newPrintableStorage,
 		StorageKeysLoaded: s.StorageKeysLoaded,
-		KeysSet:           s.KeysSet,
+		KeysSet:           newKeysSet,
 	}
 }
 func (s *Storage) DeepCopy() *Storage {
@@ -118,7 +122,6 @@ func (s *Storage) GetItem(item *z3.Bitvec) *z3.Bitvec {
 	storageKeysLoaded := s.StorageKeysLoaded
 	inKeysLoaded := storageKeysLoaded.Contains(itemV)
 	if !item.Symbolic() && itemV != 0 && !inKeysLoaded {
-
 		// TODO: dynLoader
 		value := ctx.NewBitvecVal(0, 256)
 		for _, key := range s.KeysSet.Elements() {

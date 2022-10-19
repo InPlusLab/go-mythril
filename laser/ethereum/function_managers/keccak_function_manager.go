@@ -37,7 +37,7 @@ func (k *KeccakFunctionManager) CreateKeccak(data *z3.Bitvec) (*z3.Bitvec, *z3.B
 	length := data.BvSize()
 	funcData := k.Ctx.NewBitvec("keccak256_"+strconv.Itoa(length)+"_"+data.BvString(), 256)
 	//funcData := k.Ctx.NewBitvecVal(1,256)
-	cons := k.Ctx.NewBitvecVal(1, 256).Eq(k.Ctx.NewBitvecVal(1, 256))
+	cons := k.Ctx.NewBitvecVal(1, 256).Eq(k.Ctx.NewBitvecVal(1, 256)).Simplify()
 	return funcData, cons
 }
 

@@ -6,6 +6,7 @@ import (
 	"go-mythril/laser/smt/z3"
 	"go-mythril/utils"
 	"strconv"
+	"strings"
 )
 
 const STACK_LIMIT = 1024
@@ -35,7 +36,6 @@ func (m *MachineStack) Append(b interface{}) {
 		var tmp *z3.Bitvec
 		//tmp = b.(*z3.Bitvec).Simplify()
 		tmp = b.(*z3.Bitvec)
-		fmt.Println("stacksize:", tmp.Simplify().BvSize())
 		m.RawStack = append(m.RawStack, tmp.Simplify())
 	case *z3.Bool:
 		ctx := z3.GetBoolCtx(b.(*z3.Bool))
@@ -88,7 +88,24 @@ func (m *MachineStack) PrintStack() {
 	}
 
 	for i := m.Length() - 1; i >= 0; i-- {
-		fmt.Println("PrintStack: ", m.RawStack[i].BvString(), " ", m.RawStack[i].Annotations)
+		str := m.RawStack[i].BvString()
+		fmt.Println("PrintStack: ", str, " ", m.RawStack[i].Annotations)
+	}
+}
+
+func (m *MachineStack) PrintStackOneLine() {
+	if len(m.RawStack) == 0 {
+		fmt.Println("PrintStack: null")
+	}
+
+	for i := m.Length() - 1; i >= 0; i-- {
+		str := m.RawStack[i].BvString()
+		idx := strings.Index(str, "\n")
+		if idx == -1 {
+			fmt.Println("PrintStack: ", str, " ", m.RawStack[i].Annotations)
+		} else {
+			fmt.Println("PrintStack: ", str[:idx], " ", m.RawStack[i].Annotations)
+		}
 		//if m.RawStack[i].Symbolic() {
 		//	if m.RawStack[i].Annotations.Len() != 0 {
 		//		fmt.Println("PrintStack: ", m.RawStack[i].String(), ' ', m.RawStack[i].Annotations)

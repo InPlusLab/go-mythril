@@ -64,17 +64,24 @@ func (globalState *GlobalState) Copy() *GlobalState {
 }
 
 func (globalState *GlobalState) Translate(ctx *z3.Context) {
+	if globalState.Z3ctx.GetRaw() == ctx.GetRaw() {
+		return
+	}
 	fmt.Println("before changeStateContext")
 	globalState.Z3ctx = ctx
 	// machineState stack & memory
+	//fmt.Println("glTrans1")
 	newMachineState := globalState.Mstate.Translate(ctx)
 	globalState.Mstate = newMachineState
 	// worldState constraints
+	//fmt.Println("glTrans2")
 	newWorldState := globalState.WorldState.Translate(ctx)
 	globalState.WorldState = newWorldState
 	// env
+	//fmt.Println("glTrans3")
 	newEnv := globalState.Environment.Translate(ctx)
 	globalState.Environment = newEnv
+	//fmt.Println("glTrans4")
 	// lastReturnData
 	//fmt.Println("changeStateContext done")
 }

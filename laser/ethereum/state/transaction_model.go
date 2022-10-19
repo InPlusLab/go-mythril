@@ -96,9 +96,9 @@ func NewMessageCallTransaction(code string, contractName string, inputStr string
 		CalleeAccount: NewAccount(caller,
 			ctx.NewArray("balances", 256, 256), false, txcode, contractName),
 		//Caller:   ctx.NewBitvecVal(caller, 256),
-		Caller:   caller,
-		Calldata: NewConcreteCalldata(txId, calldataList, ctx),
-		//Calldata:  NewSymbolicCalldata(txId, ctx),
+		Caller: caller,
+		//Calldata: NewConcreteCalldata(txId, calldataList, ctx),
+		Calldata:  NewSymbolicCalldata(txId, ctx),
 		GasPrice:  10,
 		GasLimit:  100000,
 		CallValue: 0, // 1 ether

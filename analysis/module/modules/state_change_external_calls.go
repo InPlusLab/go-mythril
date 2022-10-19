@@ -16,7 +16,7 @@ type StateChangeAfterCall struct {
 	SWCID       string
 	Description string
 	PreHooks    []string
-	Issues      []*analysis.Issue
+	Issues      *utils.SyncIssueSlice
 	Cache       *utils.Set
 }
 type StateChangeCallsAnnotation struct {
@@ -42,23 +42,29 @@ func (anno *StateChangeCallsAnnotation) PersistOverCalls() bool {
 }
 func (anno *StateChangeCallsAnnotation) AppendState(globalState *state.GlobalState) {
 	anno.StateChangeStates = append(anno.StateChangeStates, globalState)
+	fmt.Println("appendState!")
 }
-func (anno *StateChangeCallsAnnotation) GetIssue(globalState *state.GlobalState) *PotentialIssue {
+func (anno *StateChangeCallsAnnotation) GetIssue(globalState *state.GlobalState, dm *StateChangeAfterCall) *PotentialIssue {
 	if len(anno.StateChangeStates) == 0 {
+		fmt.Println("AnnoGetIssue Len(States) == 0")
 		return nil
 	}
 	constraints := state.NewConstraints()
 	stackLen := anno.CallState.Mstate.Stack.Length()
-	ctx := anno.CallState.Z3ctx
 
+	anno.CallState.Translate(globalState.Z3ctx)
+
+	ctx := anno.CallState.Z3ctx
 	gas := anno.CallState.Mstate.Stack.RawStack[stackLen-1]
 	to := anno.CallState.Mstate.Stack.RawStack[stackLen-2]
+
 	constraints.Add(gas.BvUGt(ctx.NewBitvecVal(2300, 256)),
 		(to.BvSGt(ctx.NewBitvecVal(16, 256))).Or(to.Eq(ctx.NewBitvecVal(0, 256))))
 	var severity string
 	var addressType string
 	if anno.UserDefinedAddress {
 		tmpVal, _ := new(big.Int).SetString("DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF", 16)
+		// stmpV, _ := new(big.Int).SetString("DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF", 16)
 		constraints.Add(to.Eq(ctx.NewBitvecVal(tmpVal, 256)))
 		severity = "Medium"
 		addressType = "user defined"
@@ -67,9 +73,11 @@ func (anno *StateChangeCallsAnnotation) GetIssue(globalState *state.GlobalState)
 		addressType = "fixed"
 	}
 	constraints.Add(globalState.WorldState.Constraints.ConstraintList...)
+	fmt.Println("getIssues- GetTx")
 	transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
 	if transactionSequence == nil {
 		// UnsatError
+		fmt.Println("stateChangeExternalCall unsat")
 		return nil
 	}
 	address := globalState.GetCurrentInstruction().Address
@@ -82,6 +90,7 @@ func (anno *StateChangeCallsAnnotation) GetIssue(globalState *state.GlobalState)
 	descriptionTail := "The contract account state is accessed after an external call to a " + addressType + " address." +
 		"To prevent reentrancy issues, consider accessing the state only before the call, especially if the callee is untrusted. " +
 		"Alternatively, a reentrancy lock can be used to prevent untrusted callees from re-entering the contract in an intermediate state."
+	fmt.Println("stateChangeExternalCall push")
 	return &PotentialIssue{
 		Contract:        globalState.Environment.ActiveAccount.ContractName,
 		FunctionName:    globalState.Environment.ActiveFuncName,
@@ -93,6 +102,7 @@ func (anno *StateChangeCallsAnnotation) GetIssue(globalState *state.GlobalState)
 		SWCID:           analysis.NewSWCData()["REENTRANCY"],
 		Bytecode:        globalState.Environment.Code.Bytecode,
 		Constraints:     constraints,
+		Detector:        dm,
 	}
 }
 
@@ -104,13 +114,13 @@ func NewStateChangeAfterCall() *StateChangeAfterCall {
 		// CALL_LIST = ["CALL", "DELEGATECALL", "CALLCODE"]
 		// STATE_READ_WRITE_LIST = ["SSTORE", "SLOAD", "CREATE", "CREATE2"]
 		PreHooks: []string{"CALL", "DELEGATECALL", "CALLCODE", "SSTORE", "SLOAD", "CREATE", "CREATE2"},
-		Issues:   make([]*analysis.Issue, 0),
+		Issues:   utils.NewSyncIssueSlice(),
 		Cache:    utils.NewSet(),
 	}
 }
 
 func (dm *StateChangeAfterCall) ResetModule() {
-	dm.Issues = make([]*analysis.Issue, 0)
+	dm.Issues = utils.NewSyncIssueSlice()
 }
 func (dm *StateChangeAfterCall) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)
@@ -120,11 +130,15 @@ func (dm *StateChangeAfterCall) Execute(target *state.GlobalState) []*analysis.I
 }
 
 func (dm *StateChangeAfterCall) AddIssue(issue *analysis.Issue) {
-	dm.Issues = append(dm.Issues, issue)
+	dm.Issues.Append(issue)
 }
 
 func (dm *StateChangeAfterCall) GetIssues() []*analysis.Issue {
-	return dm.Issues
+	list := make([]*analysis.Issue, 0)
+	for _, v := range dm.Issues.Elements() {
+		list = append(list, v.(*analysis.Issue))
+	}
+	return list
 }
 
 func (dm *StateChangeAfterCall) GetPreHooks() []string {
@@ -141,7 +155,8 @@ func (dm *StateChangeAfterCall) _execute(globalState *state.GlobalState) []*anal
 	}
 	issues := dm._analyze_state(globalState)
 	annotation := GetPotentialIssuesAnnotaion(globalState)
-	annotation.PotentialIssues = append(annotation.PotentialIssues, issues...)
+	//annotation.PotentialIssues = append(annotation.PotentialIssues, issues...)
+	annotation.Append(issues...)
 	return nil
 }
 
@@ -153,11 +168,17 @@ func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) [
 	STATE_READ_WRITE_LIST := []string{"SSTORE", "SLOAD", "CREATE", "CREATE2"}
 
 	if len(annotations) == 0 && utils.In(opcode.Name, STATE_READ_WRITE_LIST) {
+		fmt.Println("rwList: annotations == 0")
 		return make([]*PotentialIssue, 0)
 	}
 	if utils.In(opcode.Name, STATE_READ_WRITE_LIST) {
+		fmt.Println("rwList: annotations != 0")
 		for _, annotation := range annotations {
+			fmt.Println("beforeAppend:", len(annotation.(*StateChangeCallsAnnotation).StateChangeStates))
+			fmt.Println("beforeAppend:", globalState.GetAnnotations(reflect.TypeOf(&StateChangeCallsAnnotation{}))[0])
 			annotation.(*StateChangeCallsAnnotation).AppendState(globalState)
+			fmt.Println("afterAppend:", len(annotation.(*StateChangeCallsAnnotation).StateChangeStates))
+			fmt.Println("afterAppend:", globalState.GetAnnotations(reflect.TypeOf(&StateChangeCallsAnnotation{}))[0])
 		}
 	}
 	// Record state changes following from a transfer of ether
@@ -166,7 +187,9 @@ func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) [
 		value := globalState.Mstate.Stack.RawStack[stackLen-3]
 		if dm._balance_change(value, globalState) {
 			for _, annotation := range annotations {
+				fmt.Println("beforeAppend:", len(annotation.(*StateChangeCallsAnnotation).StateChangeStates))
 				annotation.(*StateChangeCallsAnnotation).AppendState(globalState)
+				fmt.Println("afterAppend:", len(annotation.(*StateChangeCallsAnnotation).StateChangeStates))
 			}
 		}
 	}
@@ -178,9 +201,10 @@ func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) [
 	vulnerabilities := make([]*PotentialIssue, 0)
 	for _, annotation := range annotations {
 		if len(annotation.(*StateChangeCallsAnnotation).StateChangeStates) == 0 {
+			fmt.Println("stateList == 0")
 			continue
 		}
-		issue := annotation.(*StateChangeCallsAnnotation).GetIssue(globalState)
+		issue := annotation.(*StateChangeCallsAnnotation).GetIssue(globalState, dm)
 		if issue != nil {
 			vulnerabilities = append(vulnerabilities, issue)
 		}
@@ -207,23 +231,30 @@ func (dm *StateChangeAfterCall) _add_external_call(globalState *state.GlobalStat
 	constraints.Add(to.Eq(ctx.NewBitvecVal(tmpVal, 256)))
 	_, sat2 := state.GetModel(constraints, make([]*z3.Bool, 0), make([]*z3.Bool, 0), true, ctx)
 	if sat2 {
-		globalState.Annotate(NewStateChangeCallsAnnotation(globalState, true))
+		globalState.Annotate(NewStateChangeCallsAnnotation(globalState.Copy(), true))
+		fmt.Println("NewStateAnno: sat")
 	} else {
-		globalState.Annotate(NewStateChangeCallsAnnotation(globalState, false))
+		globalState.Annotate(NewStateChangeCallsAnnotation(globalState.Copy(), false))
+		fmt.Println("NewStateAnno: unsat")
 	}
 }
 
 func (dm *StateChangeAfterCall) _balance_change(value *z3.Bitvec, globalState *state.GlobalState) bool {
+	//fmt.Println("value:", value.BvString())
 	if !value.Symbolic() {
+		fmt.Println("1")
 		v, _ := strconv.Atoi(value.Value())
 		return v > 0
 	} else {
+		fmt.Println("2")
 		constraints := globalState.WorldState.Constraints.Copy()
 		constraints.Add(value.BvSGt(globalState.Z3ctx.NewBitvecVal(0, 256)))
 		_, sat := state.GetModel(constraints, make([]*z3.Bool, 0), make([]*z3.Bool, 0), true, globalState.Z3ctx)
 		if sat {
+			fmt.Println("3")
 			return true
 		} else {
+			fmt.Println("4")
 			return false
 		}
 	}

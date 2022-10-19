@@ -307,9 +307,10 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 		//l.Unlock()
 
 		if globalState != nil {
-			if ctx != globalState.Z3ctx {
-				globalState.Translate(ctx)
-			}
+			//if ctx != globalState.Z3ctx {
+			//	globalState.Translate(ctx)
+			//}
+			globalState.Translate(ctx)
 
 			newStates, opcode := evm.ExecuteState(globalState)
 			fmt.Println("last", len(newStates) == 0)

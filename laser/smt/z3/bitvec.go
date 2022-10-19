@@ -97,6 +97,7 @@ func (b *Bitvec) AsBool() *Bool {
 	return &Bool{
 		rawCtx:      b.rawCtx,
 		rawAST:      b.rawAST,
+		symbolic:    b.symbolic,
 		Annotations: b.Annotations,
 	}
 }
@@ -106,6 +107,7 @@ func (b *Bitvec) AsBool() *Bool {
 // why? 2022.05.06
 // Because it only succeeds if the value can fit in a machine int.
 func (b *Bitvec) Value() string {
+	fmt.Println("bvValue")
 	if b == nil {
 		return ""
 	}
@@ -266,6 +268,7 @@ func (a *Bitvec) BvAddNoOverflow(t *Bitvec, isSigned bool) *Bool {
 			a.rawAST,
 			t.rawAST,
 			C.bool(isSigned)),
+		symbolic:    a.symbolic || t.symbolic,
 		Annotations: a.Annotations.Union(t.Annotations),
 	}
 }
@@ -280,6 +283,7 @@ func (a *Bitvec) BvSubNoUnderflow(t *Bitvec, isSigned bool) *Bool {
 			a.rawAST,
 			t.rawAST,
 			C.bool(isSigned)),
+		symbolic:    a.symbolic || t.symbolic,
 		Annotations: a.Annotations.Union(t.Annotations),
 	}
 }
@@ -294,6 +298,7 @@ func (a *Bitvec) BvMulNoOverflow(t *Bitvec, isSigned bool) *Bool {
 			a.rawAST,
 			t.rawAST,
 			C.bool(isSigned)),
+		symbolic:    a.symbolic || t.symbolic,
 		Annotations: a.Annotations.Union(t.Annotations),
 	}
 }
@@ -304,6 +309,7 @@ func (a *Bitvec) BvSLt(a2 *Bitvec) *Bool {
 	return &Bool{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvslt(a.rawCtx, a.rawAST, a2.rawAST),
+		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
@@ -314,6 +320,7 @@ func (a *Bitvec) BvSLe(a2 *Bitvec) *Bool {
 	return &Bool{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvsle(a.rawCtx, a.rawAST, a2.rawAST),
+		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
@@ -324,6 +331,7 @@ func (a *Bitvec) BvSGt(a2 *Bitvec) *Bool {
 	return &Bool{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvsgt(a.rawCtx, a.rawAST, a2.rawAST),
+		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
@@ -334,6 +342,7 @@ func (a *Bitvec) BvSGe(a2 *Bitvec) *Bool {
 	return &Bool{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvsge(a.rawCtx, a.rawAST, a2.rawAST),
+		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
@@ -344,6 +353,7 @@ func (a *Bitvec) BvULt(a2 *Bitvec) *Bool {
 	return &Bool{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvult(a.rawCtx, a.rawAST, a2.rawAST),
+		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
@@ -354,6 +364,7 @@ func (a *Bitvec) BvULe(a2 *Bitvec) *Bool {
 	return &Bool{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvule(a.rawCtx, a.rawAST, a2.rawAST),
+		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
@@ -364,6 +375,7 @@ func (a *Bitvec) BvUGt(a2 *Bitvec) *Bool {
 	return &Bool{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvugt(a.rawCtx, a.rawAST, a2.rawAST),
+		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
@@ -374,6 +386,7 @@ func (a *Bitvec) BvUGe(a2 *Bitvec) *Bool {
 	return &Bool{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvuge(a.rawCtx, a.rawAST, a2.rawAST),
+		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
@@ -384,6 +397,7 @@ func (a *Bitvec) BvURem(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvurem(a.rawCtx, a.rawAST, a2.rawAST),
+		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
@@ -394,6 +408,7 @@ func (a *Bitvec) BvSRem(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvsrem(a.rawCtx, a.rawAST, a2.rawAST),
+		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
@@ -404,6 +419,7 @@ func (a *Bitvec) BvShL(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvshl(a.rawCtx, a.rawAST, a2.rawAST),
+		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
@@ -414,6 +430,7 @@ func (a *Bitvec) BvShR(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvashr(a.rawCtx, a.rawAST, a2.rawAST),
+		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
@@ -424,6 +441,7 @@ func (a *Bitvec) BvLShR(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvlshr(a.rawCtx, a.rawAST, a2.rawAST),
+		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
@@ -436,6 +454,7 @@ func (a *Bitvec) Eq(a2 *Bitvec) *Bool {
 	return &Bool{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_eq(a.rawCtx, a.rawAST, a2.rawAST),
+		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
 }
@@ -512,7 +531,7 @@ func If(a *Bool, t2 *Bitvec, t3 *Bitvec) *Bitvec {
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_ite(a.rawCtx, a.rawAST, t2.rawAST, t3.rawAST),
 		rawSort:     t2.rawSort,
-		symbolic:    t2.symbolic || t3.symbolic,
+		symbolic:    a.symbolic || t2.symbolic || t3.symbolic,
 		Annotations: anno1.Union(t3.Annotations),
 	}
 }
