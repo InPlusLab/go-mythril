@@ -141,7 +141,7 @@ func main() {
 	//Config.Close()
 	defer ctx.Close()
 
-	//z3.SetGlobalParam("parallel.enable", "true")
+	//z3.SetGlobalPram("parallel.enable", "true")
 
 	start := time.Now()
 	evm.NormalSymExec(runtimeCode, "Time", ctx)

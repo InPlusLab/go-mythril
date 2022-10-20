@@ -6,6 +6,7 @@ import (
 	"go-mythril/laser/ethereum/state"
 	"go-mythril/utils"
 	"reflect"
+	"sync"
 )
 
 type MultipleSends struct {
@@ -18,14 +19,41 @@ type MultipleSends struct {
 }
 
 type MultipleSendsAnnotation struct {
-	CallOffsets []int
+	IndexCounter int
+	CallOffsets  sync.Map
 }
 
-func (anno MultipleSendsAnnotation) PersistToWorldState() bool {
+func NewMultipleSendsAnnotation() *MultipleSendsAnnotation {
+	return &MultipleSendsAnnotation{
+		IndexCounter: 0,
+		CallOffsets:  sync.Map{},
+	}
+}
+
+func (anno *MultipleSendsAnnotation) PersistToWorldState() bool {
 	return false
 }
-func (anno MultipleSendsAnnotation) PersistOverCalls() bool {
+func (anno *MultipleSendsAnnotation) PersistOverCalls() bool {
 	return false
+}
+func (anno *MultipleSendsAnnotation) getIndex() int {
+	anno.IndexCounter = anno.IndexCounter + 1
+	return anno.IndexCounter
+}
+func (anno *MultipleSendsAnnotation) Add(callOffset int) bool {
+	_, exist := anno.CallOffsets.LoadOrStore(anno.getIndex(), callOffset)
+	return !exist
+}
+func (anno *MultipleSendsAnnotation) Elements() []int {
+	res := make([]int, 0)
+	anno.CallOffsets.Range(func(k, v interface{}) bool {
+		res = append(res, v.(int))
+		return true
+	})
+	return res
+}
+func (anno *MultipleSendsAnnotation) Len() int {
+	return len(anno.Elements())
 }
 
 func NewMultipleSends() *MultipleSends {
@@ -89,20 +117,23 @@ func (dm *MultipleSends) _execute(globalState *state.GlobalState) []*analysis.Is
 
 func (dm *MultipleSends) _analyze_state(globalState *state.GlobalState) []*analysis.Issue {
 	instruction := globalState.GetCurrentInstruction()
-	annotations := globalState.GetAnnotations(reflect.TypeOf(MultipleSendsAnnotation{}))
+	annotations := globalState.GetAnnotations(reflect.TypeOf(&MultipleSendsAnnotation{}))
 
 	if len(annotations) == 0 {
-		globalState.Annotate(MultipleSendsAnnotation{})
-		annotations = globalState.GetAnnotations(reflect.TypeOf(MultipleSendsAnnotation{}))
+		globalState.Annotate(NewMultipleSendsAnnotation())
+		annotations = globalState.GetAnnotations(reflect.TypeOf(&MultipleSendsAnnotation{}))
 	}
-	callOffsets := annotations[0].(MultipleSendsAnnotation).CallOffsets
+	callOffsets := annotations[0].(*MultipleSendsAnnotation)
 
 	if instruction.OpCode.Name == "CALL" || instruction.OpCode.Name == "DELEGATECALL" ||
 		instruction.OpCode.Name == "STATICCALL" || instruction.OpCode.Name == "CALLCODE" {
-		callOffsets = append(callOffsets, globalState.GetCurrentInstruction().Address)
+		callOffsets.Add(globalState.GetCurrentInstruction().Address)
 	} else {
 		// RETURN OR STOP
-		for i := 1; i < len(callOffsets); i++ {
+		for i, v := range callOffsets.Elements() {
+			if i == 0 {
+				continue
+			}
 			transactionSequence := analysis.GetTransactionSequence(globalState, globalState.WorldState.Constraints)
 			if transactionSequence == nil {
 				// UnsatError
@@ -115,7 +146,7 @@ func (dm *MultipleSends) _analyze_state(globalState *state.GlobalState) []*analy
 			issue := &analysis.Issue{
 				Contract:            globalState.Environment.ActiveAccount.ContractName,
 				FunctionName:        globalState.Environment.ActiveFuncName,
-				Address:             callOffsets[i],
+				Address:             v,
 				SWCID:               analysis.NewSWCData()["MULTIPLE_SENDS"],
 				Bytecode:            globalState.Environment.Code.Bytecode,
 				Title:               "Multiple Calls in a Single Transaction",
