@@ -82,6 +82,22 @@ func (ws *WorldState) PutAccount(acc *Account) {
 	acc.Balances = ws.Balances
 }
 
+func (ws *WorldState) CreateAccount(balance int, concreteStorage bool, creator *z3.Bitvec, address *z3.Bitvec, code *disassembler.Disasembly, contractName string) *Account {
+	var trueAddr *z3.Bitvec
+	ctx := creator.GetCtx()
+	if address == nil {
+		// TODO: _generate_new_address(creator)
+		trueAddr = creator.BvAdd(ctx.NewBitvecVal(1, 256))
+	} else {
+		trueAddr = address
+	}
+	newAccount := NewAccount(trueAddr, ws.Balances, concreteStorage, code, contractName)
+	newAccount.SetBalance(ctx.NewBitvecVal(balance, 256))
+
+	ws.PutAccount(newAccount)
+	return newAccount
+}
+
 func (ws *WorldState) Translate(ctx *z3.Context) *WorldState {
 	newConstraints := NewConstraints()
 	for _, v := range ws.Constraints.ConstraintList {

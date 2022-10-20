@@ -6,6 +6,7 @@ import (
 	"go-mythril/analysis"
 	"go-mythril/analysis/module"
 	"go-mythril/analysis/module/modules"
+	"go-mythril/disassembler"
 	"go-mythril/laser/ethereum/state"
 	"go-mythril/laser/ethereum/transaction"
 	"go-mythril/laser/smt/z3"
@@ -84,14 +85,62 @@ func (evm *LaserEVM) registerInstrHooks() {
 			postHook[op] = append(postHook[op], module.Execute)
 		}
 	}
-	//timeStampDetectionModule := evm.Loader.Modules[2]
-	//preHooksDM := timeStampDetectionModule.(*modules.PredictableVariables).PreHooks
-	//for _, op := range preHooksDM {
-	//	preHook[op] = []moduleExecFunc{timeStampDetectionModule.Execute}
-	//}
-	//postHooksDM := timeStampDetectionModule.(*modules.PredictableVariables).PostHooks
-	//for _, op := range postHooksDM {
-	//	postHook[op] = []moduleExecFunc{timeStampDetectionModule.Execute}
+}
+
+func (evm *LaserEVM) exec() {
+	id := 0
+LOOP:
+	for {
+		// When there is no newState in channel, exit the iteration
+		fmt.Println("evm workList:", len(evm.WorkList))
+		if len(evm.WorkList) == 0 {
+			break LOOP
+		}
+		globalState := <-evm.WorkList
+
+		newStates, opcode := evm.ExecuteState(globalState)
+		fmt.Println(id, globalState, opcode)
+
+		for _, newState := range newStates {
+			evm.WorkList <- newState
+		}
+
+		fmt.Println(id, "done", globalState, opcode)
+		fmt.Println("==============================================================================")
+
+		if len(newStates) == 0 {
+			modules.CheckPotentialIssues(globalState)
+			for _, detector := range evm.Loader.Modules {
+				issues := detector.GetIssues()
+				fmt.Println("number of issues:", len(issues))
+				for _, issue := range issues {
+					fmt.Println("+++++++++++++++++++++++++++++++++++")
+					fmt.Println("ContractName:", issue.Contract)
+					fmt.Println("FunctionName:", issue.FunctionName)
+					fmt.Println("Title:", issue.Title)
+					fmt.Println("SWCID:", issue.SWCID)
+					fmt.Println("Address:", issue.Address)
+					fmt.Println("Severity:", issue.Severity)
+				}
+			}
+			fmt.Println("+++++++++++++++++++++++++++++++++++")
+		}
+		id++
+	}
+	fmt.Println("evm.Exec: One tx end!")
+}
+
+func (evm *LaserEVM) SingleSymExec(creationCode string, runtimeCode string, contractName string, ctx *z3.Context) {
+	fmt.Println("Single Goroutine Symbolic Executing")
+	fmt.Println("")
+	// CreationTx
+	ExecuteContractCreation(evm, creationCode, contractName, ctx)
+	// MessageTx
+	fmt.Println("messageTx:", runtimeCode)
+	//inputStrArr := support.GetArgsInstance().TransactionSequences
+	//for i := 0; i < evm.TransactionCount; i++ {
+	//	ExecuteMessageCall(evm, runtimeCode, contractName, inputStrArr[i], ctx)
+	//	fmt.Println("msgTx", i, ":done")
 	//}
 }
 
@@ -105,59 +154,6 @@ func (evm *LaserEVM) executeTransactionNormal(creationCode string, contractName 
 	inputStrArr := support.GetArgsInstance().TransactionSequences
 	for i := 0; i < evm.TransactionCount; i++ {
 		ExecuteMessageCall(evm, creationCode, contractName, inputStrArr[i], ctx)
-		id := 0
-	LOOP:
-		for {
-			// When there is no newState in channel, exit the iteration
-			fmt.Println("evm workList:", len(evm.WorkList))
-			if len(evm.WorkList) == 0 {
-				break LOOP
-			}
-			globalState := <-evm.WorkList
-
-			//file, err := os.OpenFile("D:/desktop/golang1.txt",  os.O_WRONLY|os.O_APPEND, 0666)
-			//if err != nil {
-			//	fmt.Println("file open fail", err)
-			//}
-			//defer file.Close()
-			//write := bufio.NewWriter(file)
-			//write.WriteString(strconv.Itoa(id) + " constraints:\r\n")
-			//for i, con := range globalState.WorldState.Constraints.ConstraintList {
-			//	write.WriteString( strconv.Itoa(i) + con.BoolString() + "\r\n")
-			//}
-			//write.WriteString("+++++++++++++++++++++++++++++++++\r\n")
-			//write.Flush()
-
-			newStates, opcode := evm.ExecuteState(globalState)
-			fmt.Println(id, globalState, opcode)
-			// evm.ManageCFG(opcode, newStates)
-
-			for _, newState := range newStates {
-				evm.WorkList <- newState
-			}
-
-			fmt.Println(id, "done", globalState, opcode)
-			fmt.Println("==============================================================================")
-			//if opcode == "STOP" || opcode == "RETURN" {
-			if len(newStates) == 0 {
-				modules.CheckPotentialIssues(globalState)
-				for _, detector := range evm.Loader.Modules {
-					issues := detector.GetIssues()
-					fmt.Println("number of issues:", len(issues))
-					for _, issue := range issues {
-						fmt.Println("+++++++++++++++++++++++++++++++++++")
-						fmt.Println("ContractName:", issue.Contract)
-						fmt.Println("FunctionName:", issue.FunctionName)
-						fmt.Println("Title:", issue.Title)
-						fmt.Println("SWCID:", issue.SWCID)
-						fmt.Println("Address:", issue.Address)
-						fmt.Println("Severity:", issue.Severity)
-					}
-				}
-				fmt.Println("+++++++++++++++++++++++++++++++++++")
-			}
-			id++
-		}
 		fmt.Println("normalExec:", i, "tx")
 	}
 }
@@ -419,9 +415,43 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 	}
 }
 
-func ExecuteMessageCall(evm *LaserEVM, creationCode string, contractName string, inputStr string, ctx *z3.Context) {
-	tx := state.NewMessageCallTransaction(creationCode, contractName, inputStr, ctx)
+func ExecuteContractCreation(evm *LaserEVM, creationCode string, contractName string, ctx *z3.Context) *state.Account {
+
+	worldState := state.NewWordState(ctx)
+	ACTORS := transaction.NewActors(ctx)
+	txId := state.GetNextTransactionId()
+
+	tx := &state.ContractCreationTransaction{
+		WorldState:    worldState,
+		Code:          disassembler.NewDisasembly(creationCode),
+		CalleeAccount: worldState.CreateAccount(0, true, ACTORS.GetCreator(), nil, nil, contractName),
+		Caller:        ACTORS.GetCreator(),
+		Calldata:      state.NewSymbolicCalldata(txId, ctx),
+		GasPrice:      10,
+		GasLimit:      8000000,
+		CallValue:     0,
+		Origin:        ACTORS.GetCreator(),
+		Basefee:       ctx.NewBitvecVal(1000, 256),
+		Ctx:           ctx,
+		Id:            txId,
+	}
 	setupGlobalStateForExecution(evm, tx)
+
+	newAccount := tx.CalleeAccount
+
+	fmt.Println("CreationTx Execute!")
+	evm.exec()
+	fmt.Println("CreationTx Done!")
+
+	return newAccount
+}
+
+func ExecuteMessageCall(evm *LaserEVM, runtimeCode string, contractName string, inputStr string, ctx *z3.Context) {
+	tx := state.NewMessageCallTransaction(runtimeCode, contractName, inputStr, ctx)
+	setupGlobalStateForExecution(evm, tx)
+	fmt.Println("MessageTx Execute!")
+	evm.exec()
+	fmt.Println("MessageTx Done!")
 }
 
 func setupGlobalStateForExecution(evm *LaserEVM, tx state.BaseTransaction) {
