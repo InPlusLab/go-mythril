@@ -6,6 +6,7 @@ import (
 	"go-mythril/laser/smt/z3"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 // No of iterations to perform when iteration size is symbolic
@@ -26,6 +27,59 @@ func NewMemory() *Memory {
 }
 
 // For debug
+func (m *Memory) PrintMemoryOneLine() {
+	mem := *m.RawMemory
+	if len(mem) == 0 {
+		fmt.Println("PrintMemory: null")
+	} else {
+		keyArr := make([]int, 0)
+		for i, _ := range mem {
+			keyArr = append(keyArr, int(i))
+		}
+		sort.Ints(keyArr)
+		tmpStr := "0x"
+		head := keyArr[0]
+		for i, v := range keyArr {
+			//str := value.BvString()
+			//idx := strings.Index(str, "\n")
+			//if idx == -1 {
+			//	fmt.Println("PrintStack: ", str, " ", m.RawStack[i].Annotations)
+			//} else {
+			//	fmt.Println("PrintStack: ", str[:idx], " ", m.RawStack[i].Annotations)
+			//}
+
+			if v < head+16 {
+				value, ok := mem[int64(v)]
+				if ok {
+					str := value.BvString()
+					idx := strings.Index(str, "\n")
+					if idx == -1 {
+						tmpStr += value.BvString()[2:]
+					} else {
+						tmpStr += value.BvString()[2:idx]
+					}
+				}
+			} else {
+				fmt.Println("PrintMem", strconv.FormatInt(int64(head), 16), ":", tmpStr)
+				head = keyArr[i]
+				value, ok := mem[int64(v)]
+				tmpStr = "0x"
+				if ok {
+					//tmpStr += value.BvString()[2:]
+					str := value.BvString()
+					idx := strings.Index(str, "\n")
+					if idx == -1 {
+						tmpStr += value.BvString()[2:]
+					} else {
+						tmpStr += value.BvString()[2:idx]
+					}
+				}
+			}
+		}
+		fmt.Println("PrintMem", strconv.FormatInt(int64(head), 16), ":", tmpStr)
+	}
+}
+
 func (m *Memory) PrintMemory() {
 	mem := *m.RawMemory
 	fmt.Println(mem)
@@ -70,22 +124,31 @@ func (m *Memory) Extend(size int) {
 
 func (m *Memory) GetWordAt(index int64) *z3.Bitvec {
 	mem := *m.RawMemory
-	result := mem[index]
-	fmt.Println("result:", result)
-	ctx := result.GetCtx()
-
-	for i := index + 1; i < index+32; i++ {
-		if mem[i] != nil {
-			result = result.Concat(mem[i])
-		} else {
-			result = result.Concat(ctx.NewBitvecVal(0, 8))
+	result, ok := mem[index]
+	fmt.Println("result:", result, "ok:", ok)
+	if !ok {
+		var ctx *z3.Context
+		for _, v := range mem {
+			ctx = v.GetCtx()
+			break
 		}
+		return ctx.NewBitvecVal(0, 256)
+	} else {
+		ctx := result.GetCtx()
+		for i := index + 1; i < index+32; i++ {
+			if mem[i] != nil {
+				result = result.Concat(mem[i])
+			} else {
+				result = result.Concat(ctx.NewBitvecVal(0, 8))
+			}
+		}
+		result = result.Simplify()
+		if result.BvSize() != 256 {
+			panic("memory size error in GetWordAt")
+		}
+		return result
 	}
-	result = result.Simplify()
-	if result.BvSize() != 256 {
-		panic("memory size error in GetWordAt")
-	}
-	return result
+
 }
 
 func (m *Memory) WriteWordAt(index int64, value *z3.Bitvec) {

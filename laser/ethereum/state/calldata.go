@@ -79,12 +79,14 @@ func (ccd *ConcreteCalldata) Calldatasize() *z3.Bitvec {
 	return ccd.Size()
 }
 func (ccd *ConcreteCalldata) GetWordAt(offset *z3.Bitvec) *z3.Bitvec {
-	tmp := ccd.Calldata.GetItem(offset)
+	//tmp := ccd.Calldata.GetItem(offset)
+	tmp := ccd.Load(offset)
 	ctx := tmp.GetCtx()
 	// OutofIndex check
 	index, _ := strconv.ParseInt(offset.Value(), 10, 64)
 	for i := index + 1; i < index+32; i++ {
-		tmp = tmp.Concat(ccd.Calldata.GetItem(ctx.NewBitvecVal(i, 256)))
+		//tmp = tmp.Concat(ccd.Calldata.GetItem(ctx.NewBitvecVal(i, 256)))
+		tmp = tmp.Concat(ccd.Load(ctx.NewBitvecVal(i, 256)))
 	}
 	return tmp.Simplify()
 }
@@ -152,10 +154,7 @@ func (scd *SymbolicCalldata) GetWordAt(offset *z3.Bitvec) *z3.Bitvec {
 	//return scd.Ctx.NewBitvec("SymbolicInput-"+offset.BvString(), 256)
 }
 func (scd *SymbolicCalldata) Load(item *z3.Bitvec) *z3.Bitvec {
-	//return z3.If(item.BvSLt(scd.SymSize),
-	//	scd.Calldata.GetItem(item).Simplify(),
-	//	scd.Ctx.NewBitvecVal(0, 8)).Simplify()
-	//return scd.Calldata.GetItem(item).Simplify()
+	// TODO: translate?
 	return z3.If(item.BvSLt(scd.Size()), scd.Calldata.GetItem(item), scd.Ctx.NewBitvecVal(0, 8)).Simplify()
 }
 

@@ -91,7 +91,7 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 		//		fmt.Println("PrintCons:", con.BoolString())
 		//	}
 		//}
-		state.Mstate.Memory.PrintMemory()
+		//state.Mstate.Memory.PrintMemoryOneLine()
 	}
 	fmt.Println("------------------------------------------------------------")
 	return result
@@ -607,9 +607,17 @@ func (instr *Instruction) exp_(globalState *state.GlobalState) []*state.GlobalSt
 	mstate := globalState.Mstate
 	base := mstate.Stack.Pop()
 	exponent := mstate.Stack.Pop()
-	exponentiation, constraint := function_managers.CreateCondition(base, exponent, globalState.Z3ctx)
-	mstate.Stack.Append(exponentiation)
-	globalState.WorldState.Constraints.Add(constraint)
+	fmt.Println("exp:", globalState)
+
+	if base.Symbolic() || exponent.Symbolic() {
+		res := globalState.NewBitvec("invhash("+base.BvString()+")**invhash("+exponent.BvString()+")", 256)
+		res.Annotations = base.Annotations.Union(exponent.Annotations)
+		mstate.Stack.Append(res)
+	} else {
+		exponentiation, constraint := function_managers.CreateCondition(base, exponent, globalState.Z3ctx)
+		mstate.Stack.Append(exponentiation)
+		globalState.WorldState.Constraints.Add(constraint)
+	}
 
 	ret = append(ret, globalState)
 	return ret
@@ -764,13 +772,11 @@ func (instr *Instruction) _calldata_copy_helper(globalState *state.GlobalState,
 		ret = append(ret, globalState)
 		return ret
 	}
-	//mstartV, _ := strconv.Atoi(mstart.Value())
 
 	if dstart.Symbolic() {
 		fmt.Println("Unsupported symbolic calldata offset in CALLDATACOPY")
 		dstart = dstart.Simplify()
 	}
-	//dstartV, _ := strconv.Atoi(dstart.Value())
 
 	var sizeV int
 	if size.Symbolic() {
@@ -783,6 +789,7 @@ func (instr *Instruction) _calldata_copy_helper(globalState *state.GlobalState,
 	fmt.Println("calldatacopy!")
 
 	if sizeV > 0 {
+		fmt.Println("size>0", sizeV)
 		mstate.MemExtend(mstart, sizeV)
 		// TODO: TypeError check for memExtend()
 
@@ -791,10 +798,12 @@ func (instr *Instruction) _calldata_copy_helper(globalState *state.GlobalState,
 		for i := 0; i < sizeV; i++ {
 			value := env.Calldata.Load(iData)
 			newMemory = append(newMemory, value)
-			idataValue, _ := strconv.Atoi(iData.Value())
-			iData = ctx.NewBitvecVal(idataValue+1, iData.BvSize())
+			//idataValue, _ := strconv.Atoi(iData.Value())
+			//iData = ctx.NewBitvecVal(idataValue+1, iData.BvSize())
+			iData = iData.BvAdd(ctx.NewBitvecVal(1, iData.BvSize())).Simplify()
 		}
 
+		fmt.Println("idata")
 		mstartValue, _ := strconv.ParseInt(mstart.Value(), 10, 64)
 		fmt.Println(mstartValue, "-mstartOffset ", len(newMemory), "-length")
 
@@ -813,6 +822,10 @@ func (instr *Instruction) calldatacopy_(globalState *state.GlobalState) []*state
 	op0 := mstate.Stack.Pop()
 	op1 := mstate.Stack.Pop()
 	op2 := mstate.Stack.Pop()
+	//fmt.Println("op0:", op0.BvString())
+	//fmt.Println("op1:", op1.BvString())
+	//fmt.Println("op2:", op2.BvString())
+
 	// TODO: tx warning
 	return instr._calldata_copy_helper(globalState, mstate, op0, op1, op2)
 }
@@ -1281,10 +1294,19 @@ func (instr *Instruction) mload_(globalState *state.GlobalState) []*state.Global
 	mstate := globalState.Mstate
 	offset := mstate.Stack.Pop()
 
-	mstate.MemExtend(offset, 32)
-	offsetV, _ := strconv.ParseInt(offset.Value(), 10, 64)
-	data := mstate.Memory.GetWordAt(offsetV)
-	mstate.Stack.Append(data)
+	if offset.Symbolic() {
+		fmt.Println("can't access memory with symbolic index!")
+		mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(0, 256))
+		//return ret
+	} else {
+		mstate.MemExtend(offset, 32)
+		offsetV, _ := strconv.ParseInt(offset.Value(), 10, 64)
+		fmt.Println("mload-index:", offsetV, offset.Symbolic())
+		fmt.Println("memory:", mstate.Memory.RawMemory)
+		fmt.Println("mloadState:", globalState)
+		data := mstate.Memory.GetWordAt(offsetV)
+		mstate.Stack.Append(data)
+	}
 
 	ret = append(ret, globalState)
 	return ret
@@ -1297,7 +1319,12 @@ func (instr *Instruction) mstore_(globalState *state.GlobalState) []*state.Globa
 	mstart := mstate.Stack.Pop()
 	value := mstate.Stack.Pop()
 
-	// TODO: exception
+	if mstart.Symbolic() {
+		fmt.Println("fail for mstore because of the symbolic index")
+		ret = append(ret, globalState)
+		return ret
+	}
+
 	mstate.MemExtend(mstart, 32)
 	mstartV, _ := strconv.ParseInt(mstart.Value(), 10, 64)
 	fmt.Println("mstoreSize:", value.BvSize())
