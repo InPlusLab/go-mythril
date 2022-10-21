@@ -12,6 +12,7 @@ import (
 	"go-mythril/laser/smt/z3"
 	"go-mythril/support"
 	"go-mythril/utils"
+	"strconv"
 	"sync"
 )
 
@@ -130,90 +131,79 @@ LOOP:
 	fmt.Println("evm.Exec: One tx end!")
 }
 
+func (evm *LaserEVM) multiExec(cfg *z3.Config) {
+	for i := 0; i < evm.GofuncCount; i++ {
+		go evm.Run(i, cfg)
+	}
+
+	latestSignals := make(map[int]bool)
+LOOP:
+	for {
+		/*
+			There are two situations for exiting.
+			1. All goroutines don't generate new globalStates.
+			2. There is no globalState in channel, so all goroutines will be blocked.
+		*/
+
+		//Situation 2
+		fmt.Println("noStatesFlag:", evm.NoStatesFlag)
+		if evm.NoStatesFlag {
+			fmt.Println("break in situation 2")
+			break LOOP
+		}
+
+		// Situation 1
+		signal := <-evm.SignalCh
+		latestSignals[signal.Id] = signal.Finished
+		fmt.Println(signal.Id, signal.Finished)
+		allFinished := true
+		for _, finished := range latestSignals {
+			//fmt.Println(i, finished)
+			if !finished {
+				allFinished = false
+			}
+		}
+		fmt.Println("situation 1", allFinished)
+		// TODO: 2022.10.12- Situation: goroutine 0-2 don't generate new states at the last execution.
+		// TODO: 2022.10.12- Now goroutine 3 don't generate new states, and then it get a state in channel to execute.
+		// TODO: 2022.10.12- But now it has broken in situation 1.
+		if allFinished && len(evm.WorkList) == 0 && evm.NoStatesSignal[signal.Id] {
+			fmt.Println("break in situation 1")
+			break LOOP
+		}
+	}
+}
+
 func (evm *LaserEVM) SingleSymExec(creationCode string, runtimeCode string, contractName string, ctx *z3.Context) {
 	fmt.Println("Single Goroutine Symbolic Executing")
 	fmt.Println("")
 	// CreationTx
-	ExecuteContractCreation(evm, creationCode, contractName, ctx)
+	newAccount := ExecuteContractCreation(evm, creationCode, contractName, ctx)
 	// MessageTx
-	fmt.Println("messageTx:", runtimeCode)
-	//inputStrArr := support.GetArgsInstance().TransactionSequences
-	//for i := 0; i < evm.TransactionCount; i++ {
-	//	ExecuteMessageCall(evm, runtimeCode, contractName, inputStrArr[i], ctx)
-	//	fmt.Println("msgTx", i, ":done")
-	//}
-}
-
-func (evm *LaserEVM) NormalSymExec(creationCode string, contractName string, ctx *z3.Context) {
-	fmt.Println("Symbolic Executing: ", creationCode)
-	fmt.Println("")
-	evm.executeTransactionNormal(creationCode, contractName, ctx)
-}
-
-func (evm *LaserEVM) executeTransactionNormal(creationCode string, contractName string, ctx *z3.Context) {
 	inputStrArr := support.GetArgsInstance().TransactionSequences
 	for i := 0; i < evm.TransactionCount; i++ {
-		ExecuteMessageCall(evm, creationCode, contractName, inputStrArr[i], ctx)
+		ExecuteMessageCall(evm, runtimeCode, inputStrArr[i], ctx, newAccount.Address, false, nil)
+		fmt.Println("msgTx", i, ":done")
+	}
+}
+
+func (evm *LaserEVM) SingleSymExecMsgCallOnly(runtimeCode string, contractName string, ctx *z3.Context) {
+	fmt.Println("Symbolic Executing: ", runtimeCode)
+	fmt.Println("")
+	inputStrArr := support.GetArgsInstance().TransactionSequences
+	for i := 0; i < evm.TransactionCount; i++ {
+		ExecuteMessageCallOnly(evm, runtimeCode, contractName, inputStrArr[i], ctx, false, nil)
 		fmt.Println("normalExec:", i, "tx")
 	}
 }
 
-func (evm *LaserEVM) SymExec(creationCode string, contractName string, ctx *z3.Context, cfg *z3.Config) {
-	fmt.Println("Symbolic Executing: ", creationCode)
+func (evm *LaserEVM) MultiSymExecMsgCallOnly(runtimeCode string, contractName string, ctx *z3.Context, cfg *z3.Config) {
+	fmt.Println("Symbolic Executing: ", runtimeCode)
 	fmt.Println("")
-	evm.executeTransaction(creationCode, contractName, ctx, cfg)
-}
-
-func (evm *LaserEVM) executeTransaction(creationCode string, contractName string, ctx *z3.Context, cfg *z3.Config) {
 	inputStrArr := support.GetArgsInstance().TransactionSequences
 	for i := 0; i < evm.TransactionCount; i++ {
-		ExecuteMessageCall(evm, creationCode, contractName, inputStrArr[i], ctx)
-		for i := 0; i < evm.GofuncCount; i++ {
-			go evm.Run(i, cfg)
-		}
-
-		latestSignals := make(map[int]bool)
-	LOOP:
-		for {
-			/*
-				There are two situations for exiting.
-				1. All goroutines don't generate new globalStates.
-				2. There is no globalState in channel, so all goroutines will be blocked.
-			*/
-
-			//Situation 2
-			fmt.Println("noStatesFlag:", evm.NoStatesFlag)
-			if evm.NoStatesFlag {
-				fmt.Println("break in situation 2")
-				break LOOP
-			}
-
-			// Situation 1
-			signal := <-evm.SignalCh
-			latestSignals[signal.Id] = signal.Finished
-			fmt.Println(signal.Id, signal.Finished)
-			allFinished := true
-			for _, finished := range latestSignals {
-				//fmt.Println(i, finished)
-				if !finished {
-					allFinished = false
-				}
-			}
-			fmt.Println("situation 1", allFinished)
-			// TODO: 2022.10.12- Situation: goroutine 0-2 don't generate new states at the last execution.
-			// TODO: 2022.10.12- Now goroutine 3 don't generate new states, and then it get a state in channel to execute.
-			// TODO: 2022.10.12- But now it has broken in situation 1.
-			if allFinished && len(evm.WorkList) == 0 && evm.NoStatesSignal[signal.Id] {
-				fmt.Println("break in situation 1")
-				break LOOP
-			}
-		}
-		//fmt.Println("Finish", i, len(evm.WorkList))
-		// Reset the flag
-		//evm.NoStatesFlag = false
-		//for j := 0; j < evm.GofuncCount; j++ {
-		//	evm.NoStatesSignal[j] = true
-		//}
+		ExecuteMessageCallOnly(evm, runtimeCode, contractName, inputStrArr[i], ctx, true, cfg)
+		fmt.Println("normalExec:", i, "tx")
 	}
 }
 
@@ -418,6 +408,7 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 func ExecuteContractCreation(evm *LaserEVM, creationCode string, contractName string, ctx *z3.Context) *state.Account {
 
 	worldState := state.NewWordState(ctx)
+	evm.OpenStates = append(evm.OpenStates, worldState)
 	ACTORS := transaction.NewActors(ctx)
 	txId := state.GetNextTransactionId()
 
@@ -439,19 +430,100 @@ func ExecuteContractCreation(evm *LaserEVM, creationCode string, contractName st
 
 	newAccount := tx.CalleeAccount
 
+	fmt.Println("########################################################################################")
 	fmt.Println("CreationTx Execute!")
 	evm.exec()
 	fmt.Println("CreationTx Done!")
+	fmt.Println("########################################################################################")
 
 	return newAccount
 }
 
-func ExecuteMessageCall(evm *LaserEVM, runtimeCode string, contractName string, inputStr string, ctx *z3.Context) {
-	tx := state.NewMessageCallTransaction(runtimeCode, contractName, inputStr, ctx)
+func ExecuteMessageCall(evm *LaserEVM, runtimeCode string, inputStr string, ctx *z3.Context, address *z3.Bitvec, multiple bool, cfg *z3.Config) {
+	txId := state.GetNextTransactionId()
+	externalSender := ctx.NewBitvec("sender_"+txId, 256)
+	txCode := disassembler.NewDisasembly(runtimeCode)
+
+	calldataList := make([]*z3.Bitvec, 0)
+	for i := 0; i < len(inputStr); i = i + 2 {
+		val, _ := strconv.ParseInt(inputStr[i:i+2], 16, 10)
+		calldataList = append(calldataList, ctx.NewBitvecVal(val, 8))
+	}
+
+	var openState *state.WorldState
+	if len(evm.OpenStates) > 0 {
+		openState = evm.OpenStates[0]
+	} else {
+		panic("empty openStates for msgTx!")
+	}
+
+	tx := &state.MessageCallTransaction{
+		WorldState:    openState,
+		Code:          txCode,
+		CalleeAccount: openState.AccountsExistOrLoad(address),
+		Caller:        externalSender,
+		Calldata:      state.NewSymbolicCalldata(txId, ctx),
+		//Calldata: NewConcreteCalldata(txId, calldataList, ctx),
+		GasPrice:  10,
+		GasLimit:  8000000,
+		CallValue: 0,
+		Origin:    externalSender,
+		Basefee:   ctx.NewBitvecVal(1000, 256),
+		Ctx:       ctx,
+		Id:        txId,
+	}
+	//tx.WorldState.TransactionSequence = append(tx.WorldState.TransactionSequence, tx)
 	setupGlobalStateForExecution(evm, tx)
+	fmt.Println("########################################################################################")
 	fmt.Println("MessageTx Execute!")
-	evm.exec()
+	if !multiple {
+		evm.exec()
+	} else {
+		evm.multiExec(cfg)
+	}
 	fmt.Println("MessageTx Done!")
+	fmt.Println("########################################################################################")
+}
+
+func ExecuteMessageCallOnly(evm *LaserEVM, runtimeCode string, contractName string, inputStr string, ctx *z3.Context, multiple bool, cfg *z3.Config) {
+
+	txId := state.GetNextTransactionId()
+	externalSender := ctx.NewBitvec("sender_"+txId, 256)
+	txCode := disassembler.NewDisasembly(runtimeCode)
+
+	calldataList := make([]*z3.Bitvec, 0)
+	for i := 0; i < len(inputStr); i = i + 2 {
+		val, _ := strconv.ParseInt(inputStr[i:i+2], 16, 10)
+		calldataList = append(calldataList, ctx.NewBitvecVal(val, 8))
+	}
+
+	tx := &state.MessageCallTransaction{
+		WorldState: state.NewWordState(ctx),
+		Code:       txCode,
+		CalleeAccount: state.NewAccount(externalSender, ctx.NewArray("balances", 256, 256),
+			false, txCode, contractName),
+		Caller:   externalSender,
+		Calldata: state.NewSymbolicCalldata(txId, ctx),
+		//Calldata: NewConcreteCalldata(txId, calldataList, ctx),
+		GasPrice:  10,
+		GasLimit:  8000000,
+		CallValue: 0,
+		Origin:    externalSender,
+		Basefee:   ctx.NewBitvecVal(1000, 256),
+		Ctx:       ctx,
+		Id:        txId,
+	}
+
+	setupGlobalStateForExecution(evm, tx)
+	fmt.Println("########################################################################################")
+	fmt.Println("MessageTx Execute!")
+	if !multiple {
+		evm.exec()
+	} else {
+		evm.multiExec(cfg)
+	}
+	fmt.Println("MessageTx Done!")
+	fmt.Println("########################################################################################")
 }
 
 func setupGlobalStateForExecution(evm *LaserEVM, tx state.BaseTransaction) {
@@ -459,5 +531,66 @@ func setupGlobalStateForExecution(evm *LaserEVM, tx state.BaseTransaction) {
 	ACTORS := transaction.NewActors(globalState.Z3ctx)
 	constraint := tx.GetCaller().Eq(ACTORS.GetCreator()).Or(tx.GetCaller().Eq(ACTORS.GetAttacker()), tx.GetCaller().Eq(ACTORS.GetSomeGuy()))
 	globalState.WorldState.Constraints.Add(constraint)
+	globalState.WorldState.TransactionSequence = append(globalState.WorldState.TransactionSequence, tx)
 	evm.WorkList <- globalState
 }
+
+//func (evm *LaserEVM) executeTransactionNormal(creationCode string, contractName string, ctx *z3.Context) {
+//	inputStrArr := support.GetArgsInstance().TransactionSequences
+//	for i := 0; i < evm.TransactionCount; i++ {
+//		ExecuteMessageCallOnly(evm, creationCode, contractName, inputStrArr[i], ctx)
+//		fmt.Println("normalExec:", i, "tx")
+//	}
+//}
+//func (evm *LaserEVM) executeTransaction(creationCode string, contractName string, ctx *z3.Context, cfg *z3.Config) {
+//	inputStrArr := support.GetArgsInstance().TransactionSequences
+//	for i := 0; i < evm.TransactionCount; i++ {
+//		ExecuteMessageCallOnly(evm, creationCode, contractName, inputStrArr[i], ctx, true, cfg)
+//		for i := 0; i < evm.GofuncCount; i++ {
+//			go evm.Run(i, cfg)
+//		}
+//
+//		latestSignals := make(map[int]bool)
+//	LOOP:
+//		for {
+//			/*
+//				There are two situations for exiting.
+//				1. All goroutines don't generate new globalStates.
+//				2. There is no globalState in channel, so all goroutines will be blocked.
+//			*/
+//
+//			//Situation 2
+//			fmt.Println("noStatesFlag:", evm.NoStatesFlag)
+//			if evm.NoStatesFlag {
+//				fmt.Println("break in situation 2")
+//				break LOOP
+//			}
+//
+//			// Situation 1
+//			signal := <-evm.SignalCh
+//			latestSignals[signal.Id] = signal.Finished
+//			fmt.Println(signal.Id, signal.Finished)
+//			allFinished := true
+//			for _, finished := range latestSignals {
+//				//fmt.Println(i, finished)
+//				if !finished {
+//					allFinished = false
+//				}
+//			}
+//			fmt.Println("situation 1", allFinished)
+//			// TODO: 2022.10.12- Situation: goroutine 0-2 don't generate new states at the last execution.
+//			// TODO: 2022.10.12- Now goroutine 3 don't generate new states, and then it get a state in channel to execute.
+//			// TODO: 2022.10.12- But now it has broken in situation 1.
+//			if allFinished && len(evm.WorkList) == 0 && evm.NoStatesSignal[signal.Id] {
+//				fmt.Println("break in situation 1")
+//				break LOOP
+//			}
+//		}
+//		//fmt.Println("Finish", i, len(evm.WorkList))
+//		// Reset the flag
+//		//evm.NoStatesFlag = false
+//		//for j := 0; j < evm.GofuncCount; j++ {
+//		//	evm.NoStatesSignal[j] = true
+//		//}
+//	}
+//}

@@ -50,6 +50,10 @@ func (globalState *GlobalState) Copy() *GlobalState {
 	//	LastReturnData: globalState.LastReturnData,
 	//	Annotations:    anno,
 	//}
+	newAnnotations := make([]StateAnnotation, 0)
+	for _, anno := range globalState.Annotations {
+		newAnnotations = append(newAnnotations, anno)
+	}
 	return &GlobalState{
 		WorldState:     globalState.WorldState.Copy(),
 		Environment:    globalState.Environment,
@@ -57,7 +61,7 @@ func (globalState *GlobalState) Copy() *GlobalState {
 		TxStack:        globalState.TxStack,
 		Z3ctx:          globalState.Z3ctx,
 		LastReturnData: globalState.LastReturnData,
-		Annotations:    globalState.Annotations,
+		Annotations:    newAnnotations,
 		//LastReturnData: nil,
 		//Annotations: make([]StateAnnotation, 0),
 	}

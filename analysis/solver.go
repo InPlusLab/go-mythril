@@ -238,6 +238,9 @@ func _replace_with_actual_sha(concreteTransactions []*map[string]string, model *
 }
 
 func _add_calldata_placeholder(concreteTransactions []*map[string]string, transactionSequence []state.BaseTransaction) {
+	if len(concreteTransactions) <= 0 {
+		return
+	}
 	for _, tx := range concreteTransactions {
 		realTx := *tx
 		realTx["calldata"] = realTx["input"]
@@ -248,5 +251,7 @@ func _add_calldata_placeholder(concreteTransactions []*map[string]string, transa
 	}
 	codeLen := len(transactionSequence[0].GetCode().Bytecode)
 	realTx0 := *concreteTransactions[0]
-	realTx0["calldata"] = realTx0["input"][codeLen+2:]
+	if len(realTx0["intpu"]) >= codeLen+2 {
+		realTx0["calldata"] = realTx0["input"][codeLen+2:]
+	}
 }

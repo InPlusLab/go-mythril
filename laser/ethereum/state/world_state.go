@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"go-mythril/disassembler"
 	"go-mythril/laser/smt/z3"
 )
@@ -31,8 +32,7 @@ func NewWordState(ctx *z3.Context) *WorldState {
 	startingBalances := ctx.NewArray("startingBalance", 256, 256)
 
 	ws := &WorldState{
-		Accounts: accounts,
-		//Balances:            ctx.NewArray("balance", 256, 256),
+		Accounts:            accounts,
 		Balances:            balances,
 		StartingBalances:    startingBalances,
 		Constraints:         NewConstraints(),
@@ -69,9 +69,11 @@ func (ws *WorldState) AccountsExistOrLoad(addr *z3.Bitvec) *Account {
 	accounts := ws.Accounts
 	acc, ok := accounts[addr.Simplify().Value()]
 	if ok {
+		fmt.Println("GetAccount in ws!")
 		return acc
 	} else {
 		// TODO: find in dynamicLoader
+		fmt.Println("don't getAccount in ws!")
 		return NewAccount(addr, ws.Balances, false, disassembler.NewDisasembly(""), "")
 	}
 }
@@ -87,7 +89,7 @@ func (ws *WorldState) CreateAccount(balance int, concreteStorage bool, creator *
 	ctx := creator.GetCtx()
 	if address == nil {
 		// TODO: _generate_new_address(creator)
-		trueAddr = creator.BvAdd(ctx.NewBitvecVal(1, 256))
+		trueAddr = creator.BvAdd(ctx.NewBitvecVal(1, 256)).Simplify()
 	} else {
 		trueAddr = address
 	}

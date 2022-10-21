@@ -83,17 +83,17 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	}
 	instr.ExePostHooks(globalState)
 
-	for _, state := range result {
-		// For debug
-		state.Mstate.Stack.PrintStack()
-		//for i, con := range state.WorldState.Constraints.ConstraintList {
-		//	if i==3{
-		//		fmt.Println("PrintCons:", con.BoolString())
-		//	}
-		//}
-		//state.Mstate.Memory.PrintMemoryOneLine()
-		state.Mstate.Memory.PrintMemory()
-	}
+	//for _, state := range result {
+	//	// For debug
+	//	state.Mstate.Stack.PrintStack()
+	//	//for i, con := range state.WorldState.Constraints.ConstraintList {
+	//	//	if i==3{
+	//	//		fmt.Println("PrintCons:", con.BoolString())
+	//	//	}
+	//	//}
+	//	//state.Mstate.Memory.PrintMemoryOneLine()
+	//	state.Mstate.Memory.PrintMemory()
+	//}
 	fmt.Println("------------------------------------------------------------")
 	return result
 }
