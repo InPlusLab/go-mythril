@@ -74,26 +74,25 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	fmt.Println("PC:", globalState.Mstate.Pc)
 	fmt.Println("Address:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name)
 	// has the same function of StateTransition in instructions.go
-	fmt.Println("afterMutator")
 	for _, state := range result {
 		if instr.Opcode != "JUMPI" && instr.Opcode != "JUMP" && instr.Opcode != "RETURNSUB" {
-			fmt.Println("pc++")
 			state.Mstate.Pc++
 		}
 	}
 	instr.ExePostHooks(globalState)
 
-	//for _, state := range result {
-	//	// For debug
-	//	state.Mstate.Stack.PrintStack()
-	//	//for i, con := range state.WorldState.Constraints.ConstraintList {
-	//	//	if i==3{
-	//	//		fmt.Println("PrintCons:", con.BoolString())
-	//	//	}
-	//	//}
-	//	//state.Mstate.Memory.PrintMemoryOneLine()
-	//	state.Mstate.Memory.PrintMemory()
-	//}
+	for _, state := range result {
+		// For debug
+		fmt.Println("Print:", globalState.GetCurrentInstruction().OpCode.Name)
+		state.Mstate.Stack.PrintStackOneLine()
+		//for i, con := range state.WorldState.Constraints.ConstraintList {
+		//	if i==3{
+		//		fmt.Println("PrintCons:", con.BoolString())
+		//	}
+		//}
+		//state.Mstate.Memory.PrintMemoryOneLine()
+		//state.Mstate.Memory.PrintMemory()
+	}
 	fmt.Println("------------------------------------------------------------")
 	return result
 }

@@ -136,7 +136,8 @@ func main() {
 	//z3.SetGlobalPram("parallel.enable", "true")
 
 	start := time.Now()
-	evm.SingleSymExec(creationCode, runtimeCode, "CHZ", ctx)
+	//evm.SingleSymExec(creationCode, runtimeCode, "CHZ", ctx)
+	evm.MultiSymExec(creationCode, runtimeCode, "CHZ", ctx, config)
 	//evm.SingleSymExecMsgCallOnly(runtimeCode, "Time", ctx)
 	//evm.MultiSymExecMsgCallOnly(runtimeCode, "Time", ctx, config)
 

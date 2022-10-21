@@ -35,10 +35,10 @@ type LaserEVM struct {
 	InstrPreHook  *map[string][]moduleExecFunc
 	InstrPostHook *map[string][]moduleExecFunc
 	/* Parallal */
-	SignalCh       chan Signal
+	AfterExecCh    chan Signal
 	NoStatesFlag   bool
 	NoStatesSignal []bool
-	NoStatesCh     chan []bool
+	BeforeExecCh   chan Signal
 	GofuncCount    int
 	/* Analysis */
 	Loader *module.ModuleLoader
@@ -64,10 +64,10 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		InstrPreHook:  &preHook,
 		InstrPostHook: &postHook,
 
-		SignalCh:       make(chan Signal),
+		AfterExecCh:    make(chan Signal),
 		NoStatesFlag:   false,
 		NoStatesSignal: make([]bool, 4, 4),
-		NoStatesCh:     make(chan []bool),
+		BeforeExecCh:   make(chan Signal),
 		GofuncCount:    4,
 		Loader:         moduleLoader,
 	}
@@ -113,7 +113,9 @@ LOOP:
 			modules.CheckPotentialIssues(globalState)
 			for _, detector := range evm.Loader.Modules {
 				issues := detector.GetIssues()
-				fmt.Println("number of issues:", len(issues))
+				if len(issues) > 0 {
+					fmt.Println("number of issues:", len(issues))
+				}
 				for _, issue := range issues {
 					fmt.Println("+++++++++++++++++++++++++++++++++++")
 					fmt.Println("ContractName:", issue.Contract)
@@ -136,7 +138,8 @@ func (evm *LaserEVM) multiExec(cfg *z3.Config) {
 		go evm.Run(i, cfg)
 	}
 
-	latestSignals := make(map[int]bool)
+	beforeExecSignals := make([]bool, evm.GofuncCount)
+	afterExecSignals := make([]bool, evm.GofuncCount)
 LOOP:
 	for {
 		/*
@@ -145,33 +148,44 @@ LOOP:
 			2. There is no globalState in channel, so all goroutines will be blocked.
 		*/
 
-		//Situation 2
-		fmt.Println("noStatesFlag:", evm.NoStatesFlag)
-		if evm.NoStatesFlag {
-			fmt.Println("break in situation 2")
-			break LOOP
-		}
-
-		// Situation 1
-		signal := <-evm.SignalCh
-		latestSignals[signal.Id] = signal.Finished
-		fmt.Println(signal.Id, signal.Finished)
-		allFinished := true
-		for _, finished := range latestSignals {
-			//fmt.Println(i, finished)
-			if !finished {
-				allFinished = false
+		select {
+		case signal := <-evm.AfterExecCh:
+			// true == didn't process a newState
+			afterExecSignals[signal.Id] = signal.Finished
+			//fmt.Println("afterExecSignal:", signal.Id, signal.Finished)
+			allFinished := true
+			for _, finished := range afterExecSignals {
+				//fmt.Println(i, finished)
+				if !finished {
+					allFinished = false
+				}
+			}
+			//fmt.Println("situation 1", allFinished)
+			if allFinished {
+				fmt.Println("break in situation 1")
+				break LOOP
+			}
+		case signal := <-evm.BeforeExecCh:
+			// true == didn't get a state
+			beforeExecSignals[signal.Id] = signal.Finished
+			//fmt.Println("beforeExecSignal:", signal.Id, signal.Finished)
+			allNoStates := true
+			for _, noState := range beforeExecSignals {
+				//fmt.Println(i, finished)
+				if !noState {
+					allNoStates = false
+				}
+			}
+			//fmt.Println("situation 2", allFinished)
+			if allNoStates {
+				fmt.Println("break in situation 2")
+				break LOOP
 			}
 		}
-		fmt.Println("situation 1", allFinished)
-		// TODO: 2022.10.12- Situation: goroutine 0-2 don't generate new states at the last execution.
-		// TODO: 2022.10.12- Now goroutine 3 don't generate new states, and then it get a state in channel to execute.
-		// TODO: 2022.10.12- But now it has broken in situation 1.
-		if allFinished && len(evm.WorkList) == 0 && evm.NoStatesSignal[signal.Id] {
-			fmt.Println("break in situation 1")
-			break LOOP
-		}
 	}
+	//
+	//close(evm.AfterExecCh)
+	//close(evm.BeforeExecCh)
 }
 
 func (evm *LaserEVM) SingleSymExec(creationCode string, runtimeCode string, contractName string, ctx *z3.Context) {
@@ -182,8 +196,27 @@ func (evm *LaserEVM) SingleSymExec(creationCode string, runtimeCode string, cont
 	// MessageTx
 	inputStrArr := support.GetArgsInstance().TransactionSequences
 	for i := 0; i < evm.TransactionCount; i++ {
+		fmt.Println("msgTx", i, ":start")
 		ExecuteMessageCall(evm, runtimeCode, inputStrArr[i], ctx, newAccount.Address, false, nil)
-		fmt.Println("msgTx", i, ":done")
+		fmt.Println("msgTx", i, ":end")
+	}
+}
+
+func (evm *LaserEVM) MultiSymExec(creationCode string, runtimeCode string, contractName string, ctx *z3.Context, cfg *z3.Config) {
+	fmt.Println("Multi-Goroutines Symbolic Executing")
+	fmt.Println("")
+	// CreationTx
+	newAccount := ExecuteContractCreation(evm, creationCode, contractName, ctx)
+	// MessageTx
+	inputStrArr := support.GetArgsInstance().TransactionSequences
+	for i := 0; i < evm.TransactionCount; i++ {
+		fmt.Println("msgTx", i, ":start")
+		ExecuteMessageCall(evm, runtimeCode, inputStrArr[i], ctx, newAccount.Address, true, cfg)
+		fmt.Println("msgTx", i, ":end")
+		fmt.Println("workList len:", len(evm.WorkList))
+		// Reset
+		evm.BeforeExecCh = make(chan Signal)
+		evm.AfterExecCh = make(chan Signal)
 	}
 }
 
@@ -285,30 +318,28 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 	ctx := z3.NewContext(cfg)
 	for {
 		globalState, _ := readWithSelect(evm)
-		//evm.SignalCh <- Signal{
-		//	Id:       id,
-		//	Finished: false,
-		//}
+		//fmt.Println("Run", id, globalState == nil)
+		evm.BeforeExecCh <- Signal{
+			Id:       id,
+			Finished: globalState == nil,
+		}
 		//l.Lock()
-		evm.NoStatesSignal[id] = globalState == nil
+		//evm.NoStatesSignal[id] = globalState == nil
 		//l.Unlock()
 
 		if globalState != nil {
-			//if ctx != globalState.Z3ctx {
-			//	globalState.Translate(ctx)
-			//}
+
 			globalState.Translate(ctx)
 
 			newStates, opcode := evm.ExecuteState(globalState)
-			fmt.Println("last", len(newStates) == 0)
 
 			fmt.Println(id, globalState, opcode)
-			//fmt.Println(id, globalState, opcode)
 			//evm.ManageCFG(opcode, newStates)
+
 			for _, newState := range newStates {
 				evm.WorkList <- newState
 			}
-			evm.SignalCh <- Signal{
+			evm.AfterExecCh <- Signal{
 				Id:       id,
 				Finished: len(newStates) == 0,
 			}
@@ -326,7 +357,9 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 				modules.CheckPotentialIssues(globalState)
 				for _, detector := range evm.Loader.Modules {
 					issues := detector.GetIssues()
-					fmt.Println("number of issues:", len(issues))
+					if len(issues) > 0 {
+						fmt.Println("number of issues:", len(issues))
+					}
 					for _, issue := range issues {
 						fmt.Println("+++++++++++++++++++++++++++++++++++", id)
 						fmt.Println("ContractName:", issue.Contract)
@@ -341,24 +374,24 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 				fmt.Println("+++++++++++++++++++++++++++++++++++")
 
 				// when the other goroutines have no globalStates to solve.
-				l.Lock()
-				flag := true
-				for i, v := range evm.NoStatesSignal {
-					if i != id {
-						flag = flag && v
-					}
-				}
-				l.Unlock()
-
-				if flag {
-					fmt.Println("all goroutines have no globalStates")
-					evm.NoStatesFlag = true
-					// Here, we push a value in channel to trigger the LOOP iteration in symExec.
-					evm.SignalCh <- Signal{
-						Id:       id,
-						Finished: false,
-					}
-				}
+				//l.Lock()
+				//flag := true
+				//for i, v := range evm.NoStatesSignal {
+				//	if i != id {
+				//		flag = flag && v
+				//	}
+				//}
+				//l.Unlock()
+				//
+				//if flag && len(evm.WorkList) == 0 {
+				//	fmt.Println("all goroutines have no globalStates:", opcode)
+				//	evm.NoStatesFlag = true
+				//	// Here, we push a value in channel to trigger the LOOP iteration in symExec.
+				//	evm.SignalCh <- Signal{
+				//		Id:       id,
+				//		Finished: false,
+				//	}
+				//}
 			}
 		}
 
@@ -433,7 +466,7 @@ func ExecuteContractCreation(evm *LaserEVM, creationCode string, contractName st
 	fmt.Println("########################################################################################")
 	fmt.Println("CreationTx Execute!")
 	evm.exec()
-	fmt.Println("CreationTx Done!")
+	fmt.Println("CreationTx End!")
 	fmt.Println("########################################################################################")
 
 	return newAccount
@@ -481,7 +514,7 @@ func ExecuteMessageCall(evm *LaserEVM, runtimeCode string, inputStr string, ctx 
 	} else {
 		evm.multiExec(cfg)
 	}
-	fmt.Println("MessageTx Done!")
+	fmt.Println("MessageTx End!")
 	fmt.Println("########################################################################################")
 }
 
@@ -522,7 +555,7 @@ func ExecuteMessageCallOnly(evm *LaserEVM, runtimeCode string, contractName stri
 	} else {
 		evm.multiExec(cfg)
 	}
-	fmt.Println("MessageTx Done!")
+	fmt.Println("MessageTx End!")
 	fmt.Println("########################################################################################")
 }
 

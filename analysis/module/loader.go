@@ -65,9 +65,9 @@ func (loader *ModuleLoader) registerMythrilModules() {
 	loader.Modules = append(loader.Modules,
 
 		modules.NewIntegerArithmetics(),
-		modules.NewTxOrigin(),
-		modules.NewPredictableVariables(),
-		modules.NewExternalCalls(),
+		//modules.NewTxOrigin(),
+		//modules.NewPredictableVariables(),
+		//modules.NewExternalCalls(),
 		//modules.NewStateChangeAfterCall(),
 		//modules.NewArbitraryJump(),
 		//modules.NewArbitraryStorage(),
