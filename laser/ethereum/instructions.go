@@ -1354,7 +1354,6 @@ func (instr *Instruction) sload_(globalState *state.GlobalState) []*state.Global
 
 	mstate := globalState.Mstate
 	index := mstate.Stack.Pop()
-	fmt.Println("index:", index.BvString())
 	// TODO: DynLoader to get the storage ?
 	//globalState.Environment.ActiveAccount.Storage.SetItem(index, globalState.Z3ctx.NewBitvecVal(0, 256))
 	mstate.Stack.Append(globalState.Environment.ActiveAccount.Storage.GetItem(index).Translate(globalState.Z3ctx))
@@ -1371,10 +1370,6 @@ func (instr *Instruction) sstore_(globalState *state.GlobalState) []*state.Globa
 	value := mstate.Stack.Pop()
 
 	globalState.Environment.ActiveAccount.Storage.SetItem(index, value)
-
-	//fmt.Println("afterSetItem:", globalState.Environment.ActiveAccount.Storage.GetItem(index).BvString())
-	//myindex := globalState.Z3ctx.NewBitvecVal(0, 256)
-	//fmt.Println("afterSetItem2:", globalState.Environment.ActiveAccount.Storage.GetItem(myindex).BvString())
 
 	ret = append(ret, globalState)
 	return ret

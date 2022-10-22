@@ -37,14 +37,19 @@ func (acc *Account) Copy() *Account {
 	return tmp
 }
 func (acc *Account) Translate(ctx *z3.Context) *Account {
-	return &Account{
-		Address:      acc.Address.Translate(ctx),
-		Balances:     acc.Balances.Translate(ctx).(*z3.Array),
-		Storage:      acc.Storage.Translate(ctx),
-		Code:         acc.Code,
-		ContractName: acc.ContractName,
-		Deleted:      acc.Deleted,
-	}
+	//return &Account{
+	//	Address:      acc.Address.Translate(ctx),
+	//	Balances:     acc.Balances.Translate(ctx).(*z3.Array),
+	//	Storage:      acc.Storage.Translate(ctx),
+	//	Code:         acc.Code,
+	//	ContractName: acc.ContractName,
+	//	Deleted:      acc.Deleted,
+	//}
+	// Tips: Account == Storage, and Translate != Copy
+	acc.Address = acc.Address.Translate(ctx)
+	acc.Balances = acc.Balances.Translate(ctx).(*z3.Array)
+	acc.Storage = acc.Storage.Translate(ctx)
+	return acc
 }
 func (acc *Account) Balance() *z3.Bitvec {
 	return acc.Balances.GetItem(acc.Address)
@@ -119,39 +124,36 @@ func (s *Storage) GetItem(item *z3.Bitvec) *z3.Bitvec {
 	storage := s.StandardStorage
 
 	ctx := item.GetCtx()
-	itemV, _ := strconv.ParseInt(s.Address.Value(), 10, 64)
-	storageKeysLoaded := s.StorageKeysLoaded
-	inKeysLoaded := storageKeysLoaded.Contains(itemV)
+	//itemV, _ := strconv.ParseInt(s.Address.Value(), 10, 64)
+	//storageKeysLoaded := s.StorageKeysLoaded
+	//inKeysLoaded := storageKeysLoaded.Contains(itemV)
 	// TODO: dynLoader
-	if !item.Symbolic() && itemV != 0 && !inKeysLoaded {
-		fmt.Println("#1")
-
-		value := ctx.NewBitvecVal(0, 256)
-		for _, key := range s.KeysSet.Elements() {
-			value = z3.If(key.(*z3.Bitvec).Eq(item), storage.GetItem(item).Simplify(), value)
-		}
-		fmt.Println("#2")
-		// storage.SetItem(item, value)
-		s.StorageKeysLoaded.Add(itemV)
-		s.PrintableStorage[item] = value
+	//if !item.Symbolic() && itemV != 0 && !inKeysLoaded {
+	//	fmt.Println("#1")
+	//
+	//	value := ctx.NewBitvecVal(0, 256)
+	//	for _, key := range s.KeysSet.Elements() {
+	//		value = z3.If(key.(*z3.Bitvec).Eq(item), storage.GetItem(item).Simplify(), value)
+	//	}
+	//	fmt.Println("#2")
+	//	// storage.SetItem(item, value)
+	//	s.StorageKeysLoaded.Add(itemV)
+	//	s.PrintableStorage[item] = value
+	//}
+	if item.Symbolic() {
+		panic("can't get item in Storage using symbolic index!")
 	}
-	// TODO: maybe wrong
-	//fmt.Println("#3")
 	result := storage.GetItem(item).Simplify()
-	fmt.Println("#4")
 	if strings.Contains(result.BvString(), "_") {
-		fmt.Println("#5", result.BvString())
+		fmt.Println("StorageSymbolicResult: ", result.BvString())
 		return ctx.NewBitvecVal(0, 256)
 	}
-	fmt.Println("#6")
-
 	//itemStr := item.BvString()
 	//for k, v := range s.PrintableStorage {
 	//	if k.BvString() == itemStr {
 	//		return v.Translate(ctx)
 	//	}
 	//}
-
 	return result
 }
 func (s *Storage) SetItem(key *z3.Bitvec, value *z3.Bitvec) {

@@ -560,9 +560,13 @@ func ExecuteMessageCallOnly(evm *LaserEVM, runtimeCode string, contractName stri
 }
 
 func setupGlobalStateForExecution(evm *LaserEVM, tx state.BaseTransaction) {
+	fmt.Println("00")
 	globalState := tx.InitialGlobalState()
+	fmt.Println("0000")
 	ACTORS := transaction.NewActors(globalState.Z3ctx)
+	fmt.Println("11")
 	constraint := tx.GetCaller().Eq(ACTORS.GetCreator()).Or(tx.GetCaller().Eq(ACTORS.GetAttacker()), tx.GetCaller().Eq(ACTORS.GetSomeGuy()))
+	fmt.Println("22")
 	globalState.WorldState.Constraints.Add(constraint)
 	globalState.WorldState.TransactionSequence = append(globalState.WorldState.TransactionSequence, tx)
 	evm.WorkList <- globalState

@@ -91,6 +91,9 @@ func (a *Array) DeepCopy() BaseArray {
 	}
 }
 func (a *Array) Translate(ctx *Context) BaseArray {
+	if a.rawCtx == ctx.raw {
+		return a
+	}
 	return &Array{
 		name:      a.name,
 		rawCtx:    ctx.raw,
@@ -137,6 +140,9 @@ func (a *K) DeepCopy() BaseArray {
 }
 
 func (a *K) Translate(ctx *Context) BaseArray {
+	if a.rawCtx == ctx.raw {
+		return a
+	}
 	return &K{
 		rawCtx:    ctx.raw,
 		rawAST:    C.Z3_translate(a.rawCtx, a.rawAST, ctx.raw),

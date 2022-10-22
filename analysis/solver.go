@@ -93,7 +93,6 @@ func GetTransactionSequence(globalState *state.GlobalState, constraints *state.C
 		fmt.Println("unsat in getTxSeq")
 		return nil
 	}
-
 	initialWorldState := transactionSequence[0].GetWorldState()
 	initialAccounts := initialWorldState.Accounts
 	for _, transaction := range transactionSequence {
@@ -105,7 +104,7 @@ func GetTransactionSequence(globalState *state.GlobalState, constraints *state.C
 
 	for address, _ := range initialAccounts {
 		minPriceDict[address] = model.Eval(
-			initialWorldState.StartingBalances.GetItem(ctx.NewBitvec(address, 256)).AsAST(), true).Int()
+			initialWorldState.StartingBalances.Translate(ctx).GetItem(ctx.NewBitvec(address, 256)).AsAST(), true).Int()
 	}
 	concreteInitialState := _get_concrete_state(initialAccounts, &minPriceDict)
 	switch transactionSequence[0].(type) {

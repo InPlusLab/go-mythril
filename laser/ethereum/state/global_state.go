@@ -75,16 +75,13 @@ func (globalState *GlobalState) Translate(ctx *z3.Context) {
 	globalState.Z3ctx = ctx
 	// machineState stack & memory
 	//fmt.Println("glTrans1")
-	newMachineState := globalState.Mstate.Translate(ctx)
-	globalState.Mstate = newMachineState
+	globalState.Mstate = globalState.Mstate.Translate(ctx)
 	// worldState constraints
 	//fmt.Println("glTrans2")
-	newWorldState := globalState.WorldState.Translate(ctx)
-	globalState.WorldState = newWorldState
+	globalState.WorldState = globalState.WorldState.Translate(ctx)
 	// env
 	//fmt.Println("glTrans3")
-	newEnv := globalState.Environment.Translate(ctx)
-	globalState.Environment = newEnv
+	globalState.Environment = globalState.Environment.Translate(ctx)
 	//fmt.Println("glTrans4")
 	// lastReturnData
 	//fmt.Println("changeStateContext done")

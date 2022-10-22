@@ -121,6 +121,10 @@ func (tx *MessageCallTransaction) InitialGlobalStateFromEnvironment(worldState *
 	globalState := NewGlobalState(worldState, env, tx.Ctx, append(txStack, tx))
 	globalState.Environment.ActiveFuncName = activeFunc
 
+	// Tips: Account is always the same Account in environment and worldState.Accounts.
+	// Tips: So the last round the content of Account may be already translated.
+	env.ActiveAccount = env.ActiveAccount.Translate(tx.Ctx)
+
 	// make sure the value of sender is enough
 	sender := env.Sender
 	receiver := env.ActiveAccount.Address
@@ -128,9 +132,9 @@ func (tx *MessageCallTransaction) InitialGlobalStateFromEnvironment(worldState *
 	value := tx.GetCallValue()
 	constrain := globalState.WorldState.Balances.GetItem(sender).BvUGe(value)
 	globalState.WorldState.Constraints.Add(constrain)
-
 	receiverV := globalState.WorldState.Balances.GetItem(receiver)
 	senderV := globalState.WorldState.Balances.GetItem(sender)
+
 	globalState.WorldState.Balances.SetItem(receiver, receiverV.BvAdd(value).Simplify())
 	globalState.WorldState.Balances.SetItem(sender, senderV.BvSub(value).Simplify())
 
