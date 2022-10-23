@@ -71,6 +71,8 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 
 	instr.ExePreHooks(globalState)
 	result := instr.Mutator(globalState)
+	a := globalState.WorldState.AccountsExistOrLoad(globalState.Environment.Address).Balance()
+	fmt.Println("balanceAddr:", a.BvString())
 	fmt.Println("PC:", globalState.Mstate.Pc)
 	fmt.Println("Address:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name)
 	// has the same function of StateTransition in instructions.go
@@ -81,18 +83,19 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	}
 	instr.ExePostHooks(globalState)
 
-	for _, state := range result {
-		// For debug
-		fmt.Println("Print:", globalState.GetCurrentInstruction().OpCode.Name)
-		state.Mstate.Stack.PrintStackOneLine()
-		//for i, con := range state.WorldState.Constraints.ConstraintList {
-		//	if i==3{
-		//		fmt.Println("PrintCons:", con.BoolString())
-		//	}
-		//}
-		//state.Mstate.Memory.PrintMemoryOneLine()
-		//state.Mstate.Memory.PrintMemory()
-	}
+	//for _, state := range result {
+	//	// For debug
+	//	//fmt.Println("Print:", globalState.GetCurrentInstruction().OpCode.Name)
+	//	//state.Mstate.Stack.PrintStackOneLine()
+	//	//state.Mstate.Stack.PrintStack()
+	//	//for i, con := range state.WorldState.Constraints.ConstraintList {
+	//	//	if i==3{
+	//	//		fmt.Println("PrintCons:", con.BoolString())
+	//	//	}
+	//	//}
+	//	//state.Mstate.Memory.PrintMemoryOneLine()
+	//	//state.Mstate.Memory.PrintMemory()
+	//}
 	fmt.Println("------------------------------------------------------------")
 	return result
 }
@@ -850,16 +853,15 @@ func (instr *Instruction) balance_(globalState *state.GlobalState) []*state.Glob
 	address := mstate.Stack.Pop()
 	var balance *z3.Bitvec
 	if !address.Symbolic() {
-		fmt.Println("before")
 		balance = globalState.WorldState.AccountsExistOrLoad(address).Balance()
-		//balance = ctx.NewBitvecVal(0, 256)
-		fmt.Println("after")
 	} else {
 		balance = ctx.NewBitvecVal(0, 256)
 		for _, acc := range globalState.WorldState.Accounts {
 			balance = z3.If(address.Eq(acc.Address), acc.Balance(), balance)
 		}
 	}
+	fmt.Println(balance.BvString())
+	fmt.Println(balance.Simplify().BvString())
 	mstate.Stack.Append(balance)
 
 	ret = append(ret, globalState)

@@ -9,7 +9,7 @@ import (
 
 type BaseArray interface {
 	GetItem(bitvec *Bitvec) *Bitvec
-	SetItem(index *Bitvec, value *Bitvec) BaseArray
+	SetItem(index *Bitvec, value *Bitvec)
 	DeepCopy() BaseArray
 	Translate(ctx *Context) BaseArray
 }
@@ -53,14 +53,8 @@ func (c *Context) NewK(dom int, vRange int, value int) *K {
 	}
 }
 
-func (a *Array) SetItem(index *Bitvec, value *Bitvec) BaseArray {
-	return &Array{
-		name:      a.name,
-		rawCtx:    a.rawCtx,
-		rawAST:    C.Z3_mk_store(a.rawCtx, a.rawAST, index.rawAST, value.rawAST),
-		domSize:   a.domSize,
-		rangeSize: a.rangeSize,
-	}
+func (a *Array) SetItem(index *Bitvec, value *Bitvec) {
+	a.rawAST = C.Z3_mk_store(a.rawCtx, a.rawAST, index.rawAST, value.rawAST)
 }
 
 func (a *Array) GetItem(index *Bitvec) *Bitvec {
@@ -103,13 +97,8 @@ func (a *Array) Translate(ctx *Context) BaseArray {
 	}
 }
 
-func (a *K) SetItem(index *Bitvec, value *Bitvec) BaseArray {
-	return &K{
-		rawCtx:    a.rawCtx,
-		rawAST:    C.Z3_mk_store(a.rawCtx, a.rawAST, index.rawAST, value.rawAST),
-		domSize:   a.domSize,
-		rangeSize: a.rangeSize,
-	}
+func (a *K) SetItem(index *Bitvec, value *Bitvec) {
+	a.rawAST = C.Z3_mk_store(a.rawCtx, a.rawAST, index.rawAST, value.rawAST)
 }
 
 func (a *K) GetItem(index *Bitvec) *Bitvec {

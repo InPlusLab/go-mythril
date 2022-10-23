@@ -255,8 +255,9 @@ func (dm *IntegerArithmetics) _handel_return(globalState *state.GlobalState) {
 func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalState) {
 	stateAnnotation := getOverflowUnderflowStateAnnotation(globalState)
 	for _, annotation := range stateAnnotation.OverflowingStateAnnotations.Elements() {
-		fmt.Println("iterableInEnd")
+		fmt.Println("iterableInEnd!")
 		ostate := annotation.(OverUnderflowAnnotation).OverflowingState
+		fmt.Println("ostateAddress:", ostate.GetCurrentInstruction().Address)
 		if dm.OstatesUnsatisfiable.Contains(ostate) {
 			fmt.Println("contains")
 			continue
@@ -267,13 +268,11 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 		}
 
 		if !dm.OstatesSatisfiable.Contains(ostate) {
-			fmt.Println("1")
 			constraints := ostate.WorldState.Constraints.DeepCopy()
 			constraints.Add(annotation.(OverUnderflowAnnotation).Constraint.Translate(ostate.Z3ctx))
 			//constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
-			fmt.Println("2")
 			_, sat := state.GetModel(constraints, nil, nil, false, ostate.Z3ctx)
-			fmt.Println("3")
+
 			if sat {
 				fmt.Println("sat")
 				dm.OstatesSatisfiable.Add(ostate)
@@ -294,7 +293,7 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 		//constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
 
 		transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
-		fmt.Println("5")
+
 		if transactionSequence == nil {
 			// UnsatError
 			fmt.Println("unsaterror for getTxSeq")
@@ -328,7 +327,7 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 		address := getAddressFromState(ostate)
 		dm.Cache.Add(address)
 		//dm.Issues = append(dm.Issues, issue)
-		fmt.Println("integerOverflow push:", address)
+		fmt.Println("integerOverflow push:", address, &ostate)
 		dm.Issues.Append(issue)
 		fmt.Println(dm.Issues)
 	}

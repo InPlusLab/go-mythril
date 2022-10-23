@@ -102,9 +102,9 @@ func (m *MachineStack) PrintStackOneLine() {
 		str := m.RawStack[i].BvString()
 		idx := strings.Index(str, "\n")
 		if idx == -1 {
-			fmt.Println("PrintStack: ", str, " ", m.RawStack[i].Annotations)
+			fmt.Println("PrintStack: ", str, " ", m.RawStack[i].Annotations.Len(), m.RawStack[i].Annotations.Elements())
 		} else {
-			fmt.Println("PrintStack: ", str[:idx], " ", m.RawStack[i].Annotations)
+			fmt.Println("PrintStack: ", str[:idx], " ", m.RawStack[i].Annotations.Len(), m.RawStack[i].Annotations.Elements())
 		}
 		//if m.RawStack[i].Symbolic() {
 		//	if m.RawStack[i].Annotations.Len() != 0 {

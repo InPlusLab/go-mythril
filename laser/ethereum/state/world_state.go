@@ -47,29 +47,29 @@ func NewWordState(ctx *z3.Context) *WorldState {
 }
 
 func (ws *WorldState) Copy() *WorldState {
-	//var tmp *WorldState
-	//for _, acc := range ws.Accounts {
-	//	tmp.PutAccount(acc.Copy())
-	//}
-	//tmp.Balances = ws.Balances
-	//tmp.Constraints = ws.Constraints.Copy()
-	//
-	//return tmp
 
-	return &WorldState{
-		Accounts:            ws.Accounts,
-		Balances:            ws.Balances,
-		StartingBalances:    ws.StartingBalances,
-		Constraints:         ws.Constraints.DeepCopy(),
-		TransactionSequence: ws.TransactionSequence,
+	txSeq := make([]BaseTransaction, 0)
+	for _, tx := range ws.TransactionSequence {
+		txSeq = append(txSeq, tx)
 	}
+	resWs := &WorldState{
+		Accounts:            make(map[string]*Account),
+		Balances:            ws.Balances.DeepCopy().(*z3.Array),
+		StartingBalances:    ws.StartingBalances.DeepCopy().(*z3.Array),
+		Constraints:         ws.Constraints.DeepCopy(),
+		TransactionSequence: txSeq,
+	}
+	for _, acc := range ws.Accounts {
+		resWs.PutAccount(acc.Copy())
+	}
+
+	return resWs
 }
 
 func (ws *WorldState) AccountsExistOrLoad(addr *z3.Bitvec) *Account {
 	accounts := ws.Accounts
 	acc, ok := accounts[addr.Simplify().Value()]
 	if ok {
-		fmt.Println("GetAccount in ws!")
 		return acc
 	} else {
 		// TODO: find in dynamicLoader
@@ -94,9 +94,10 @@ func (ws *WorldState) CreateAccount(balance int, concreteStorage bool, creator *
 		trueAddr = address
 	}
 	newAccount := NewAccount(trueAddr, ws.Balances, concreteStorage, code, contractName)
-	newAccount.SetBalance(ctx.NewBitvecVal(balance, 256))
 
+	newAccount.SetBalance(ctx.NewBitvecVal(balance, 256))
 	ws.PutAccount(newAccount)
+
 	return newAccount
 }
 

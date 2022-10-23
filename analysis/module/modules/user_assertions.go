@@ -82,22 +82,28 @@ func (dm *UserAssertions) _analyze_state(globalState *state.GlobalState) []*anal
 	stackLen := globalState.Mstate.Stack.Length()
 
 	if opcode.Name == "MSTORE" {
-		value := globalState.Mstate.Stack.RawStack[stackLen-2]
+		value := globalState.Mstate.Stack.RawStack[stackLen-2].Simplify()
+		fmt.Println("value:", value.BvString())
 		if value.Symbolic() {
 			return make([]*analysis.Issue, 0)
 		}
 		mstorePattern := "cafecafecafecafecafecafecafecafecafecafecafecafecafecafecafe"
-
+		fmt.Println("#1")
 		valueInt, _ := strconv.Atoi(value.Value())
+		fmt.Println("#2")
 		srcStr := utils.ToHexStr(valueInt)
+		fmt.Println("#3")
 		if len(srcStr) >= 126 {
+			fmt.Println("#4")
 			if !(strings.Contains(utils.ToHexStr(valueInt)[:126], mstorePattern)) {
 				return make([]*analysis.Issue, 0)
 			}
+			fmt.Println("#5")
 		} else {
+			fmt.Println("#6")
 			return make([]*analysis.Issue, 0)
 		}
-
+		fmt.Println("#7")
 		message = "Failed property id" + value.Extract(15, 0).Value()
 	} else {
 		topic := globalState.Mstate.Stack.RawStack[stackLen-3]

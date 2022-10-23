@@ -29,11 +29,14 @@ func NewAccount(addr *z3.Bitvec, balances *z3.Array, concreteStorage bool, code 
 	}
 }
 func (acc *Account) Copy() *Account {
-	var tmp *Account
-	tmp.Address = acc.Address
-	tmp.Code = acc.Code
-	tmp.Balances = acc.Balances
-	tmp.Storage = acc.Storage.DeepCopy()
+	tmp := &Account{
+		Address:      acc.Address,
+		Code:         acc.Code,
+		Balances:     acc.Balances,
+		Storage:      acc.Storage.DeepCopy(),
+		ContractName: acc.ContractName,
+		Deleted:      acc.Deleted,
+	}
 	return tmp
 }
 func (acc *Account) Translate(ctx *z3.Context) *Account {
@@ -159,7 +162,7 @@ func (s *Storage) GetItem(item *z3.Bitvec) *z3.Bitvec {
 func (s *Storage) SetItem(key *z3.Bitvec, value *z3.Bitvec) {
 	printableStorage := s.PrintableStorage
 	printableStorage[key] = value
-	s.StandardStorage = s.StandardStorage.SetItem(key, value)
+	s.StandardStorage.SetItem(key, value)
 	s.KeysSet.Add(key)
 
 	if !key.Symbolic() {
