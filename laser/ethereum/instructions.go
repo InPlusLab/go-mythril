@@ -71,8 +71,7 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 
 	instr.ExePreHooks(globalState)
 	result := instr.Mutator(globalState)
-	a := globalState.WorldState.AccountsExistOrLoad(globalState.Environment.Address).Balance()
-	fmt.Println("balanceAddr:", a.BvString())
+
 	fmt.Println("PC:", globalState.Mstate.Pc)
 	fmt.Println("Address:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name)
 	// has the same function of StateTransition in instructions.go

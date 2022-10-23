@@ -193,7 +193,7 @@ func (evm *LaserEVM) SingleSymExec(creationCode string, runtimeCode string, cont
 	fmt.Println("Single Goroutine Symbolic Executing")
 	fmt.Println("")
 	// CreationTx
-	newAccount := ExecuteContractCreation(evm, creationCode, contractName, ctx)
+	newAccount := ExecuteContractCreation(evm, creationCode, contractName, ctx, false, nil)
 	// MessageTx
 	inputStrArr := support.GetArgsInstance().TransactionSequences
 	for i := 0; i < evm.TransactionCount; i++ {
@@ -207,7 +207,10 @@ func (evm *LaserEVM) MultiSymExec(creationCode string, runtimeCode string, contr
 	fmt.Println("Multi-Goroutines Symbolic Executing")
 	fmt.Println("")
 	// CreationTx
-	newAccount := ExecuteContractCreation(evm, creationCode, contractName, ctx)
+	newAccount := ExecuteContractCreation(evm, creationCode, contractName, ctx, true, cfg)
+	// Reset
+	evm.BeforeExecCh = make(chan Signal)
+	evm.AfterExecCh = make(chan Signal)
 	// MessageTx
 	inputStrArr := support.GetArgsInstance().TransactionSequences
 	for i := 0; i < evm.TransactionCount; i++ {
@@ -439,7 +442,7 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 	}
 }
 
-func ExecuteContractCreation(evm *LaserEVM, creationCode string, contractName string, ctx *z3.Context) *state.Account {
+func ExecuteContractCreation(evm *LaserEVM, creationCode string, contractName string, ctx *z3.Context, multiple bool, cfg *z3.Config) *state.Account {
 
 	worldState := state.NewWordState(ctx)
 	evm.OpenStates = append(evm.OpenStates, worldState)
@@ -467,7 +470,11 @@ func ExecuteContractCreation(evm *LaserEVM, creationCode string, contractName st
 
 	fmt.Println("########################################################################################")
 	fmt.Println("CreationTx Execute!")
-	evm.exec()
+	if !multiple {
+		evm.exec()
+	} else {
+		evm.multiExec(cfg)
+	}
 	fmt.Println("CreationTx End!")
 	fmt.Println("########################################################################################")
 

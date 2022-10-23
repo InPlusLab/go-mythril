@@ -6,7 +6,6 @@ import (
 	"go-mythril/laser/smt/z3"
 	"go-mythril/utils"
 	"strconv"
-	"strings"
 )
 
 type Account struct {
@@ -125,8 +124,8 @@ func (s *Storage) DeepCopy() *Storage {
 }
 func (s *Storage) GetItem(item *z3.Bitvec) *z3.Bitvec {
 	storage := s.StandardStorage
-
-	ctx := item.GetCtx()
+	fmt.Println("index:", item.BvString())
+	//ctx := item.GetCtx()
 	//itemV, _ := strconv.ParseInt(s.Address.Value(), 10, 64)
 	//storageKeysLoaded := s.StorageKeysLoaded
 	//inKeysLoaded := storageKeysLoaded.Contains(itemV)
@@ -147,10 +146,10 @@ func (s *Storage) GetItem(item *z3.Bitvec) *z3.Bitvec {
 		panic("can't get item in Storage using symbolic index!")
 	}
 	result := storage.GetItem(item).Simplify()
-	if strings.Contains(result.BvString(), "_") {
-		fmt.Println("StorageSymbolicResult: ", result.BvString())
-		return ctx.NewBitvecVal(0, 256)
-	}
+	//if strings.Contains(result.BvString(), "_") {
+	//	fmt.Println("StorageSymbolicResult: ", result.BvString())
+	//	return ctx.NewBitvecVal(0, 256)
+	//}
 	//itemStr := item.BvString()
 	//for k, v := range s.PrintableStorage {
 	//	if k.BvString() == itemStr {
