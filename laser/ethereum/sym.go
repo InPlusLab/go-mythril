@@ -12,6 +12,7 @@ import (
 	"go-mythril/laser/smt/z3"
 	"go-mythril/support"
 	"go-mythril/utils"
+	"reflect"
 	"strconv"
 	"sync"
 )
@@ -31,7 +32,9 @@ type LaserEVM struct {
 	TransactionCount int
 	WorkList         chan *state.GlobalState
 	OpenStates       []*state.WorldState
-	// FinalState       chan *state.GlobalState
+	//FinalState []*state.GlobalState
+	FinalState *state.GlobalState
+	//FinalState       chan *state.GlobalState
 	InstrPreHook  *map[string][]moduleExecFunc
 	InstrPostHook *map[string][]moduleExecFunc
 	/* Parallal */
@@ -60,7 +63,8 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		TransactionCount: TransactionCount,
 		WorkList:         make(chan *state.GlobalState, 1000),
 		OpenStates:       make([]*state.WorldState, 0),
-		// FinalState:       make(chan *state.GlobalState),
+		FinalState:       nil,
+		//FinalState:       make(chan *state.GlobalState),
 		InstrPreHook:  &preHook,
 		InstrPostHook: &postHook,
 
@@ -110,6 +114,16 @@ LOOP:
 		fmt.Println("==============================================================================")
 
 		if len(newStates) == 0 {
+			evm.FinalState = globalState
+			if "*state.MessageCallTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() {
+				// TODO
+				if opcode == "STOP" {
+					fmt.Println("txEnd: append ws!")
+					evm.OpenStates = append(evm.OpenStates, globalState.WorldState)
+					fmt.Println("openStatesLen:", len(evm.OpenStates))
+				}
+			}
+			//evm.FinalState = append(evm.FinalState,globalState)
 			modules.CheckPotentialIssues(globalState)
 			for _, detector := range evm.Loader.Modules {
 				issues := detector.GetIssues()
@@ -194,11 +208,21 @@ func (evm *LaserEVM) SingleSymExec(creationCode string, runtimeCode string, cont
 	fmt.Println("")
 	// CreationTx
 	newAccount := ExecuteContractCreation(evm, creationCode, contractName, ctx, false, nil)
-	index := ctx.NewBitvecVal(1, 256)
-	fmt.Println("afterCreationCall:", newAccount.Storage.GetItem(index).BvString())
+
 	// MessageTx
 	inputStrArr := support.GetArgsInstance().TransactionSequences
 	for i := 0; i < evm.TransactionCount; i++ {
+		fmt.Println("beforeMsgCall-OpenStatesLen:", len(evm.OpenStates))
+		tmpOpenStates := make([]*state.WorldState, 0)
+		for _, ws := range evm.OpenStates {
+			if ws.Constraints.IsPossible() {
+				tmpOpenStates = append(tmpOpenStates, ws)
+				fmt.Println(ws)
+			}
+		}
+		evm.OpenStates = tmpOpenStates
+		fmt.Println("afterMsgCall-OpenStatesLen:", len(evm.OpenStates))
+
 		fmt.Println("msgTx", i, ":start")
 		ExecuteMessageCall(evm, runtimeCode, inputStrArr[i], ctx, newAccount.Address, false, nil)
 		fmt.Println("msgTx", i, ":end")
@@ -216,6 +240,17 @@ func (evm *LaserEVM) MultiSymExec(creationCode string, runtimeCode string, contr
 	// MessageTx
 	inputStrArr := support.GetArgsInstance().TransactionSequences
 	for i := 0; i < evm.TransactionCount; i++ {
+		fmt.Println("beforeMsgCall-OpenStatesLen:", len(evm.OpenStates))
+		tmpOpenStates := make([]*state.WorldState, 0)
+		for _, ws := range evm.OpenStates {
+			if ws.Constraints.IsPossible() {
+				tmpOpenStates = append(tmpOpenStates, ws)
+				fmt.Println(ws)
+			}
+		}
+		evm.OpenStates = tmpOpenStates
+		fmt.Println("afterMsgCall-OpenStatesLen:", len(evm.OpenStates))
+
 		fmt.Println("msgTx", i, ":start")
 		ExecuteMessageCall(evm, runtimeCode, inputStrArr[i], ctx, newAccount.Address, true, cfg)
 		fmt.Println("msgTx", i, ":end")
@@ -360,6 +395,15 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 			fmt.Println("===========================================================================")
 			//if opcode == "STOP" || opcode == "RETURN" {
 			if len(newStates) == 0 {
+				if "*state.MessageCallTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() {
+					// TODO
+					if opcode == "STOP" {
+						evm.OpenStates = append(evm.OpenStates, globalState.WorldState)
+					}
+				}
+				//evm.FinalState = append(evm.FinalState, globalState)
+				evm.FinalState = globalState
+
 				modules.CheckPotentialIssues(globalState)
 				for _, detector := range evm.Loader.Modules {
 					issues := detector.GetIssues()
@@ -469,8 +513,6 @@ func ExecuteContractCreation(evm *LaserEVM, creationCode string, contractName st
 	}
 	setupGlobalStateForExecution(evm, tx)
 
-	newAccount := tx.CalleeAccount
-
 	fmt.Println("########################################################################################")
 	fmt.Println("CreationTx Execute!")
 	if !multiple {
@@ -481,44 +523,48 @@ func ExecuteContractCreation(evm *LaserEVM, creationCode string, contractName st
 	fmt.Println("CreationTx End!")
 	fmt.Println("########################################################################################")
 
+	// Tips: the final Storage pass
+	newAccount := evm.FinalState.Environment.ActiveAccount
+	evm.OpenStates = []*state.WorldState{evm.FinalState.WorldState}
+
 	return newAccount
 }
 
 func ExecuteMessageCall(evm *LaserEVM, runtimeCode string, inputStr string, ctx *z3.Context, address *z3.Bitvec, multiple bool, cfg *z3.Config) {
-	txId := state.GetNextTransactionId()
-	externalSender := ctx.NewBitvec("sender_"+txId, 256)
-	txCode := disassembler.NewDisasembly(runtimeCode)
-	fmt.Println("In msgId:", txId)
-	calldataList := make([]*z3.Bitvec, 0)
-	for i := 0; i < len(inputStr); i = i + 2 {
-		val, _ := strconv.ParseInt(inputStr[i:i+2], 16, 10)
-		calldataList = append(calldataList, ctx.NewBitvecVal(val, 8))
+
+	if len(evm.OpenStates) <= 0 {
+		panic("ExecuteMessageCall empty openStates!")
+	}
+	for _, openState := range evm.OpenStates {
+		txId := state.GetNextTransactionId()
+		externalSender := ctx.NewBitvec("sender_"+txId, 256)
+		txCode := disassembler.NewDisasembly(runtimeCode)
+		fmt.Println("In msgId:", txId)
+		calldataList := make([]*z3.Bitvec, 0)
+		for i := 0; i < len(inputStr); i = i + 2 {
+			val, _ := strconv.ParseInt(inputStr[i:i+2], 16, 10)
+			calldataList = append(calldataList, ctx.NewBitvecVal(val, 8))
+		}
+		tx := &state.MessageCallTransaction{
+			WorldState:    openState.Translate(ctx),
+			Code:          txCode,
+			CalleeAccount: openState.Translate(ctx).AccountsExistOrLoad(address.Translate(ctx)),
+			Caller:        externalSender,
+			Calldata:      state.NewSymbolicCalldata(txId, ctx),
+			//Calldata: NewConcreteCalldata(txId, calldataList, ctx),
+			GasPrice:  10,
+			GasLimit:  8000000,
+			CallValue: 0,
+			Origin:    externalSender,
+			Basefee:   ctx.NewBitvecVal(1000, 256),
+			Ctx:       ctx,
+			Id:        txId,
+		}
+		setupGlobalStateForExecution(evm, tx)
 	}
 
-	var openState *state.WorldState
-	if len(evm.OpenStates) > 0 {
-		openState = evm.OpenStates[0]
-	} else {
-		panic("empty openStates for msgTx!")
-	}
+	evm.OpenStates = make([]*state.WorldState, 0)
 
-	tx := &state.MessageCallTransaction{
-		WorldState:    openState,
-		Code:          txCode,
-		CalleeAccount: openState.AccountsExistOrLoad(address),
-		Caller:        externalSender,
-		Calldata:      state.NewSymbolicCalldata(txId, ctx),
-		//Calldata: NewConcreteCalldata(txId, calldataList, ctx),
-		GasPrice:  10,
-		GasLimit:  8000000,
-		CallValue: 0,
-		Origin:    externalSender,
-		Basefee:   ctx.NewBitvecVal(1000, 256),
-		Ctx:       ctx,
-		Id:        txId,
-	}
-	//tx.WorldState.TransactionSequence = append(tx.WorldState.TransactionSequence, tx)
-	setupGlobalStateForExecution(evm, tx)
 	fmt.Println("########################################################################################")
 	fmt.Println("MessageTx Execute!")
 	if !multiple {

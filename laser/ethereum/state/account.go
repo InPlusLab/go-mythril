@@ -1,7 +1,6 @@
 package state
 
 import (
-	"fmt"
 	"go-mythril/disassembler"
 	"go-mythril/laser/smt/z3"
 	"go-mythril/utils"
@@ -123,11 +122,8 @@ func (s *Storage) DeepCopy() *Storage {
 	default:
 		concrete = false
 	}
-	fmt.Println("InStorageDeepCopy:", concrete)
 	newStorage := NewStorage(s.Address, concrete)
 	for k, v := range s.PrintableStorage {
-		fmt.Println("(index-value)")
-		fmt.Println(k.BvString(), v.BvString())
 		newStorage.StandardStorage.SetItem(k, v)
 		newStorage.PrintableStorage[k] = v
 	}
@@ -157,6 +153,7 @@ func (s *Storage) GetItem(item *z3.Bitvec) *z3.Bitvec {
 	//	s.PrintableStorage[item] = value
 	//}
 	if item.Symbolic() {
+		//fmt.Println("get item in Storage using symbolic index!")
 		panic("can't get item in Storage using symbolic index!")
 	}
 	result := storage.GetItem(item).Simplify()

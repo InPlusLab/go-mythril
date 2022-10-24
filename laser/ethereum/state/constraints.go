@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"go-mythril/laser/smt/z3"
 )
 
@@ -32,8 +33,14 @@ func (c *Constraints) DeepCopy() *Constraints {
 }
 
 func (c *Constraints) IsPossible() bool {
-	// TODO: z3 solve
-	return true
+	if len(c.ConstraintList) <= 0 {
+		fmt.Println("In isPossible: empty Constraints")
+		return false
+	} else {
+		ctx := z3.GetBoolCtx(c.ConstraintList[0])
+		_, ok := GetModel(c, make([]*z3.Bool, 0), make([]*z3.Bool, 0), false, ctx)
+		return ok
+	}
 }
 
 func (c *Constraints) Add(constraints ...*z3.Bool) bool {

@@ -50,13 +50,17 @@ func (globalState *GlobalState) Copy() *GlobalState {
 	//	LastReturnData: globalState.LastReturnData,
 	//	Annotations:    anno,
 	//}
+	fmt.Println("globalStateCopy!")
 	newAnnotations := make([]StateAnnotation, 0)
 	for _, anno := range globalState.Annotations {
 		newAnnotations = append(newAnnotations, anno)
 	}
+	newWs := globalState.WorldState.Copy()
+	newEnv := globalState.Environment.Copy()
+	newEnv.ActiveAccount = newWs.AccountsExistOrLoad(newEnv.ActiveAccount.Address)
 	return &GlobalState{
-		WorldState:     globalState.WorldState.Copy(),
-		Environment:    globalState.Environment.Copy(),
+		WorldState:     newWs,
+		Environment:    newEnv,
 		Mstate:         globalState.Mstate.DeepCopy(),
 		TxStack:        globalState.TxStack,
 		Z3ctx:          globalState.Z3ctx,

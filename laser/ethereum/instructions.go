@@ -82,26 +82,20 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	}
 	instr.ExePostHooks(globalState)
 
-	for _, state := range result {
-		// For debug
-		//fmt.Println("Print:", globalState.GetCurrentInstruction().OpCode.Name)
-		state.Mstate.Stack.PrintStackOneLine()
-		//state.Mstate.Stack.PrintStack()
-		//for i, con := range state.WorldState.Constraints.ConstraintList {
-		//	if i==3{
-		//		fmt.Println("PrintCons:", con.BoolString())
-		//	}
-		//}
-		//state.Mstate.Memory.PrintMemoryOneLine()
-		//state.Mstate.Memory.PrintMemory()
-	}
-	fmt.Println("------------------------------------------------------------")
-
-	//if globalState.Mstate.Pc == 220 {
-	//	fmt.Println(globalState.Mstate.Pc, globalState, globalState.GetCurrentInstruction().OpCode.Name)
-	//	fmt.Println(globalState.Mstate.Pc,"done", globalState, globalState.GetCurrentInstruction().OpCode.Name)
-	//	panic("sstop 220")
+	//for _, state := range result {
+	//	// For debug
+	//	//fmt.Println("Print:", globalState.GetCurrentInstruction().OpCode.Name)
+	//	state.Mstate.Stack.PrintStackOneLine()
+	//	//state.Mstate.Stack.PrintStack()
+	//	//for i, con := range state.WorldState.Constraints.ConstraintList {
+	//	//	if i==3{
+	//	//		fmt.Println("PrintCons:", con.BoolString())
+	//	//	}
+	//	//}
+	//	//state.Mstate.Memory.PrintMemoryOneLine()
+	//	//state.Mstate.Memory.PrintMemory()
 	//}
+	fmt.Println("------------------------------------------------------------")
 
 	return result
 }
@@ -1364,6 +1358,7 @@ func (instr *Instruction) sload_(globalState *state.GlobalState) []*state.Global
 	index := mstate.Stack.Pop()
 	// TODO: DynLoader to get the storage ?
 	//globalState.Environment.ActiveAccount.Storage.SetItem(index, globalState.Z3ctx.NewBitvecVal(0, 256))
+	fmt.Println("sload_")
 	fmt.Println("index:", index.BvString())
 	fmt.Println("value:", globalState.Environment.ActiveAccount.Storage.GetItem(index).Translate(globalState.Z3ctx).BvString())
 	mstate.Stack.Append(globalState.Environment.ActiveAccount.Storage.GetItem(index).Translate(globalState.Z3ctx))
@@ -1380,7 +1375,7 @@ func (instr *Instruction) sstore_(globalState *state.GlobalState) []*state.Globa
 	value := mstate.Stack.Pop()
 
 	fmt.Println("sstore_:")
-	fmt.Println(index.BvString(), value.BvString())
+	fmt.Println("index:", index.BvString(), "-", value.BvString())
 	globalState.Environment.ActiveAccount.Storage.SetItem(index, value)
 
 	ret = append(ret, globalState)
@@ -1481,6 +1476,15 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 		newState.LastReturnData = &returnData
 
 		fmt.Println("negativeState:", newState)
+		//if globalState.GetCurrentInstruction().Address == 1736 {
+		//	if newState.GetCurrentInstruction().OpCode.Name != "TIMESTAMP" {
+		//		ret = append(ret, newState)
+		//	}else{
+		//		fmt.Println("isTimestamp 1736-1737 fuck!")
+		//	}
+		//}else{
+		//	ret = append(ret, newState)
+		//}
 		ret = append(ret, newState)
 	} else {
 		fmt.Println("Pruned unreachable states.")
