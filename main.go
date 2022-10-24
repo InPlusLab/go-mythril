@@ -17,7 +17,7 @@ func main() {
 	fmt.Println("go mythril")
 
 	LOADER := module.NewModuleLoader()
-	evm := ethereum.NewLaserEVM(1, 1, 2, LOADER)
+	evm := ethereum.NewLaserEVM(1, 1, 1, LOADER)
 
 	// Set the inputStr for each tx
 	args := support.GetArgsInstance()

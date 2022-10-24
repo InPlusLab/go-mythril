@@ -56,7 +56,7 @@ func (globalState *GlobalState) Copy() *GlobalState {
 	}
 	return &GlobalState{
 		WorldState:     globalState.WorldState.Copy(),
-		Environment:    globalState.Environment,
+		Environment:    globalState.Environment.Copy(),
 		Mstate:         globalState.Mstate.DeepCopy(),
 		TxStack:        globalState.TxStack,
 		Z3ctx:          globalState.Z3ctx,

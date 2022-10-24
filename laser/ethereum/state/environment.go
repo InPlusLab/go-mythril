@@ -49,20 +49,25 @@ func NewEnvironment(code *disassembler.Disasembly,
 
 // shallow copy
 func (env *Environment) Copy() *Environment {
+	newStack := make([]*z3.Bitvec, 0)
+	for _, v := range env.Stack {
+		newStack = append(newStack, v)
+	}
 	return &Environment{
-		Code:           env.Code,
-		ActiveAccount:  env.ActiveAccount,
-		Address:        env.Address,
-		Sender:         env.Sender,
+		Code: env.Code,
+		//ActiveAccount:  env.ActiveAccount.Copy(),
+		ActiveAccount:  env.ActiveAccount.Copy(),
+		Address:        env.Address.Copy(),
+		Sender:         env.Sender.Copy(),
 		Calldata:       env.Calldata,
 		GasPrice:       env.GasPrice,
 		CallValue:      env.CallValue,
-		Origin:         env.Origin,
-		Basefee:        env.Basefee,
-		ChainId:        env.ChainId,
-		BlockNumber:    env.BlockNumber,
+		Origin:         env.Origin.Copy(),
+		Basefee:        env.Basefee.Copy(),
+		ChainId:        env.ChainId.Copy(),
+		BlockNumber:    env.BlockNumber.Copy(),
 		ActiveFuncName: env.ActiveFuncName,
-		Stack:          env.Stack,
+		Stack:          newStack,
 	}
 }
 

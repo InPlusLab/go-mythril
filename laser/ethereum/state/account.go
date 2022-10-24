@@ -28,15 +28,24 @@ func NewAccount(addr *z3.Bitvec, balances *z3.Array, concreteStorage bool, code 
 	}
 }
 func (acc *Account) Copy() *Account {
-	tmp := &Account{
-		Address:      acc.Address,
-		Code:         acc.Code,
-		Balances:     acc.Balances,
-		Storage:      acc.Storage.DeepCopy(),
+	//tmp := &Account{
+	//	Address:      acc.Address,
+	//	Code:         acc.Code,
+	//	Balances:     acc.Balances.DeepCopy().(*z3.Array),
+	//	//Storage:      acc.Storage.DeepCopy(),
+	//	Storage: acc.Storage,
+	//	ContractName: acc.ContractName,
+	//	Deleted:      acc.Deleted,
+	//}
+	return &Account{
+		Address:  acc.Address,
+		Code:     acc.Code,
+		Balances: acc.Balances.DeepCopy().(*z3.Array),
+		Storage:  acc.Storage.DeepCopy(),
+		//Storage: acc.Storage,
 		ContractName: acc.ContractName,
 		Deleted:      acc.Deleted,
 	}
-	return tmp
 }
 func (acc *Account) Translate(ctx *z3.Context) *Account {
 	//return &Account{
@@ -114,17 +123,22 @@ func (s *Storage) DeepCopy() *Storage {
 	default:
 		concrete = false
 	}
+	fmt.Println("InStorageDeepCopy:", concrete)
 	newStorage := NewStorage(s.Address, concrete)
-	newStorage.StandardStorage = s.StandardStorage.DeepCopy()
-	newStorage.PrintableStorage = s.PrintableStorage
-	newStorage.StorageKeysLoaded = s.StorageKeysLoaded
-	newStorage.KeysSet = s.KeysSet
+	for k, v := range s.PrintableStorage {
+		fmt.Println("(index-value)")
+		fmt.Println(k.BvString(), v.BvString())
+		newStorage.StandardStorage.SetItem(k, v)
+		newStorage.PrintableStorage[k] = v
+	}
+	newStorage.StorageKeysLoaded = s.StorageKeysLoaded.Copy()
+	newStorage.KeysSet = s.KeysSet.Copy()
 
 	return newStorage
 }
 func (s *Storage) GetItem(item *z3.Bitvec) *z3.Bitvec {
 	storage := s.StandardStorage
-	fmt.Println("index:", item.BvString())
+
 	//ctx := item.GetCtx()
 	//itemV, _ := strconv.ParseInt(s.Address.Value(), 10, 64)
 	//storageKeysLoaded := s.StorageKeysLoaded

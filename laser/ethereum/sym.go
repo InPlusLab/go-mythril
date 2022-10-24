@@ -194,6 +194,8 @@ func (evm *LaserEVM) SingleSymExec(creationCode string, runtimeCode string, cont
 	fmt.Println("")
 	// CreationTx
 	newAccount := ExecuteContractCreation(evm, creationCode, contractName, ctx, false, nil)
+	index := ctx.NewBitvecVal(1, 256)
+	fmt.Println("afterCreationCall:", newAccount.Storage.GetItem(index).BvString())
 	// MessageTx
 	inputStrArr := support.GetArgsInstance().TransactionSequences
 	for i := 0; i < evm.TransactionCount; i++ {
@@ -448,6 +450,7 @@ func ExecuteContractCreation(evm *LaserEVM, creationCode string, contractName st
 	evm.OpenStates = append(evm.OpenStates, worldState)
 	ACTORS := transaction.NewActors(ctx)
 	txId := state.GetNextTransactionId()
+	fmt.Println("In creationId:", txId)
 	account := worldState.CreateAccount(0, true, ACTORS.GetCreator(), nil, nil, contractName)
 
 	tx := &state.ContractCreationTransaction{
@@ -485,7 +488,7 @@ func ExecuteMessageCall(evm *LaserEVM, runtimeCode string, inputStr string, ctx 
 	txId := state.GetNextTransactionId()
 	externalSender := ctx.NewBitvec("sender_"+txId, 256)
 	txCode := disassembler.NewDisasembly(runtimeCode)
-
+	fmt.Println("In msgId:", txId)
 	calldataList := make([]*z3.Bitvec, 0)
 	for i := 0; i < len(inputStr); i = i + 2 {
 		val, _ := strconv.ParseInt(inputStr[i:i+2], 16, 10)
