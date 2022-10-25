@@ -4,7 +4,6 @@ import (
 	"go-mythril/disassembler"
 	"go-mythril/laser/smt/z3"
 	"go-mythril/utils"
-	"strconv"
 )
 
 type Account struct {
@@ -195,9 +194,9 @@ func (s *Storage) SetItem(key *z3.Bitvec, value *z3.Bitvec) {
 	s.KeysSet.Add(key)
 	s.KeysArr = append(s.KeysArr, key)
 
-	if !key.Symbolic() {
-		keyV, _ := strconv.ParseInt(key.Value(), 10, 64)
-		storageKeysLoaded := s.StorageKeysLoaded
-		storageKeysLoaded.Add(keyV)
-	}
+	//if !key.Symbolic() {
+	//	keyV, _ := strconv.ParseInt(key.Value(), 10, 64)
+	//	storageKeysLoaded := s.StorageKeysLoaded
+	//	storageKeysLoaded.Add(keyV)
+	//}
 }

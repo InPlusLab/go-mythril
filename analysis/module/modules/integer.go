@@ -197,7 +197,6 @@ func (dm *IntegerArithmetics) _handel_sstore(globalState *state.GlobalState) {
 	value := stack.RawStack[stack.Length()-2]
 	stateAnnotation := getOverflowUnderflowStateAnnotation(globalState)
 	for _, annotation := range value.Annotations.Elements() {
-		fmt.Println(reflect.TypeOf(annotation).String(), "addAnnoStore")
 		if reflect.TypeOf(annotation).String() == "modules.OverUnderflowAnnotation" {
 			stateAnnotation.OverflowingStateAnnotations.Add(annotation)
 		}
@@ -208,12 +207,9 @@ func (dm *IntegerArithmetics) _handel_jumpi(globalState *state.GlobalState) {
 	stack := globalState.Mstate.Stack
 	value := stack.RawStack[stack.Length()-2]
 	stateAnnotation := getOverflowUnderflowStateAnnotation(globalState)
-	fmt.Println("handel_jumpi", value.Annotations.Len())
 	//fmt.Println(stateAnnotation, " ", stateAnnotation.OverflowingStateAnnotations.Len())
 	for _, annotation := range value.Annotations.Elements() {
-		fmt.Println(reflect.TypeOf(annotation).String(), "addAnnoJumpi")
 		if reflect.TypeOf(annotation).String() == "modules.OverUnderflowAnnotation" {
-			fmt.Println("addInglobaleStateAnno")
 			stateAnnotation.OverflowingStateAnnotations.Add(annotation)
 			fmt.Println(stateAnnotation, " ", stateAnnotation.OverflowingStateAnnotations.Len())
 		}
@@ -225,7 +221,6 @@ func (dm *IntegerArithmetics) _handel_call(globalState *state.GlobalState) {
 	value := stack.RawStack[stack.Length()-3]
 	stateAnnotation := getOverflowUnderflowStateAnnotation(globalState)
 	for _, annotation := range value.Annotations.Elements() {
-		fmt.Println(reflect.TypeOf(annotation).String(), "addAnnoCall")
 		if reflect.TypeOf(annotation).String() == "modules.OverUnderflowAnnotation" {
 			stateAnnotation.OverflowingStateAnnotations.Add(annotation)
 		}
@@ -243,23 +238,18 @@ func (dm *IntegerArithmetics) _handel_return(globalState *state.GlobalState) {
 
 	for _, element := range globalState.Mstate.Memory.GetItems(offsetV, offsetV+lengthV) {
 		for _, annotation := range element.Annotations.Elements() {
-			fmt.Println(reflect.TypeOf(annotation).String(), "addAnnoReturn")
 			if reflect.TypeOf(annotation).String() == "modules.OverUnderflowAnnotation" {
 				stateAnnotation.OverflowingStateAnnotations.Add(annotation)
 			}
 		}
 	}
-	fmt.Println("handelReturn")
 }
 
 func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalState) {
 	stateAnnotation := getOverflowUnderflowStateAnnotation(globalState)
 	for _, annotation := range stateAnnotation.OverflowingStateAnnotations.Elements() {
-		fmt.Println("iterableInEnd!")
 		ostate := annotation.(OverUnderflowAnnotation).OverflowingState
-		fmt.Println("ostateAddress:", ostate.GetCurrentInstruction().Address)
 		if dm.OstatesUnsatisfiable.Contains(ostate) {
-			fmt.Println("contains")
 			continue
 		}
 
@@ -327,7 +317,6 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 		address := getAddressFromState(ostate)
 		dm.Cache.Add(address)
 		//dm.Issues = append(dm.Issues, issue)
-		fmt.Println("integerOverflow push:", address, &ostate)
 		dm.Issues.Append(issue)
 		fmt.Println(dm.Issues)
 	}

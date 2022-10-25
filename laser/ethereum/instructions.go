@@ -269,7 +269,6 @@ func (instr *Instruction) Mutator(globalState *state.GlobalState) []*state.Globa
 	} else if instr.Opcode == "INVALID" {
 		instr.invalid_(globalState)
 		ret := make([]*state.GlobalState, 0)
-		ret = append(ret, globalState)
 		return ret
 	} else if instr.Opcode == "STOP" {
 		instr.stop_(globalState)
@@ -1476,10 +1475,13 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 		newState.LastReturnData = &returnData
 
 		fmt.Println("negativeState:", newState)
-
-		ret = append(ret, newState)
+		if newState.WorldState.Constraints.IsPossible() {
+			ret = append(ret, newState)
+		} else {
+			fmt.Println("negativeStateGet, but ws.Constraints isn't possible")
+		}
 	} else {
-		fmt.Println("Pruned unreachable states.")
+		fmt.Println("Pruned unreachable states-negative.")
 	}
 
 	// True case
@@ -1505,9 +1507,13 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 			newState.LastReturnData = &returnData
 
 			fmt.Println("positiveState:", newState)
-			ret = append(ret, newState)
+			if newState.WorldState.Constraints.IsPossible() {
+				ret = append(ret, newState)
+			} else {
+				fmt.Println("positiveStateGet, but ws.Constraints isn't possible")
+			}
 		} else {
-			fmt.Println("Pruned unreachable states!")
+			fmt.Println("Pruned unreachable states-positive")
 		}
 	}
 	return ret

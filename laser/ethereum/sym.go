@@ -106,9 +106,18 @@ LOOP:
 		newStates, opcode := evm.ExecuteState(globalState)
 		fmt.Println(id, globalState, opcode)
 
+		// If args.sparse_pruning is False:
+		//newPossibleStates := make([]*state.GlobalState, 0)
 		for _, newState := range newStates {
+			//if newState.WorldState.Constraints.IsPossible(){
+			//	newPossibleStates = append(newPossibleStates, newState)
+			//}
 			evm.WorkList <- newState
 		}
+		//fmt.Println("newPossibleStatesLen:", len(newPossibleStates))
+		//for _, newState := range newPossibleStates {
+		//	evm.WorkList <- newState
+		//}
 
 		fmt.Println(id, "done", globalState, opcode)
 		fmt.Println("==============================================================================")
@@ -116,7 +125,7 @@ LOOP:
 		if len(newStates) == 0 {
 			evm.FinalState = globalState
 			if "*state.MessageCallTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() {
-				if opcode != "REVERT" {
+				if opcode != "REVERT" && opcode != "INVALID" {
 					fmt.Println("txEnd: append ws!")
 					evm.OpenStates = append(evm.OpenStates, globalState.WorldState)
 					fmt.Println("openStatesLen:", len(evm.OpenStates))
@@ -124,23 +133,23 @@ LOOP:
 			}
 			//evm.FinalState = append(evm.FinalState,globalState)
 			modules.CheckPotentialIssues(globalState)
-			for _, detector := range evm.Loader.Modules {
-				issues := detector.GetIssues()
-				if len(issues) > 0 {
-					fmt.Println("number of issues:", len(issues))
-				}
-				for _, issue := range issues {
-					fmt.Println("+++++++++++++++++++++++++++++++++++")
-					fmt.Println("ContractName:", issue.Contract)
-					fmt.Println("FunctionName:", issue.FunctionName)
-					fmt.Println("Title:", issue.Title)
-					fmt.Println("SWCID:", issue.SWCID)
-					fmt.Println("Address:", issue.Address)
-					fmt.Println("Severity:", issue.Severity)
-					fmt.Println("DescriptionHead:", issue.DescriptionHead)
-				}
-			}
-			fmt.Println("+++++++++++++++++++++++++++++++++++")
+			//for _, detector := range evm.Loader.Modules {
+			//	issues := detector.GetIssues()
+			//	if len(issues) > 0 {
+			//		fmt.Println("number of issues:", len(issues))
+			//	}
+			//	for _, issue := range issues {
+			//		fmt.Println("+++++++++++++++++++++++++++++++++++")
+			//		fmt.Println("ContractName:", issue.Contract)
+			//		fmt.Println("FunctionName:", issue.FunctionName)
+			//		fmt.Println("Title:", issue.Title)
+			//		fmt.Println("SWCID:", issue.SWCID)
+			//		fmt.Println("Address:", issue.Address)
+			//		fmt.Println("Severity:", issue.Severity)
+			//		fmt.Println("DescriptionHead:", issue.DescriptionHead)
+			//	}
+			//}
+			//fmt.Println("+++++++++++++++++++++++++++++++++++")
 		}
 		id++
 	}
@@ -232,16 +241,17 @@ func (evm *LaserEVM) MultiSymExec(creationCode string, runtimeCode string, contr
 	fmt.Println("Multi-Goroutines Symbolic Executing")
 	fmt.Println("")
 	// CreationTx
-	newAccount := ExecuteContractCreation(evm, creationCode, contractName, ctx, true, cfg)
+	newAccount := ExecuteContractCreation(evm, creationCode, contractName, ctx, false, nil)
 	// Reset
-	evm.BeforeExecCh = make(chan Signal)
-	evm.AfterExecCh = make(chan Signal)
+	//evm.BeforeExecCh = make(chan Signal)
+	//evm.AfterExecCh = make(chan Signal)
 	// MessageTx
 	inputStrArr := support.GetArgsInstance().TransactionSequences
 	for i := 0; i < evm.TransactionCount; i++ {
 		fmt.Println("beforeMsgCall-OpenStatesLen:", len(evm.OpenStates))
 		tmpOpenStates := make([]*state.WorldState, 0)
 		for _, ws := range evm.OpenStates {
+			//tmpWs := ws.Translate(ctx)
 			if ws.Constraints.IsPossible() {
 				tmpOpenStates = append(tmpOpenStates, ws)
 				fmt.Println(ws)
@@ -396,7 +406,7 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 			//if opcode == "STOP" || opcode == "RETURN" {
 			if len(newStates) == 0 {
 				if "*state.MessageCallTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() {
-					if opcode != "REVERT" {
+					if opcode != "REVERT" && opcode != "INVALID" {
 						evm.OpenStates = append(evm.OpenStates, globalState.WorldState)
 					}
 				}
@@ -404,23 +414,23 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 				evm.FinalState = globalState
 
 				modules.CheckPotentialIssues(globalState)
-				for _, detector := range evm.Loader.Modules {
-					issues := detector.GetIssues()
-					if len(issues) > 0 {
-						fmt.Println("number of issues:", len(issues))
-					}
-					for _, issue := range issues {
-						fmt.Println("+++++++++++++++++++++++++++++++++++", id)
-						fmt.Println("ContractName:", issue.Contract)
-						fmt.Println("FunctionName:", issue.FunctionName)
-						fmt.Println("Title:", issue.Title)
-						fmt.Println("SWCID:", issue.SWCID)
-						fmt.Println("Address:", issue.Address)
-						fmt.Println("Severity:", issue.Severity)
-					}
-				}
-
-				fmt.Println("+++++++++++++++++++++++++++++++++++")
+				//for _, detector := range evm.Loader.Modules {
+				//	issues := detector.GetIssues()
+				//	if len(issues) > 0 {
+				//		fmt.Println("number of issues:", len(issues))
+				//	}
+				//	for _, issue := range issues {
+				//		fmt.Println("+++++++++++++++++++++++++++++++++++", id)
+				//		fmt.Println("ContractName:", issue.Contract)
+				//		fmt.Println("FunctionName:", issue.FunctionName)
+				//		fmt.Println("Title:", issue.Title)
+				//		fmt.Println("SWCID:", issue.SWCID)
+				//		fmt.Println("Address:", issue.Address)
+				//		fmt.Println("Severity:", issue.Severity)
+				//	}
+				//}
+				//
+				//fmt.Println("+++++++++++++++++++++++++++++++++++")
 
 				// when the other goroutines have no globalStates to solve.
 				//l.Lock()
