@@ -50,7 +50,6 @@ func (globalState *GlobalState) Copy() *GlobalState {
 	//	LastReturnData: globalState.LastReturnData,
 	//	Annotations:    anno,
 	//}
-	fmt.Println("globalStateCopy!")
 	newAnnotations := make([]StateAnnotation, 0)
 	for _, anno := range globalState.Annotations {
 		newAnnotations = append(newAnnotations, anno)

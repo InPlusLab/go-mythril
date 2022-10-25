@@ -143,8 +143,6 @@ func main() {
 	//Config.Close()
 	//defer ctx.Close()
 
-	//z3.SetGlobalPram("parallel.enable", "true")
-
 	start := time.Now()
 	evm.SingleSymExec(creationCode, runtimeCode, "CHZ", ctx)
 	//evm.MultiSymExec(creationCode, runtimeCode, "CHZ", ctx, config)

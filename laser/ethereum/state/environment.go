@@ -72,19 +72,29 @@ func (env *Environment) Copy() *Environment {
 }
 
 func (env *Environment) Translate(ctx *z3.Context) *Environment {
-	return &Environment{
-		Code:           env.Code,
-		ActiveAccount:  env.ActiveAccount.Translate(ctx),
-		Address:        env.Address.Translate(ctx),
-		Sender:         env.Sender.Translate(ctx),
-		Calldata:       env.Calldata.Translate(ctx),
-		GasPrice:       env.GasPrice,
-		CallValue:      env.CallValue,
-		Origin:         env.Origin.Translate(ctx),
-		Basefee:        env.Basefee.Translate(ctx),
-		ChainId:        env.ChainId.Translate(ctx),
-		BlockNumber:    env.BlockNumber.Translate(ctx),
-		ActiveFuncName: env.ActiveFuncName,
-		Stack:          env.Stack,
-	}
+	//return &Environment{
+	//	Code:           env.Code,
+	//	ActiveAccount:  env.ActiveAccount.Translate(ctx),
+	//	Address:        env.Address.Translate(ctx),
+	//	Sender:         env.Sender.Translate(ctx),
+	//	Calldata:       env.Calldata.Translate(ctx),
+	//	GasPrice:       env.GasPrice,
+	//	CallValue:      env.CallValue,
+	//	Origin:         env.Origin.Translate(ctx),
+	//	Basefee:        env.Basefee.Translate(ctx),
+	//	ChainId:        env.ChainId.Translate(ctx),
+	//	BlockNumber:    env.BlockNumber.Translate(ctx),
+	//	ActiveFuncName: env.ActiveFuncName,
+	//	Stack:          env.Stack,
+	//}
+	env.ActiveAccount = env.ActiveAccount.Translate(ctx)
+	env.Address = env.Address.Translate(ctx)
+	env.Sender = env.Sender.Translate(ctx)
+	env.Calldata = env.Calldata.Translate(ctx)
+	env.Origin = env.Origin.Translate(ctx)
+	env.Basefee = env.Basefee.Translate(ctx)
+	env.ChainId = env.ChainId.Translate(ctx)
+	env.BlockNumber = env.BlockNumber.Translate(ctx)
+
+	return env
 }

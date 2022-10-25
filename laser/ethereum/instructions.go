@@ -1476,15 +1476,7 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 		newState.LastReturnData = &returnData
 
 		fmt.Println("negativeState:", newState)
-		//if globalState.GetCurrentInstruction().Address == 1736 {
-		//	if newState.GetCurrentInstruction().OpCode.Name != "TIMESTAMP" {
-		//		ret = append(ret, newState)
-		//	}else{
-		//		fmt.Println("isTimestamp 1736-1737 fuck!")
-		//	}
-		//}else{
-		//	ret = append(ret, newState)
-		//}
+
 		ret = append(ret, newState)
 	} else {
 		fmt.Println("Pruned unreachable states.")

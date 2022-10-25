@@ -62,7 +62,6 @@ func (ws *WorldState) Copy() *WorldState {
 	for _, acc := range ws.Accounts {
 		resWs.PutAccount(acc.Copy())
 	}
-
 	return resWs
 }
 
@@ -108,16 +107,20 @@ func (ws *WorldState) Translate(ctx *z3.Context) *WorldState {
 		newV := v.Translate(ctx)
 		newConstraints.Add(newV)
 	}
-	newAccouts := make(map[string]*Account)
+	newAccounts := make(map[string]*Account)
 	for i, v := range ws.Accounts {
-		newAccouts[i] = v.Translate(ctx)
+		newAccounts[i] = v.Translate(ctx)
 	}
-
-	return &WorldState{
-		Accounts:            newAccouts,
-		Balances:            ws.Balances.Translate(ctx).(*z3.Array),
-		StartingBalances:    ws.StartingBalances.Translate(ctx).(*z3.Array),
-		Constraints:         newConstraints,
-		TransactionSequence: ws.TransactionSequence,
-	}
+	//return &WorldState{
+	//	Accounts:            newAccouts,
+	//	Balances:            ws.Balances.Translate(ctx).(*z3.Array),
+	//	StartingBalances:    ws.StartingBalances.Translate(ctx).(*z3.Array),
+	//	Constraints:         newConstraints,
+	//	TransactionSequence: ws.TransactionSequence,
+	//}
+	ws.Accounts = newAccounts
+	ws.Balances = ws.Balances.Translate(ctx).(*z3.Array)
+	ws.StartingBalances = ws.StartingBalances.Translate(ctx).(*z3.Array)
+	ws.Constraints = newConstraints
+	return ws
 }

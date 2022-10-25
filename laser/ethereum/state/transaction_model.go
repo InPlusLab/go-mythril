@@ -123,21 +123,20 @@ func (tx *MessageCallTransaction) InitialGlobalStateFromEnvironment(worldState *
 
 	// Tips: Account is always the same Account in environment and worldState.Accounts.
 	// Tips: So the last round the content of Account may be already translated.
-	env.ActiveAccount = env.ActiveAccount.Translate(tx.Ctx)
+	//env.ActiveAccount = env.ActiveAccount.Translate(tx.Ctx)
+	//globalState.Translate(tx.Ctx)
 
 	// make sure the value of sender is enough
 	sender := env.Sender
 	receiver := env.ActiveAccount.Address
 	//value := tx.Ctx.NewBitvecVal(env.CallValue, 256)
-	value := tx.GetCallValue()
+	value := tx.GetCallValue().Translate(tx.Ctx)
 	constrain := globalState.WorldState.Balances.GetItem(sender).BvUGe(value)
 	globalState.WorldState.Constraints.Add(constrain)
 	receiverV := globalState.WorldState.Balances.GetItem(receiver)
 	senderV := globalState.WorldState.Balances.GetItem(sender)
-
 	globalState.WorldState.Balances.SetItem(receiver, receiverV.BvAdd(value).Simplify())
 	globalState.WorldState.Balances.SetItem(sender, senderV.BvSub(value).Simplify())
-
 	return globalState
 }
 

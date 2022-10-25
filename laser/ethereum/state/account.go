@@ -71,11 +71,13 @@ func (acc *Account) SetBalance(balance *z3.Bitvec) {
 type Storage struct {
 	Address          *z3.Bitvec
 	StandardStorage  z3.BaseArray
-	PrintableStorage map[*z3.Bitvec]*z3.Bitvec
+	PrintableStorage map[string]*z3.Bitvec
 	// set(int)
 	StorageKeysLoaded *utils.Set
 	// set(bv)
 	KeysSet *utils.Set
+	// set(bv)
+	KeysArr []*z3.Bitvec
 }
 
 func NewStorage(addr *z3.Bitvec, concrete bool) *Storage {
@@ -92,26 +94,34 @@ func NewStorage(addr *z3.Bitvec, concrete bool) *Storage {
 	return &Storage{
 		Address:           addr,
 		StandardStorage:   sstorage,
-		PrintableStorage:  make(map[*z3.Bitvec]*z3.Bitvec),
+		PrintableStorage:  make(map[string]*z3.Bitvec),
 		StorageKeysLoaded: utils.NewSet(),
 		KeysSet:           utils.NewSet(),
+		KeysArr:           make([]*z3.Bitvec, 0),
 	}
 }
 func (s *Storage) Translate(ctx *z3.Context) *Storage {
-	newPrintableStorage := make(map[*z3.Bitvec]*z3.Bitvec)
-	for i, v := range s.PrintableStorage {
-		newPrintableStorage[i.Translate(ctx)] = v.Translate(ctx)
+	newKeysArr := make([]*z3.Bitvec, 0)
+	for _, k := range s.KeysArr {
+		key := k.Translate(ctx)
+		newKeysArr = append(newKeysArr, key)
+		pV, ok := s.PrintableStorage[key.BvString()]
+		if ok {
+			s.PrintableStorage[key.BvString()] = pV.Translate(ctx)
+		}
 	}
-	newKeysSet := utils.NewSet()
-	for _, v := range s.KeysSet.Elements() {
-		newKeysSet.Add(v.(*z3.Bitvec).Translate(ctx))
-	}
+
+	//newKeysSet := utils.NewSet()
+	//for _, v := range s.KeysSet.Elements() {
+	//	newKeysSet.Add(v.(*z3.Bitvec).Translate(ctx))
+	//}
 	return &Storage{
 		Address:           s.Address.Translate(ctx),
 		StandardStorage:   s.StandardStorage.Translate(ctx),
-		PrintableStorage:  newPrintableStorage,
+		PrintableStorage:  s.PrintableStorage,
 		StorageKeysLoaded: s.StorageKeysLoaded,
-		KeysSet:           newKeysSet,
+		KeysSet:           s.KeysSet,
+		KeysArr:           newKeysArr,
 	}
 }
 func (s *Storage) DeepCopy() *Storage {
@@ -122,13 +132,22 @@ func (s *Storage) DeepCopy() *Storage {
 	default:
 		concrete = false
 	}
+
 	newStorage := NewStorage(s.Address, concrete)
-	for k, v := range s.PrintableStorage {
-		newStorage.StandardStorage.SetItem(k, v)
-		newStorage.PrintableStorage[k] = v
+	//if len(s.KeysArr) == 0 {
+	//	newStorage.SetItem(k.Copy(), originV.Copy())
+	//}
+	for _, k := range s.KeysArr {
+		originV := s.PrintableStorage[k.BvString()]
+		newStorage.SetItem(k.Copy(), originV.Copy())
 	}
-	newStorage.StorageKeysLoaded = s.StorageKeysLoaded.Copy()
-	newStorage.KeysSet = s.KeysSet.Copy()
+	//for k, v := range s.PrintableStorage {
+	//	fmt.Println(k.BvString(), v.BvString())
+	//	newStorage.StandardStorage.SetItem(k, v)
+	//	newStorage.PrintableStorage[k] = v
+	//}
+	//newStorage.StorageKeysLoaded = s.StorageKeysLoaded.Copy()
+	//newStorage.KeysSet = s.KeysSet.Copy()
 
 	return newStorage
 }
@@ -171,9 +190,10 @@ func (s *Storage) GetItem(item *z3.Bitvec) *z3.Bitvec {
 }
 func (s *Storage) SetItem(key *z3.Bitvec, value *z3.Bitvec) {
 	printableStorage := s.PrintableStorage
-	printableStorage[key] = value
+	printableStorage[key.BvString()] = value
 	s.StandardStorage.SetItem(key, value)
 	s.KeysSet.Add(key)
+	s.KeysArr = append(s.KeysArr, key)
 
 	if !key.Symbolic() {
 		keyV, _ := strconv.ParseInt(key.Value(), 10, 64)

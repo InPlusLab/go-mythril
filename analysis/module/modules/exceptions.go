@@ -142,8 +142,7 @@ func is_assertion_failure(globalState *state.GlobalState) bool {
 	stackLength := state.Stack.Length()
 	offset := state.Stack.RawStack[stackLength-1]
 	length := state.Stack.RawStack[stackLength-2]
-	fmt.Println("offset:", offset.BvString())
-	fmt.Println("length:", length.BvString())
+
 	offsetV, _ := strconv.ParseInt(offset.Value(), 10, 64)
 	lengthV, _ := strconv.ParseInt(length.Value(), 10, 64)
 	returnData := state.Memory.GetItems(offsetV, offsetV+lengthV)

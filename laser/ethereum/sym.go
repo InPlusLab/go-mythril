@@ -116,8 +116,7 @@ LOOP:
 		if len(newStates) == 0 {
 			evm.FinalState = globalState
 			if "*state.MessageCallTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() {
-				// TODO
-				if opcode == "STOP" {
+				if opcode != "REVERT" {
 					fmt.Println("txEnd: append ws!")
 					evm.OpenStates = append(evm.OpenStates, globalState.WorldState)
 					fmt.Println("openStatesLen:", len(evm.OpenStates))
@@ -357,6 +356,7 @@ func readWithSelect(evm *LaserEVM) (*state.GlobalState, error) {
 func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 	fmt.Println("Run")
 	ctx := z3.NewContext(cfg)
+	//defer ctx.Close()
 	for {
 		globalState, _ := readWithSelect(evm)
 		//fmt.Println("Run", id, globalState == nil)
@@ -396,8 +396,7 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 			//if opcode == "STOP" || opcode == "RETURN" {
 			if len(newStates) == 0 {
 				if "*state.MessageCallTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() {
-					// TODO
-					if opcode == "STOP" {
+					if opcode != "REVERT" {
 						evm.OpenStates = append(evm.OpenStates, globalState.WorldState)
 					}
 				}
@@ -546,11 +545,13 @@ func ExecuteMessageCall(evm *LaserEVM, runtimeCode string, inputStr string, ctx 
 			calldataList = append(calldataList, ctx.NewBitvecVal(val, 8))
 		}
 		tx := &state.MessageCallTransaction{
-			WorldState:    openState.Translate(ctx),
+			WorldState: openState.Translate(ctx),
+			//WorldState: openState,
 			Code:          txCode,
 			CalleeAccount: openState.Translate(ctx).AccountsExistOrLoad(address.Translate(ctx)),
-			Caller:        externalSender,
-			Calldata:      state.NewSymbolicCalldata(txId, ctx),
+			//CalleeAccount: openState.AccountsExistOrLoad(address),
+			Caller:   externalSender,
+			Calldata: state.NewSymbolicCalldata(txId, ctx),
 			//Calldata: NewConcreteCalldata(txId, calldataList, ctx),
 			GasPrice:  10,
 			GasLimit:  8000000,
