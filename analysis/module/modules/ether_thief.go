@@ -5,6 +5,7 @@ import (
 	"go-mythril/analysis"
 	"go-mythril/laser/ethereum/state"
 	"go-mythril/laser/ethereum/transaction"
+	"go-mythril/laser/smt/z3"
 	"go-mythril/utils"
 )
 
@@ -85,7 +86,7 @@ func (dm *EtherThief) _analyze_state(globalState *state.GlobalState) []*Potentia
 		Gstate.Environment.Sender.Translate(Gstate.Z3ctx).Eq(ACTORS.GetAttacker().Translate(Gstate.Z3ctx)),
 		Gstate.CurrentTransaction().GetCaller().Translate(Gstate.Z3ctx).Eq(Gstate.CurrentTransaction().GetOrigin().Translate(Gstate.Z3ctx)))
 	// Pre-solve so we only add potential issues if the attacker's balance is increased.
-	_, sat := state.GetModel(constraints, nil, nil, true, globalState.Z3ctx)
+	_, sat := state.GetModel(constraints, make([]*z3.Bool, 0), make([]*z3.Bool, 0), true, globalState.Z3ctx)
 	potentialIssue := &PotentialIssue{
 		Contract:     Gstate.Environment.ActiveAccount.ContractName,
 		FunctionName: Gstate.Environment.ActiveFuncName,
@@ -104,19 +105,10 @@ func (dm *EtherThief) _analyze_state(globalState *state.GlobalState) []*Potentia
 	}
 	if sat {
 		fmt.Println("etherThief success")
-		fmt.Println("constraints:")
-		for i, v := range constraints.ConstraintList {
-			fmt.Println(i, "-", v.BoolString())
-		}
 		return []*PotentialIssue{potentialIssue}
 	} else {
 		// UnsatError
 		fmt.Println("etherThief fail")
-		fmt.Println("constraints:")
-		for i, v := range constraints.ConstraintList {
-			fmt.Println(i, "-", v.BoolString())
-			fmt.Println(i, "-", v.Simplify().BoolString())
-		}
 		return make([]*PotentialIssue, 0)
 	}
 }

@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"go-mythril/disassembler"
 	"go-mythril/laser/smt/z3"
 	"go-mythril/utils"
@@ -171,8 +172,8 @@ func (s *Storage) GetItem(item *z3.Bitvec) *z3.Bitvec {
 	//	s.PrintableStorage[item] = value
 	//}
 	if item.Symbolic() {
-		//fmt.Println("get item in Storage using symbolic index!")
-		panic("can't get item in Storage using symbolic index!")
+		fmt.Println("get item in Storage using symbolic index!")
+		//panic("can't get item in Storage using symbolic index!")
 	}
 	result := storage.GetItem(item).Simplify()
 	//if strings.Contains(result.BvString(), "_") {

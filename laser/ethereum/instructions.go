@@ -1145,8 +1145,12 @@ func (instr *Instruction) extcodesize_(globalState *state.GlobalState) []*state.
 		ret = append(ret, globalState)
 		return ret
 	}
-	code := globalState.WorldState.AccountsExistOrLoad(addr).Code.Bytecode
-	mstate.Stack.Append(len(code) / 2)
+	code := globalState.WorldState.AccountsExistOrLoad(addr).Code
+	if globalState.WorldState.AccountsExistOrLoad(addr).Code == nil {
+		fmt.Println("code nil!!!")
+	} else {
+		mstate.Stack.Append(len(code.Bytecode) / 2)
+	}
 
 	ret = append(ret, globalState)
 	return ret
@@ -1357,9 +1361,9 @@ func (instr *Instruction) sload_(globalState *state.GlobalState) []*state.Global
 	index := mstate.Stack.Pop()
 	// TODO: DynLoader to get the storage ?
 	//globalState.Environment.ActiveAccount.Storage.SetItem(index, globalState.Z3ctx.NewBitvecVal(0, 256))
-	fmt.Println("sload_")
-	fmt.Println("index:", index.BvString())
-	fmt.Println("value:", globalState.Environment.ActiveAccount.Storage.GetItem(index).Translate(globalState.Z3ctx).BvString())
+	//fmt.Println("sload_")
+	//fmt.Println("index:", index.BvString())
+	//fmt.Println("value:", globalState.Environment.ActiveAccount.Storage.GetItem(index).Translate(globalState.Z3ctx).BvString())
 	mstate.Stack.Append(globalState.Environment.ActiveAccount.Storage.GetItem(index).Translate(globalState.Z3ctx))
 	//mstate.Stack.Append(globalState.Z3ctx.NewBitvec("sload_",256))
 	ret = append(ret, globalState)

@@ -5,6 +5,7 @@ import (
 	"go-mythril/analysis"
 	"go-mythril/laser/ethereum/state"
 	"go-mythril/utils"
+	"math/big"
 )
 
 type ArbitraryStorage struct {
@@ -77,7 +78,8 @@ func (dm *ArbitraryStorage) _analyze_state(globalState *state.GlobalState) []*Po
 	ctx := globalState.Z3ctx
 	constrains := globalState.WorldState.Constraints.Copy()
 	fmt.Println("arbitraryWriteCons:", writeSlot.BvString())
-	constrains.Add(writeSlot.Eq(ctx.NewBitvecVal(324345425435, 256)))
+	tmpVal, _ := new(big.Int).SetString("324345425435", 10)
+	constrains.Add(writeSlot.Eq(ctx.NewBitvecVal(tmpVal, 256)))
 	potentialIssue := &PotentialIssue{
 		Contract:        globalState.Environment.ActiveAccount.ContractName,
 		FunctionName:    globalState.Environment.ActiveFuncName,

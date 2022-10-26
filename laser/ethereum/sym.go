@@ -503,12 +503,14 @@ func ExecuteContractCreation(evm *LaserEVM, creationCode string, contractName st
 	evm.OpenStates = append(evm.OpenStates, worldState)
 	ACTORS := transaction.NewActors(ctx)
 	txId := state.GetNextTransactionId()
+	code := disassembler.NewDisasembly(creationCode)
 	fmt.Println("In creationId:", txId)
-	account := worldState.CreateAccount(0, true, ACTORS.GetCreator(), nil, nil, contractName)
+
+	account := worldState.CreateAccount(0, true, ACTORS.GetCreator(), nil, code, contractName)
 
 	tx := &state.ContractCreationTransaction{
 		WorldState:    worldState,
-		Code:          disassembler.NewDisasembly(creationCode),
+		Code:          code,
 		CalleeAccount: account,
 		Caller:        ACTORS.GetCreator(),
 		Calldata:      state.NewSymbolicCalldata(txId, ctx),

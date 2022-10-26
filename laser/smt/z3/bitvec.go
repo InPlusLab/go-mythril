@@ -110,7 +110,7 @@ func (b *Bitvec) Value() string {
 	if b == nil {
 		return ""
 	}
-	if !strings.Contains(b.BvString(), "_") && !b.symbolic {
+	if !strings.Contains(b.BvString(), "_") && !b.symbolic && strings.Contains(b.BvString(), "#x") {
 		tmp := b.Simplify()
 		value := C.GoString(C.Z3_get_numeral_string(tmp.rawCtx, tmp.rawAST))
 		return value

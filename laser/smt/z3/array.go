@@ -54,16 +54,19 @@ func (c *Context) NewK(dom int, vRange int, value int) *K {
 }
 
 func (a *Array) SetItem(index *Bitvec, value *Bitvec) {
+	//ctx := a.GetCtx()
+	//newIndex := index.Translate(ctx)
+	//newValue := value.Translate(ctx)
 	a.rawAST = C.Z3_mk_store(a.rawCtx, a.rawAST, index.rawAST, value.rawAST)
 }
 
 func (a *Array) GetItem(index *Bitvec) *Bitvec {
 	// TODO: why?
 	ctx := a.GetCtx()
-	index = index.Translate(ctx)
+	newIndex := index.Translate(ctx)
 	return &Bitvec{
 		rawCtx:  a.rawCtx,
-		rawAST:  C.Z3_mk_select(a.rawCtx, a.rawAST, index.rawAST),
+		rawAST:  C.Z3_mk_select(a.rawCtx, a.rawAST, newIndex.rawAST),
 		rawSort: C.Z3_mk_bv_sort(a.rawCtx, C.uint(a.rangeSize)),
 		// TODO: maybe wrong
 		symbolic:    index.symbolic,
@@ -98,10 +101,15 @@ func (a *Array) Translate(ctx *Context) BaseArray {
 }
 
 func (a *K) SetItem(index *Bitvec, value *Bitvec) {
+	//ctx := a.GetCtx()
+	//newIndex := index.Translate(ctx)
+	//newValue := value.Translate(ctx)
 	a.rawAST = C.Z3_mk_store(a.rawCtx, a.rawAST, index.rawAST, value.rawAST)
 }
 
 func (a *K) GetItem(index *Bitvec) *Bitvec {
+	//ctx := a.GetCtx()
+	//newIndex := index.Translate(ctx)
 	return &Bitvec{
 		rawCtx:  a.rawCtx,
 		rawAST:  C.Z3_mk_select(a.rawCtx, a.rawAST, index.rawAST),
