@@ -983,10 +983,9 @@ func (instr *Instruction) sha3_(globalState *state.GlobalState) []*state.GlobalS
 		ret = append(ret, globalState)
 		return ret
 	}
-	fmt.Println("getRealHash")
-	fmt.Println("data:", data.BvString(), data.BvSize())
+
 	result, cons := function_managers.NewKeccakFunctionManager(globalState.Z3ctx).CreateKeccak(data)
-	fmt.Println("result:", result.BvString())
+
 	mstate.Stack.Append(result)
 	globalState.WorldState.Constraints.Add(cons)
 	ret = append(ret, globalState)
@@ -1377,8 +1376,8 @@ func (instr *Instruction) sstore_(globalState *state.GlobalState) []*state.Globa
 	index := mstate.Stack.Pop()
 	value := mstate.Stack.Pop()
 
-	fmt.Println("sstore_:")
-	fmt.Println("index:", index.BvString(), "-", value.BvString())
+	//fmt.Println("sstore_:")
+	//fmt.Println("index:", index.BvString(), "-", value.BvString())
 	globalState.Environment.ActiveAccount.Storage.SetItem(index, value)
 
 	ret = append(ret, globalState)
@@ -1466,6 +1465,7 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 	// False case
 	if negatedCond {
 		fmt.Println("test negative nil")
+
 		newState := globalState.Copy()
 		newState.Mstate.MinGasUsed += minGas
 		newState.Mstate.MaxGasUsed += maxGas
@@ -1479,6 +1479,7 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 		newState.LastReturnData = &returnData
 
 		fmt.Println("negativeState:", newState)
+		//ret = append(ret, newState)
 		if newState.WorldState.Constraints.IsPossible() {
 			ret = append(ret, newState)
 		} else {
@@ -1498,6 +1499,7 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 	if instruction.OpCode.Name == "JUMPDEST" {
 		if positiveCond {
 			fmt.Println("test positive nil")
+
 			newState := globalState.Copy()
 			newState.Mstate.MinGasUsed += minGas
 			newState.Mstate.MaxGasUsed += maxGas
@@ -1511,6 +1513,7 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 			newState.LastReturnData = &returnData
 
 			fmt.Println("positiveState:", newState)
+			//ret = append(ret, newState)
 			if newState.WorldState.Constraints.IsPossible() {
 				ret = append(ret, newState)
 			} else {

@@ -83,12 +83,12 @@ func (dm *UserAssertions) _analyze_state(globalState *state.GlobalState) []*anal
 
 	if opcode.Name == "MSTORE" {
 		value := globalState.Mstate.Stack.RawStack[stackLen-2].Simplify()
-		fmt.Println("value:", value.BvString())
+		//fmt.Println("value:", value.BvString())
 		if value.Symbolic() {
 			return make([]*analysis.Issue, 0)
 		}
 		mstorePattern := "cafecafecafecafecafecafecafecafecafecafecafecafecafecafecafe"
-		fmt.Println("#1")
+
 		valueInt, _ := strconv.Atoi(value.Value())
 
 		srcStr := utils.ToHexStr(valueInt)

@@ -138,7 +138,8 @@ func (dm *IntegerArithmetics) _handel_add(globalState *state.GlobalState) {
 	op0, op1 := dm._get_args(globalState)
 	c := op0.BvAddNoOverflow(op1, false).Not()
 	annotation := OverUnderflowAnnotation{
-		OverflowingState: globalState.Copy(),
+		//OverflowingState: globalState.Copy(),
+		OverflowingState: globalState,
 		Operator:         "addition",
 		Constraint:       c,
 	}
@@ -148,7 +149,8 @@ func (dm *IntegerArithmetics) _handel_mul(globalState *state.GlobalState) {
 	op0, op1 := dm._get_args(globalState)
 	c := op0.BvMulNoOverflow(op1, false).Not()
 	annotation := OverUnderflowAnnotation{
-		OverflowingState: globalState.Copy(),
+		//OverflowingState: globalState.Copy(),
+		OverflowingState: globalState,
 		Operator:         "multiplication",
 		Constraint:       c,
 	}
@@ -158,7 +160,8 @@ func (dm *IntegerArithmetics) _handel_sub(globalState *state.GlobalState) {
 	op0, op1 := dm._get_args(globalState)
 	c := op0.BvSubNoUnderflow(op1, false).Not()
 	annotation := OverUnderflowAnnotation{
-		OverflowingState: globalState.Copy(),
+		//OverflowingState: globalState.Copy(),
+		OverflowingState: globalState,
 		Operator:         "subtraction",
 		Constraint:       c,
 	}
@@ -185,7 +188,8 @@ func (dm *IntegerArithmetics) _handel_exp(globalState *state.GlobalState) {
 		constraint = op1.BvSGe(ctx.NewBitvecVal(int64(math.Ceil(256/math.Log2(float64(op0V)))), 256))
 	}
 	annotation := OverUnderflowAnnotation{
-		OverflowingState: globalState.Copy(),
+		//OverflowingState: globalState.Copy(),
+		OverflowingState: globalState,
 		Operator:         "exponentiation",
 		Constraint:       constraint,
 	}
@@ -258,7 +262,8 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 		}
 
 		if !dm.OstatesSatisfiable.Contains(ostate) {
-			constraints := ostate.WorldState.Constraints.DeepCopy()
+			//constraints := ostate.WorldState.Constraints.DeepCopy()
+			constraints := ostate.WorldState.Constraints
 			constraints.Add(annotation.(OverUnderflowAnnotation).Constraint.Translate(ostate.Z3ctx))
 			//constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
 			_, sat := state.GetModel(constraints, nil, nil, false, ostate.Z3ctx)
@@ -278,7 +283,8 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 			"at transaction end address", globalState.GetCurrentInstruction().Address, "ostate address",
 			ostate.GetCurrentInstruction().Address)
 
-		constraints := globalState.WorldState.Constraints.DeepCopy()
+		//constraints := globalState.WorldState.Constraints.DeepCopy()
+		constraints := globalState.WorldState.Constraints
 		constraints.Add(annotation.(OverUnderflowAnnotation).Constraint.Translate(globalState.Z3ctx))
 		//constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
 

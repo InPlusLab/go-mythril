@@ -77,7 +77,8 @@ func (dm *EtherThief) _execute(globalState *state.GlobalState) []*analysis.Issue
 }
 
 func (dm *EtherThief) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
-	Gstate := globalState.Copy()
+	//Gstate := globalState.Copy()
+	Gstate := globalState
 	ACTORS := transaction.NewActors(Gstate.Z3ctx)
 	instruction := Gstate.GetCurrentInstruction()
 	constraints := Gstate.WorldState.Constraints.Copy()

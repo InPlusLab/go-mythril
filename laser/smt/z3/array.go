@@ -10,6 +10,7 @@ import (
 type BaseArray interface {
 	GetItem(bitvec *Bitvec) *Bitvec
 	SetItem(index *Bitvec, value *Bitvec)
+	//DeepCopy() BaseArray
 	DeepCopy() BaseArray
 	Translate(ctx *Context) BaseArray
 }

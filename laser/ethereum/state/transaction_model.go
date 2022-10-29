@@ -331,7 +331,8 @@ func (tx *ContractCreationTransaction) GetGasLimit() int {
 
 func (tx *ContractCreationTransaction) GetPreWorldState() *WorldState {
 	// TODO: Deepcopy ?
-	return tx.WorldState.Copy()
+	//return tx.WorldState.Copy()
+	return nil
 }
 
 func (tx *ContractCreationTransaction) GetCode() *disassembler.Disasembly {

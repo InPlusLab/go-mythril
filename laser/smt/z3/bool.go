@@ -29,6 +29,24 @@ func (b *Bool) BoolString() string {
 	return C.GoString(C.Z3_ast_to_string(b.rawCtx, b.rawAST))
 }
 
+func (b *Bool) Copy() *Bool {
+	return &Bool{
+		rawCtx:      b.rawCtx,
+		rawAST:      b.rawAST,
+		symbolic:    b.symbolic,
+		Annotations: b.Annotations,
+	}
+}
+
+//func (b *Bool) Copy(ctx *Context) *Bool {
+//	return &Bool{
+//		rawCtx:      ctx.raw,
+//		rawAST:      C.Z3_translate(b.rawCtx, b.rawAST, ctx.raw),
+//		symbolic:    b.symbolic,
+//		Annotations: b.Annotations.Copy(),
+//	}
+//}
+
 // Translate is used to copy ast from one context to another.
 func (b *Bool) Translate(c *Context) *Bool {
 	// use in integer.go
@@ -76,15 +94,6 @@ func (b *Bool) Simplify() *Bool {
 	return &Bool{
 		rawCtx:      b.rawCtx,
 		rawAST:      C.Z3_simplify(b.rawCtx, b.rawAST),
-		symbolic:    b.symbolic,
-		Annotations: b.Annotations,
-	}
-}
-
-func (b *Bool) Copy() *Bool {
-	return &Bool{
-		rawCtx:      b.rawCtx,
-		rawAST:      b.rawAST,
 		symbolic:    b.symbolic,
 		Annotations: b.Annotations,
 	}

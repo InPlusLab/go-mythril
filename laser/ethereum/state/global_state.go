@@ -90,20 +90,33 @@ func (globalState *GlobalState) Translate(ctx *z3.Context) {
 	//fmt.Println("changeStateContext done")
 }
 
-//func changeStateContext(globalState *state.GlobalState, ctx *z3.Context) {
+//func (globalState *GlobalState) Translate(ctx *z3.Context) *GlobalState {
+//	if globalState.Z3ctx.GetRaw() == ctx.GetRaw() {
+//		return globalState
+//	}
+//
 //	fmt.Println("before changeStateContext")
-//	globalState.Z3ctx = ctx
 //	// machineState stack & memory
-//	newMachineState := globalState.Mstate.Translate(ctx)
-//	globalState.Mstate = newMachineState
+//	fmt.Println("glTrans1")
+//	newMstate := globalState.Mstate.Translate(ctx)
 //	// worldState constraints
+//	fmt.Println("glTrans2")
 //	newWorldState := globalState.WorldState.Translate(ctx)
-//	globalState.WorldState = newWorldState
 //	// env
+//	fmt.Println("glTrans3")
 //	newEnv := globalState.Environment.Translate(ctx)
-//	globalState.Environment = newEnv
+//	fmt.Println("glTrans4")
 //	// lastReturnData
 //	//fmt.Println("changeStateContext done")
+//	return &GlobalState{
+//		WorldState:  newWorldState,
+//		Mstate:      newMstate,
+//		Z3ctx :      ctx,
+//		Environment: newEnv,
+//		TxStack:        globalState.TxStack,
+//		LastReturnData: globalState.LastReturnData,
+//		Annotations:    globalState.Annotations,
+//	}
 //}
 
 func (globalState *GlobalState) GetCurrentInstruction() *disassembler.EvmInstruction {

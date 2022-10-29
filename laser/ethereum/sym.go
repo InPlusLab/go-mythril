@@ -42,12 +42,15 @@ type LaserEVM struct {
 	NoStatesFlag   bool
 	NoStatesSignal []bool
 	BeforeExecCh   chan Signal
+	MarkList       []*map[int64]*z3.Bitvec
+	CtxList        []*z3.Context
+	NewCtxList     []*z3.Context
 	GofuncCount    int
 	/* Analysis */
 	Loader *module.ModuleLoader
 }
 
-func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, moduleLoader *module.ModuleLoader) *LaserEVM {
+func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, moduleLoader *module.ModuleLoader, cfg *z3.Config) *LaserEVM {
 
 	preHook := make(map[string][]moduleExecFunc)
 	postHook := make(map[string][]moduleExecFunc)
@@ -55,6 +58,11 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 	for _, v := range opcodes {
 		preHook[v.Name] = make([]moduleExecFunc, 0)
 		postHook[v.Name] = make([]moduleExecFunc, 0)
+	}
+
+	ctxList := make([]*z3.Context, 4, 4)
+	for i, _ := range ctxList {
+		ctxList[i] = z3.NewContext(cfg)
 	}
 
 	evm := LaserEVM{
@@ -72,6 +80,9 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		NoStatesFlag:   false,
 		NoStatesSignal: make([]bool, 4, 4),
 		BeforeExecCh:   make(chan Signal),
+		MarkList:       make([]*map[int64]*z3.Bitvec, 4, 4),
+		CtxList:        ctxList,
+		NewCtxList:     make([]*z3.Context, 0),
 		GofuncCount:    4,
 		Loader:         moduleLoader,
 	}
@@ -184,8 +195,9 @@ LOOP:
 				}
 			}
 			//fmt.Println("situation 1", allFinished)
-			if allFinished {
+			if allFinished && len(evm.WorkList) == 0 {
 				fmt.Println("break in situation 1")
+				fmt.Println("workListLen:", len(evm.WorkList))
 				break LOOP
 			}
 		case signal := <-evm.BeforeExecCh:
@@ -202,6 +214,8 @@ LOOP:
 			//fmt.Println("situation 2", allFinished)
 			if allNoStates {
 				fmt.Println("break in situation 2")
+				fmt.Println("workListLen:", len(evm.WorkList))
+
 				break LOOP
 			}
 		}
@@ -267,6 +281,11 @@ func (evm *LaserEVM) MultiSymExec(creationCode string, runtimeCode string, contr
 		// Reset
 		evm.BeforeExecCh = make(chan Signal)
 		evm.AfterExecCh = make(chan Signal)
+		evm.MarkList = make([]*map[int64]*z3.Bitvec, evm.GofuncCount, evm.GofuncCount)
+		//for _, obj := range evm.NewCtxList {
+		//	obj.Close()
+		//}
+		//evm.NewCtxList = make([]*z3.Context, 0)
 	}
 }
 
@@ -363,29 +382,90 @@ func readWithSelect(evm *LaserEVM) (*state.GlobalState, error) {
 	}
 }
 
+func readWithSelect2(evm *LaserEVM, id int) (*state.GlobalState, error) {
+	select {
+	case globalState := <-evm.WorkList:
+
+		if globalState.LastReturnData == nil {
+			return globalState, nil
+		} else {
+			if globalState.LastReturnData == evm.MarkList[id] {
+				return globalState, nil
+			} else {
+				for i, m := range evm.MarkList {
+					if i != id {
+						if globalState.LastReturnData == m {
+							evm.WorkList <- globalState
+							return nil, errors.New("get other's state, push it back to WorkList")
+						}
+					}
+				}
+				evm.MarkList[id] = globalState.LastReturnData
+				return globalState, nil
+			}
+		}
+
+	default:
+		return nil, errors.New("evm.WorkList is empty")
+	}
+}
+
+func readWithSelect3(evm *LaserEVM, id int) (*state.GlobalState, error) {
+	select {
+	case globalState := <-evm.WorkList:
+		ctx := evm.CtxList[id]
+		if globalState.Z3ctx == ctx {
+			return globalState, nil
+		} else {
+			for i, m := range evm.CtxList {
+				if i != id {
+					if globalState.Z3ctx == m {
+						evm.WorkList <- globalState
+						return nil, errors.New("get other's state, push it back to WorkList")
+					}
+				}
+			}
+			return globalState, nil
+		}
+
+	default:
+		return nil, errors.New("evm.WorkList is empty")
+	}
+}
+
 func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 	fmt.Println("Run")
-	ctx := z3.NewContext(cfg)
+
 	//defer ctx.Close()
 	for {
-		globalState, _ := readWithSelect(evm)
+		//ctx := z3.NewContext(cfg)
+		//globalState, err := readWithSelect(evm)
+		//globalState, err := readWithSelect2(evm, id)
+		globalState, err := readWithSelect3(evm, id)
 		//fmt.Println("Run", id, globalState == nil)
 		evm.BeforeExecCh <- Signal{
 			Id:       id,
-			Finished: globalState == nil,
+			Finished: globalState == nil && err.Error() == "evm.WorkList is empty",
 		}
+
 		//l.Lock()
 		//evm.NoStatesSignal[id] = globalState == nil
 		//l.Unlock()
 
 		if globalState != nil {
 
-			globalState.Translate(ctx)
+			globalState.Translate(evm.CtxList[id])
 
 			newStates, opcode := evm.ExecuteState(globalState)
 
 			fmt.Println(id, globalState, opcode)
 			//evm.ManageCFG(opcode, newStates)
+
+			if len(newStates) == 2 {
+				ctx := z3.NewContext(cfg)
+				evm.NewCtxList = append(evm.NewCtxList, ctx)
+				newStates[1].Translate(ctx)
+			}
 
 			for _, newState := range newStates {
 				evm.WorkList <- newState
@@ -395,62 +475,19 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 				Finished: len(newStates) == 0,
 			}
 
-			fmt.Println(id, "done", globalState, opcode)
+			fmt.Println(id, "done", globalState, opcode, globalState.Z3ctx)
 
-			//fmt.Println("produceNoStates:", id, len(newStates) == 0)
-			//fmt.Println(id, opcode)
-			//for i := 0; i < evm.GofuncCount; i++ {
-			//	fmt.Println(evm.NoStatesSignal[i])
-			//}
 			fmt.Println("===========================================================================")
-			//if opcode == "STOP" || opcode == "RETURN" {
 			if len(newStates) == 0 {
 				if "*state.MessageCallTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() {
 					if opcode != "REVERT" && opcode != "INVALID" {
 						evm.OpenStates = append(evm.OpenStates, globalState.WorldState)
 					}
 				}
-				//evm.FinalState = append(evm.FinalState, globalState)
 				evm.FinalState = globalState
 
-				modules.CheckPotentialIssues(globalState)
-				//for _, detector := range evm.Loader.Modules {
-				//	issues := detector.GetIssues()
-				//	if len(issues) > 0 {
-				//		fmt.Println("number of issues:", len(issues))
-				//	}
-				//	for _, issue := range issues {
-				//		fmt.Println("+++++++++++++++++++++++++++++++++++", id)
-				//		fmt.Println("ContractName:", issue.Contract)
-				//		fmt.Println("FunctionName:", issue.FunctionName)
-				//		fmt.Println("Title:", issue.Title)
-				//		fmt.Println("SWCID:", issue.SWCID)
-				//		fmt.Println("Address:", issue.Address)
-				//		fmt.Println("Severity:", issue.Severity)
-				//	}
-				//}
-				//
-				//fmt.Println("+++++++++++++++++++++++++++++++++++")
+				//modules.CheckPotentialIssues(globalState)
 
-				// when the other goroutines have no globalStates to solve.
-				//l.Lock()
-				//flag := true
-				//for i, v := range evm.NoStatesSignal {
-				//	if i != id {
-				//		flag = flag && v
-				//	}
-				//}
-				//l.Unlock()
-				//
-				//if flag && len(evm.WorkList) == 0 {
-				//	fmt.Println("all goroutines have no globalStates:", opcode)
-				//	evm.NoStatesFlag = true
-				//	// Here, we push a value in channel to trigger the LOOP iteration in symExec.
-				//	evm.SignalCh <- Signal{
-				//		Id:       id,
-				//		Finished: false,
-				//	}
-				//}
 			}
 		}
 

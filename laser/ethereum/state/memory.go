@@ -184,14 +184,11 @@ func (m *Memory) GetItems(start int64, stop int64) []*z3.Bitvec {
 func (m *Memory) GetItems2Bytes(start int64, stop int64) []byte {
 	bvarr := m.GetItems(start, stop)
 	str := ""
-	fmt.Println("11")
 	for _, item := range bvarr {
 		// TODO: array getItm symbolic false
 		str += item.Value()
 	}
-	fmt.Println("33")
 	bytecode, _ := hex.DecodeString(str)
-	fmt.Println("44")
 	return bytecode
 }
 
@@ -212,7 +209,7 @@ func (m *Memory) SetItem(key int64, value *z3.Bitvec) {
 func (m *Memory) Copy() *Memory {
 	rawM := make(map[int64]*z3.Bitvec)
 	for i, v := range *m.RawMemory {
-		rawM[i] = v
+		rawM[i] = v.Copy()
 	}
 	return &Memory{
 		Msize:     m.Msize,

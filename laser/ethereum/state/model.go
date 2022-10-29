@@ -32,7 +32,7 @@ func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool
 		// GetTimeHandlerInstance().TimeRemaining()-500
 		//timeout = min(timeout, GetTimeHandlerInstance().TimeRemaining()-500)
 		if timeout <= 0 {
-			fmt.Println("timeout")
+			//fmt.Println("timeout")
 			return nil, false
 		}
 	}

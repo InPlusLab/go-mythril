@@ -235,10 +235,12 @@ func (dm *StateChangeAfterCall) _add_external_call(globalState *state.GlobalStat
 	constraints.Add(to.Eq(ctx.NewBitvecVal(tmpVal, 256)))
 	_, sat2 := state.GetModel(constraints, make([]*z3.Bool, 0), make([]*z3.Bool, 0), true, ctx)
 	if sat2 {
-		globalState.Annotate(NewStateChangeCallsAnnotation(globalState.Copy(), true))
+		//globalState.Annotate(NewStateChangeCallsAnnotation(globalState.Copy(), true))
+		globalState.Annotate(NewStateChangeCallsAnnotation(globalState, true))
 		fmt.Println("NewStateAnno: sat")
 	} else {
-		globalState.Annotate(NewStateChangeCallsAnnotation(globalState.Copy(), false))
+		//globalState.Annotate(NewStateChangeCallsAnnotation(globalState.Copy(), false))
+		globalState.Annotate(NewStateChangeCallsAnnotation(globalState, false))
 		fmt.Println("NewStateAnno: unsat")
 	}
 }
@@ -246,19 +248,15 @@ func (dm *StateChangeAfterCall) _add_external_call(globalState *state.GlobalStat
 func (dm *StateChangeAfterCall) _balance_change(value *z3.Bitvec, globalState *state.GlobalState) bool {
 	//fmt.Println("value:", value.BvString())
 	if !value.Symbolic() {
-		fmt.Println("1")
 		v, _ := strconv.Atoi(value.Value())
 		return v > 0
 	} else {
-		fmt.Println("2")
 		constraints := globalState.WorldState.Constraints.Copy()
 		constraints.Add(value.BvSGt(globalState.Z3ctx.NewBitvecVal(0, 256)))
 		_, sat := state.GetModel(constraints, make([]*z3.Bool, 0), make([]*z3.Bool, 0), true, globalState.Z3ctx)
 		if sat {
-			fmt.Println("3")
 			return true
 		} else {
-			fmt.Println("4")
 			return false
 		}
 	}

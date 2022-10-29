@@ -28,13 +28,13 @@ func NewWordState(ctx *z3.Context) *WorldState {
 	//balances.SetItem(ACTORS.GetAttacker(), ctx.NewBitvec("initBalance",256))
 	//balances.SetItem(ACTORS.GetSomeGuy(), ctx.NewBitvec("initBalance",256))
 
-	startingBalances := balances.DeepCopy()
-	//startingBalances := ctx.NewArray("startingBalance", 256, 256)
+	//startingBalances := balances.DeepCopy()
+	startingBalances := ctx.NewArray("Balance", 256, 256)
 
 	ws := &WorldState{
 		Accounts:            accounts,
 		Balances:            balances,
-		StartingBalances:    startingBalances.(*z3.Array),
+		StartingBalances:    startingBalances,
 		Constraints:         NewConstraints(),
 		TransactionSequence: make([]BaseTransaction, 0),
 	}
@@ -69,7 +69,6 @@ func (ws *WorldState) AccountsExistOrLoad(addr *z3.Bitvec) *Account {
 	accounts := ws.Accounts
 	acc, ok := accounts[addr.Simplify().Value()]
 	if ok {
-		fmt.Println("getAccount in ws!")
 		return acc
 	} else {
 		// TODO: find in dynamicLoader
@@ -111,16 +110,16 @@ func (ws *WorldState) Translate(ctx *z3.Context) *WorldState {
 	for i, v := range ws.Accounts {
 		newAccounts[i] = v.Translate(ctx)
 	}
-	//return &WorldState{
-	//	Accounts:            newAccouts,
-	//	Balances:            ws.Balances.Translate(ctx).(*z3.Array),
-	//	StartingBalances:    ws.StartingBalances.Translate(ctx).(*z3.Array),
-	//	Constraints:         newConstraints,
-	//	TransactionSequence: ws.TransactionSequence,
-	//}
-	ws.Accounts = newAccounts
-	ws.Balances = ws.Balances.Translate(ctx).(*z3.Array)
-	ws.StartingBalances = ws.StartingBalances.Translate(ctx).(*z3.Array)
-	ws.Constraints = newConstraints
-	return ws
+	return &WorldState{
+		Accounts:            newAccounts,
+		Balances:            ws.Balances.Translate(ctx).(*z3.Array),
+		StartingBalances:    ws.StartingBalances.Translate(ctx).(*z3.Array),
+		Constraints:         newConstraints,
+		TransactionSequence: ws.TransactionSequence,
+	}
+	//ws.Accounts = newAccounts
+	//ws.Balances = ws.Balances.Translate(ctx).(*z3.Array)
+	//ws.StartingBalances = ws.StartingBalances.Translate(ctx).(*z3.Array)
+	//ws.Constraints = newConstraints
+	//return ws
 }

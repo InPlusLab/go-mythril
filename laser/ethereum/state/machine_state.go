@@ -163,19 +163,19 @@ func (m *MachineState) Translate(ctx *z3.Context) *MachineState {
 
 	newMemory := m.Memory.CopyTranslate(ctx)
 	//
-	//return &MachineState{
-	//	GasLimit:   m.GasLimit,
-	//	Pc:         m.Pc,
-	//	Stack:      newStack,
-	//	Memory:     newMemory,
-	//	Depth:      m.Depth,
-	//	MinGasUsed: m.MinGasUsed,
-	//	MaxGasUsed: m.MaxGasUsed,
-	//}
-	m.Memory = newMemory
-	m.Stack = newStack
-
-	return m
+	return &MachineState{
+		GasLimit:   m.GasLimit,
+		Pc:         m.Pc,
+		Stack:      newStack,
+		Memory:     newMemory,
+		Depth:      m.Depth,
+		MinGasUsed: m.MinGasUsed,
+		MaxGasUsed: m.MaxGasUsed,
+	}
+	//m.Memory = newMemory
+	//m.Stack = newStack
+	//
+	//return m
 }
 
 func (m *MachineState) CalculateMemorySize(start int, size int) int {
