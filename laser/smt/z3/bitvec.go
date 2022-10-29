@@ -86,8 +86,9 @@ func (a *Bitvec) BvSize() int {
 // AsAST returns the ast of bv
 func (b *Bitvec) AsAST() *AST {
 	return &AST{
-		rawCtx: b.rawCtx,
-		rawAST: b.rawAST,
+		rawCtx:  b.rawCtx,
+		rawAST:  b.rawAST,
+		rawSort: b.rawSort,
 	}
 }
 
@@ -110,9 +111,10 @@ func (b *Bitvec) Value() string {
 	if b == nil {
 		return ""
 	}
-	if !strings.Contains(b.BvString(), "_") && !b.symbolic && strings.Contains(b.BvString(), "#x") {
+	if !strings.Contains(b.BvString(), "_") && !b.symbolic && strings.HasPrefix(b.BvString(), "#x") {
 		tmp := b.Simplify()
 		value := C.GoString(C.Z3_get_numeral_string(tmp.rawCtx, tmp.rawAST))
+		//value := "0"
 		return value
 	} else {
 		return "??"
@@ -164,11 +166,30 @@ func (b *Bitvec) Translate(c *Context) *Bitvec {
 	if b.rawCtx == c.raw {
 		return b
 	}
+	//fmt.Println("BvKind:", b.GetAstKind())
+	//size := C.Z3_get_bv_sort_size(b.rawCtx, b.rawSort)
 	return &Bitvec{
 		rawCtx: c.raw,
 		rawAST: C.Z3_translate(b.rawCtx, b.rawAST, c.raw),
 		// TODO: sort translate?
-		rawSort:     b.rawSort,
+		rawSort: b.rawSort,
+		//rawSort: C.Z3_mk_bv_sort(c.raw, size),
+		symbolic:    b.symbolic,
+		Annotations: b.Annotations.Copy(),
+	}
+}
+
+func (b *Bitvec) Translate8(c *Context) *Bitvec {
+	if b.rawCtx == c.raw {
+		return b
+	}
+	//size := C.Z3_get_bv_sort_size(b.rawCtx, b.rawSort)
+	return &Bitvec{
+		rawCtx: c.raw,
+		rawAST: C.Z3_translate(b.rawCtx, b.rawAST, c.raw),
+		// TODO: sort translate?
+		//rawSort:     b.rawSort,
+		rawSort:     C.Z3_mk_bv_sort(c.raw, C.uint(8)),
 		symbolic:    b.symbolic,
 		Annotations: b.Annotations.Copy(),
 	}
@@ -402,6 +423,7 @@ func (a *Bitvec) BvURem(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvurem(a.rawCtx, a.rawAST, a2.rawAST),
+		rawSort:     a.rawSort,
 		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
@@ -413,6 +435,7 @@ func (a *Bitvec) BvSRem(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvsrem(a.rawCtx, a.rawAST, a2.rawAST),
+		rawSort:     a.rawSort,
 		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
@@ -424,6 +447,7 @@ func (a *Bitvec) BvShL(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvshl(a.rawCtx, a.rawAST, a2.rawAST),
+		rawSort:     a.rawSort,
 		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
@@ -435,6 +459,7 @@ func (a *Bitvec) BvShR(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvashr(a.rawCtx, a.rawAST, a2.rawAST),
+		rawSort:     a.rawSort,
 		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}
@@ -446,6 +471,7 @@ func (a *Bitvec) BvLShR(a2 *Bitvec) *Bitvec {
 	return &Bitvec{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_bvlshr(a.rawCtx, a.rawAST, a2.rawAST),
+		rawSort:     a.rawSort,
 		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}

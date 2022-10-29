@@ -745,7 +745,8 @@ func (instr *Instruction) calldataload_(globalState *state.GlobalState) []*state
 	op0 := mstate.Stack.Pop()
 	value := env.Calldata.GetWordAt(op0)
 	fmt.Println("calldataload_:", value)
-	mstate.Stack.Append(value.Translate(globalState.Z3ctx))
+	//mstate.Stack.Append(value.Translate(globalState.Z3ctx))
+	mstate.Stack.Append(value)
 
 	ret = append(ret, globalState)
 	return ret
@@ -970,23 +971,24 @@ func (instr *Instruction) sha3_(globalState *state.GlobalState) []*state.GlobalS
 	dataList := mstate.Memory.GetItems(indexV, indexV+int64(length))
 	var data *z3.Bitvec
 	if len(dataList) > 1 {
-		data = dataList[0].Translate(globalState.Z3ctx)
+		//data = dataList[0].Translate(globalState.Z3ctx)
+		data = dataList[0]
 		for i := 1; i < len(dataList); i++ {
-			data = data.Concat(dataList[i].Translate(globalState.Z3ctx)).Simplify()
+			//data = data.Concat(dataList[i].Translate(globalState.Z3ctx)).Simplify()
+			data = data.Concat(dataList[i]).Simplify()
 		}
 	} else if len(dataList) == 1 {
-		data = dataList[0].Translate(globalState.Z3ctx).Simplify()
+		//data = dataList[0].Translate(globalState.Z3ctx).Simplify()
+		data = dataList[0].Simplify()
 	} else {
-		fmt.Println("getEmptyKeccakHash")
 		result := function_managers.NewKeccakFunctionManager(globalState.Z3ctx).GetEmptyKeccakHash()
 		mstate.Stack.Append(result)
 		ret = append(ret, globalState)
 		return ret
 	}
-	fmt.Println("getRealHash")
-	fmt.Println("data:", data.BvString(), data.BvSize())
+	//fmt.Println("data:", data.BvString(), data.BvSize())
 	result, cons := function_managers.NewKeccakFunctionManager(globalState.Z3ctx).CreateKeccak(data)
-	fmt.Println("result:", result.BvString())
+	//fmt.Println("result:", result.BvString())
 	mstate.Stack.Append(result)
 	globalState.WorldState.Constraints.Add(cons)
 	ret = append(ret, globalState)
@@ -1363,9 +1365,9 @@ func (instr *Instruction) sload_(globalState *state.GlobalState) []*state.Global
 	//globalState.Environment.ActiveAccount.Storage.SetItem(index, globalState.Z3ctx.NewBitvecVal(0, 256))
 	//fmt.Println("sload_")
 	//fmt.Println("index:", index.BvString())
-	//fmt.Println("value:", globalState.Environment.ActiveAccount.Storage.GetItem(index).Translate(globalState.Z3ctx).BvString())
-	mstate.Stack.Append(globalState.Environment.ActiveAccount.Storage.GetItem(index).Translate(globalState.Z3ctx))
-	//mstate.Stack.Append(globalState.Z3ctx.NewBitvec("sload_",256))
+	//mstate.Stack.Append(globalState.Environment.ActiveAccount.Storage.GetItem(index).Translate(globalState.Z3ctx))
+	mstate.Stack.Append(globalState.Environment.ActiveAccount.Storage.GetItem(index))
+
 	ret = append(ret, globalState)
 	return ret
 }
@@ -1377,8 +1379,8 @@ func (instr *Instruction) sstore_(globalState *state.GlobalState) []*state.Globa
 	index := mstate.Stack.Pop()
 	value := mstate.Stack.Pop()
 
-	fmt.Println("sstore_:")
-	fmt.Println("index:", index.BvString(), "-", value.BvString())
+	//fmt.Println("sstore_:")
+	//fmt.Println("index:", index.BvString(), "-", value.BvString())
 	globalState.Environment.ActiveAccount.Storage.SetItem(index, value)
 
 	ret = append(ret, globalState)
@@ -1474,11 +1476,18 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 		newState.Mstate.Pc += 1
 		newState.WorldState.Constraints.Add(negated)
 
+		//if globalState.LastReturnData == nil {
+		//	returnData := make(map[int64]*z3.Bitvec)
+		//	returnData[0] = newState.Z3ctx.NewBitvecVal(0, 256)
+		//	newState.LastReturnData = &returnData
+		//}
+
 		returnData := make(map[int64]*z3.Bitvec)
 		returnData[0] = newState.Z3ctx.NewBitvecVal(0, 256)
 		newState.LastReturnData = &returnData
 
 		fmt.Println("negativeState:", newState)
+		//ret = append(ret, newState)
 		if newState.WorldState.Constraints.IsPossible() {
 			ret = append(ret, newState)
 		} else {
@@ -1506,11 +1515,22 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 			newState.Mstate.Depth += 1
 			newState.WorldState.Constraints.Add(condi)
 
+			//if globalState.LastReturnData == nil {
+			//	returnData := make(map[int64]*z3.Bitvec)
+			//	returnData[0] = newState.Z3ctx.NewBitvecVal(1, 256)
+			//	newState.LastReturnData = &returnData
+			//}else if negatedCond {
+			//	returnData := make(map[int64]*z3.Bitvec)
+			//	returnData[0] = newState.Z3ctx.NewBitvecVal(1, 256)
+			//	newState.LastReturnData = &returnData
+			//}
+
 			returnData := make(map[int64]*z3.Bitvec)
 			returnData[0] = newState.Z3ctx.NewBitvecVal(1, 256)
 			newState.LastReturnData = &returnData
 
 			fmt.Println("positiveState:", newState)
+			//ret = append(ret, newState)
 			if newState.WorldState.Constraints.IsPossible() {
 				ret = append(ret, newState)
 			} else {

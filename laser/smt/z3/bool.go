@@ -35,13 +35,17 @@ func (b *Bool) Translate(c *Context) *Bool {
 	if b.rawCtx == c.raw {
 		return b
 	}
-
+	//fmt.Println("BoolKind:", b.GetAstKind())
 	return &Bool{
 		rawCtx:      c.raw,
 		rawAST:      C.Z3_translate(b.rawCtx, b.rawAST, c.raw),
 		symbolic:    b.symbolic,
 		Annotations: b.Annotations.Copy(),
 	}
+}
+
+func (b *Bool) GetAstKind() C.Z3_ast_kind {
+	return C.Z3_get_ast_kind(b.rawCtx, b.rawAST)
 }
 
 func (b *Bool) AsAST() *AST {

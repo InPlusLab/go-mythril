@@ -15,4 +15,6 @@ const (
 	OpFalse              = C.Z3_OP_FALSE
 	OpAdd                = C.Z3_OP_ADD
 	NumeralKindAST       = C.Z3_NUMERAL_AST
+	AppKindAST           = C.Z3_APP_AST
+	VarKindAST           = C.Z3_VAR_AST
 )
