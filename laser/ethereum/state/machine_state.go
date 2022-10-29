@@ -236,12 +236,26 @@ func (m *MachineState) DeepCopy() *MachineState {
 	//}
 	//fmt.Println("deepcopy", len(stack.RawStack))
 
+	//GasLimit   int
+	//Pc         int
+	//Stack      *MachineStack
+	//Memory     *Memory
+	//Depth      int
+	//MinGasUsed int
+	//MaxGasUsed int
+	fmt.Println("beforeMemoryCopy")
+	newMemory := m.Memory.Copy()
+	fmt.Println("afterMemoryCopy")
+	fmt.Println("beforeStackCopy")
+	newStack := m.Stack.Copy()
+	fmt.Println("afterStackCopy")
+
 	return &MachineState{
-		GasLimit: m.GasLimit,
-		Pc:       m.Pc,
-		Memory:   m.Memory.Copy(),
-		//Memory:     memory,
-		Stack:      m.Stack.Copy(),
+		GasLimit:   m.GasLimit,
+		Pc:         m.Pc,
+		Memory:     newMemory,
+		Stack:      newStack,
+		Depth:      m.Depth,
 		MinGasUsed: m.MinGasUsed,
 		MaxGasUsed: m.MaxGasUsed,
 	}

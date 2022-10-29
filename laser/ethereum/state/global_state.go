@@ -57,10 +57,13 @@ func (globalState *GlobalState) Copy() *GlobalState {
 	newWs := globalState.WorldState.Copy()
 	newEnv := globalState.Environment.Copy()
 	newEnv.ActiveAccount = newWs.AccountsExistOrLoad(newEnv.ActiveAccount.Address)
+	fmt.Println("afterEnvAccount")
+	newMs := globalState.Mstate.DeepCopy()
+	fmt.Println("afterMstateDeepCopy")
 	return &GlobalState{
 		WorldState:     newWs,
 		Environment:    newEnv,
-		Mstate:         globalState.Mstate.DeepCopy(),
+		Mstate:         newMs,
 		TxStack:        globalState.TxStack,
 		Z3ctx:          globalState.Z3ctx,
 		LastReturnData: globalState.LastReturnData,
@@ -74,17 +77,18 @@ func (globalState *GlobalState) Translate(ctx *z3.Context) {
 	if globalState.Z3ctx.GetRaw() == ctx.GetRaw() {
 		return
 	}
-	fmt.Println("before changeStateContext")
+	fmt.Println("before changeStateContext:", globalState.GetCurrentInstruction().OpCode.Name, globalState, globalState.LastReturnData)
+
 	globalState.Z3ctx = ctx
 	// machineState stack & memory
 	fmt.Println("glTrans1")
 	globalState.Mstate = globalState.Mstate.Translate(ctx)
-	// worldState constraints
-	fmt.Println("glTrans2")
-	globalState.WorldState = globalState.WorldState.Translate(ctx)
 	// env
-	fmt.Println("glTrans3")
+	fmt.Println("glTrans2")
 	globalState.Environment = globalState.Environment.Translate(ctx)
+	// worldState constraints
+	fmt.Println("glTrans3")
+	globalState.WorldState = globalState.WorldState.Translate(ctx)
 	fmt.Println("glTrans4")
 	// lastReturnData
 	//fmt.Println("changeStateContext done")

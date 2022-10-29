@@ -87,10 +87,8 @@ func (dm *TxOrigin) _analyze_state(globalState *state.GlobalState) []*analysis.I
 
 	if globalState.GetCurrentInstruction().OpCode.Name == "JUMPI" {
 		// In JUMPI prehook
-		fmt.Println("IN jumpi")
 		length := globalState.Mstate.Stack.Length()
 		for _, annotation := range globalState.Mstate.Stack.RawStack[length-2].Annotations.Elements() {
-			fmt.Println("In origin iteration", reflect.TypeOf(annotation).String())
 			if reflect.TypeOf(annotation).String() == "modules.TxOriginAnnotation" {
 				constraints := globalState.WorldState.Constraints.Copy()
 				transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
@@ -124,7 +122,6 @@ func (dm *TxOrigin) _analyze_state(globalState *state.GlobalState) []*analysis.I
 		}
 	} else {
 		// In ORIGIN posthook
-		fmt.Println("IN origin")
 		length := globalState.Mstate.Stack.Length()
 		globalState.Mstate.Stack.RawStack[length-1].Annotate(TxOriginAnnotation{})
 	}

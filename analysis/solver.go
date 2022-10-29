@@ -50,7 +50,7 @@ func GetTransactionSequenceTmp(globalState *state.GlobalState, constraints *stat
 	initialWorldState := transactionSequence[0].GetWorldState()
 	initialAccounts := initialWorldState.Accounts
 	for _, transaction := range transactionSequence {
-		concreteTx := _get_concrete_transaction(model, transaction)
+		concreteTx := _get_concrete_transaction(model, transaction, globalState.Z3ctx)
 		concreteTransactions = append(concreteTransactions, concreteTx)
 	}
 	minPriceDict := make(map[string]int)
@@ -77,48 +77,45 @@ func GetTransactionSequenceTmp(globalState *state.GlobalState, constraints *stat
 }
 
 func GetTransactionSequence(globalState *state.GlobalState, constraints *state.Constraints) map[string]interface{} {
-	//var transactionSequence []state.BaseTransaction
-	//for i, v := range globalState.WorldState.TransactionSequence {
-	//	transactionSequence[i] = v
-	//}
 
 	transactionSequence := globalState.WorldState.TransactionSequence
-	concreteTransactions := make([]*map[string]string, 0)
+	//concreteTransactions := make([]*map[string]string, 0)
 	txConstraints, minimize := _set_minimisation_constraints(transactionSequence, constraints.Copy(),
 		make([]*z3.Bool, 0), 5000, globalState.WorldState, globalState.Z3ctx)
 
-	model, ok := state.GetModel(txConstraints, minimize, make([]*z3.Bool, 0), false, globalState.Z3ctx)
+	//model, ok := state.GetModel(txConstraints, minimize, make([]*z3.Bool, 0), false, globalState.Z3ctx)
+	_, ok := state.GetModel(txConstraints, minimize, make([]*z3.Bool, 0), false, globalState.Z3ctx)
 	if !ok {
 		// UnsatError
 		fmt.Println("unsat in getTxSeq")
 		return nil
 	}
-	initialWorldState := transactionSequence[0].GetWorldState()
-	initialAccounts := initialWorldState.Accounts
-	for _, transaction := range transactionSequence {
-		concreteTx := _get_concrete_transaction(model, transaction)
-		concreteTransactions = append(concreteTransactions, concreteTx)
-	}
-	minPriceDict := make(map[string]int)
-	ctx := globalState.Z3ctx
-
-	for address, _ := range initialAccounts {
-		minPriceDict[address] = model.Eval(
-			initialWorldState.StartingBalances.Translate(ctx).GetItem(ctx.NewBitvec(address, 256)).AsAST(), true).Int()
-	}
-	concreteInitialState := _get_concrete_state(initialAccounts, &minPriceDict)
-	switch transactionSequence[0].(type) {
-	case *state.ContractCreationTransaction:
-		code := transactionSequence[0].(*state.ContractCreationTransaction).Code
-		_replace_with_actual_sha(concreteTransactions, model, code, globalState.Z3ctx)
-	default:
-		_replace_with_actual_sha(concreteTransactions, model, nil, globalState.Z3ctx)
-	}
-	_add_calldata_placeholder(concreteTransactions, transactionSequence)
+	//initialWorldState := transactionSequence[0].GetWorldState()
+	//initialAccounts := initialWorldState.Accounts
+	//for _, transaction := range transactionSequence {
+	//	concreteTx := _get_concrete_transaction(model, transaction, globalState.Z3ctx)
+	//	concreteTransactions = append(concreteTransactions, concreteTx)
+	//}
+	//minPriceDict := make(map[string]int)
+	//ctx := globalState.Z3ctx
+	//
+	//for address, _ := range initialAccounts {
+	//	minPriceDict[address] = model.Eval(
+	//		initialWorldState.StartingBalances.Translate(ctx).GetItem(ctx.NewBitvec(address, 256)).AsAST(), true).Int()
+	//}
+	//concreteInitialState := _get_concrete_state(initialAccounts, &minPriceDict)
+	//switch transactionSequence[0].(type) {
+	//case *state.ContractCreationTransaction:
+	//	code := transactionSequence[0].(*state.ContractCreationTransaction).Code
+	//	_replace_with_actual_sha(concreteTransactions, model, code, globalState.Z3ctx)
+	//default:
+	//	_replace_with_actual_sha(concreteTransactions, model, nil, globalState.Z3ctx)
+	//}
+	//_add_calldata_placeholder(concreteTransactions, transactionSequence)
 
 	steps := make(map[string]interface{})
-	steps["initialState"] = concreteInitialState
-	steps["steps"] = concreteTransactions
+	//steps["initialState"] = concreteInitialState
+	//steps["steps"] = concreteTransactions
 	return steps
 }
 
@@ -136,12 +133,12 @@ func _get_concrete_state(initialAccounts map[string]*state.Account, minPriceDict
 	return &accounts
 }
 
-func _get_concrete_transaction(model *z3.Model, transacton state.BaseTransaction) *map[string]string {
+func _get_concrete_transaction(model *z3.Model, transacton state.BaseTransaction, ctx *z3.Context) *map[string]string {
 	// Get concrete values from transaction
 	// String() return #x123, not 0x123
-	address := transacton.GetCalleeAccount().Address.BvString()
-	value := model.Eval(transacton.GetCallValue().AsAST(), true).String()
-	caller := model.Eval(transacton.GetCaller().AsAST(), true).String()
+	address := transacton.GetCalleeAccount().Address.Translate(ctx).BvString()
+	value := model.Eval(transacton.GetCallValue().Translate(ctx).AsAST(), true).String()
+	caller := model.Eval(transacton.GetCaller().Translate(ctx).AsAST(), true).String()
 	caller = "#x" + utils.Zfill(caller[2:], 40)
 	input := ""
 	switch transacton.(type) {

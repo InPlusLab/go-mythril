@@ -78,7 +78,8 @@ func CheckPotentialIssues(globalState *state.GlobalState) {
 	unsatPotentialIssues := make([]*PotentialIssue, 0)
 	for _, potentialIssue := range annotation.Elements() {
 		fmt.Println("addPotentialIssues")
-		tmpConstraint := globalState.WorldState.Constraints.Copy()
+		//tmpConstraint := globalState.WorldState.Constraints.Copy()
+		tmpConstraint := globalState.WorldState.Constraints.DeepCopy()
 		//tmpConstraint.Add(potentialIssue.Constraints.ConstraintList...)
 		// should translate the context here
 		for _, con := range potentialIssue.Constraints.ConstraintList {

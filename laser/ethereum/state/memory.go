@@ -220,6 +220,7 @@ func (m *Memory) Copy() *Memory {
 func (m *Memory) CopyTranslate(ctx *z3.Context) *Memory {
 	rawM := make(map[int64]*z3.Bitvec)
 	for i, v := range *m.RawMemory {
+		//rawM[i] = v.Translate8(ctx)
 		rawM[i] = v.Translate(ctx)
 	}
 	return &Memory{

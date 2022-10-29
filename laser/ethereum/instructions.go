@@ -970,22 +970,24 @@ func (instr *Instruction) sha3_(globalState *state.GlobalState) []*state.GlobalS
 	dataList := mstate.Memory.GetItems(indexV, indexV+int64(length))
 	var data *z3.Bitvec
 	if len(dataList) > 1 {
-		data = dataList[0].Translate(globalState.Z3ctx)
+		//data = dataList[0].Translate(globalState.Z3ctx)
+		data = dataList[0]
 		for i := 1; i < len(dataList); i++ {
-			data = data.Concat(dataList[i].Translate(globalState.Z3ctx)).Simplify()
+			//data = data.Concat(dataList[i].Translate(globalState.Z3ctx)).Simplify()
+			data = data.Concat(dataList[i]).Simplify()
 		}
 	} else if len(dataList) == 1 {
-		data = dataList[0].Translate(globalState.Z3ctx).Simplify()
+		//data = dataList[0].Translate(globalState.Z3ctx).Simplify()
+		data = dataList[0].Simplify()
 	} else {
-		fmt.Println("getEmptyKeccakHash")
 		result := function_managers.NewKeccakFunctionManager(globalState.Z3ctx).GetEmptyKeccakHash()
 		mstate.Stack.Append(result)
 		ret = append(ret, globalState)
 		return ret
 	}
-
+	//fmt.Println("data:", data.BvString(), data.BvSize())
 	result, cons := function_managers.NewKeccakFunctionManager(globalState.Z3ctx).CreateKeccak(data)
-
+	fmt.Println("result:", result.BvString())
 	mstate.Stack.Append(result)
 	globalState.WorldState.Constraints.Add(cons)
 	ret = append(ret, globalState)
@@ -1465,7 +1467,6 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 	// False case
 	if negatedCond {
 		fmt.Println("test negative nil")
-
 		newState := globalState.Copy()
 		newState.Mstate.MinGasUsed += minGas
 		newState.Mstate.MaxGasUsed += maxGas

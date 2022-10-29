@@ -111,7 +111,7 @@ func (b *Bitvec) Value() string {
 	if b == nil {
 		return ""
 	}
-	if !strings.Contains(b.BvString(), "_") && !b.symbolic && strings.HasPrefix(b.BvString(), "#x") {
+	if !strings.Contains(b.BvString(), "_") && !b.symbolic && strings.Contains(b.BvString(), "#x") {
 		tmp := b.Simplify()
 		value := C.GoString(C.Z3_get_numeral_string(tmp.rawCtx, tmp.rawAST))
 		//value := "0"
@@ -169,36 +169,16 @@ func (b *Bitvec) Copy() *Bitvec {
 	}
 }
 
-//
-//func (b *Bitvec) Copy(ctx *Context) *Bitvec {
-//	var anno *utils.Set
-//	if b.Annotations == nil {
-//		anno = utils.NewSet()
-//	}else {
-//		anno = b.Annotations.Copy()
-//	}
-//
-//	return &Bitvec{
-//		rawCtx:      ctx.raw,
-//		rawAST: C.Z3_translate(b.rawCtx, b.rawAST, ctx.raw),
-//		rawSort:     b.rawSort,
-//		symbolic:    b.symbolic,
-//		Annotations: anno,
-//	}
-//}
-
 // Translate is used to copy ast from one context to another.
 func (b *Bitvec) Translate(c *Context) *Bitvec {
 	if b.rawCtx == c.raw {
 		return b
 	}
-	size := C.Z3_get_bv_sort_size(b.rawCtx, b.rawSort)
 	return &Bitvec{
 		rawCtx: c.raw,
 		rawAST: C.Z3_translate(b.rawCtx, b.rawAST, c.raw),
 		// TODO: sort translate?
-		//rawSort:     b.rawSort,
-		rawSort:     C.Z3_mk_bv_sort(c.raw, C.uint(size)),
+		rawSort:     b.rawSort,
 		symbolic:    b.symbolic,
 		Annotations: b.Annotations.Copy(),
 	}

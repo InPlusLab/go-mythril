@@ -92,6 +92,7 @@ func (a *Array) Translate(ctx *Context) BaseArray {
 	if a.rawCtx == ctx.raw {
 		return a
 	}
+	//fmt.Println("ArrayKind:", a.GetAstKind())
 	return &Array{
 		name:      a.name,
 		rawCtx:    ctx.raw,
@@ -99,6 +100,10 @@ func (a *Array) Translate(ctx *Context) BaseArray {
 		domSize:   a.domSize,
 		rangeSize: a.rangeSize,
 	}
+}
+
+func (a *Array) GetAstKind() C.Z3_ast_kind {
+	return C.Z3_get_ast_kind(a.rawCtx, a.rawAST)
 }
 
 func (a *K) SetItem(index *Bitvec, value *Bitvec) {
@@ -141,10 +146,15 @@ func (a *K) Translate(ctx *Context) BaseArray {
 	if a.rawCtx == ctx.raw {
 		return a
 	}
+	//fmt.Println("KKind:", a.GetAstKind())
 	return &K{
 		rawCtx:    ctx.raw,
 		rawAST:    C.Z3_translate(a.rawCtx, a.rawAST, ctx.raw),
 		domSize:   a.domSize,
 		rangeSize: a.rangeSize,
 	}
+}
+
+func (a *K) GetAstKind() C.Z3_ast_kind {
+	return C.Z3_get_ast_kind(a.rawCtx, a.rawAST)
 }
