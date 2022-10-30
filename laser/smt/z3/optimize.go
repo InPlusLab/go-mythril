@@ -4,7 +4,6 @@ package z3
 // #include "goZ3Config.h"
 import "C"
 import (
-	"fmt"
 	"unsafe"
 )
 
@@ -77,7 +76,6 @@ func (s *Optimize) Check(args ...*AST) LBool {
 		return LBool(C.Z3_optimize_check(s.rawCtx, s.rawOptimize, C.uint(length),
 			(*C.Z3_ast)(unsafe.Pointer(&raws[0]))))
 	} else {
-		fmt.Println("optimize check")
 		//tmp := AST{rawCtx: s.rawCtx, rawAST: nil}
 		//fmt.Println("optimize 2")
 		return LBool(C.Z3_optimize_check(s.rawCtx, s.rawOptimize, C.uint(0), nil))

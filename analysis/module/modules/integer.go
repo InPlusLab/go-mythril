@@ -138,10 +138,10 @@ func (dm *IntegerArithmetics) _handel_add(globalState *state.GlobalState) {
 	op0, op1 := dm._get_args(globalState)
 	c := op0.BvAddNoOverflow(op1, false).Not()
 	annotation := OverUnderflowAnnotation{
-		//OverflowingState: globalState.Copy(),
-		OverflowingState: globalState,
-		Operator:         "addition",
-		Constraint:       c,
+		OverflowingState: globalState.Copy(),
+		//OverflowingState: globalState,
+		Operator:   "addition",
+		Constraint: c,
 	}
 	op0.Annotate(annotation)
 }
@@ -149,10 +149,10 @@ func (dm *IntegerArithmetics) _handel_mul(globalState *state.GlobalState) {
 	op0, op1 := dm._get_args(globalState)
 	c := op0.BvMulNoOverflow(op1, false).Not()
 	annotation := OverUnderflowAnnotation{
-		//OverflowingState: globalState.Copy(),
-		OverflowingState: globalState,
-		Operator:         "multiplication",
-		Constraint:       c,
+		OverflowingState: globalState.Copy(),
+		//OverflowingState: globalState,
+		Operator:   "multiplication",
+		Constraint: c,
 	}
 	op0.Annotate(annotation)
 }
@@ -160,10 +160,10 @@ func (dm *IntegerArithmetics) _handel_sub(globalState *state.GlobalState) {
 	op0, op1 := dm._get_args(globalState)
 	c := op0.BvSubNoUnderflow(op1, false).Not()
 	annotation := OverUnderflowAnnotation{
-		//OverflowingState: globalState.Copy(),
-		OverflowingState: globalState,
-		Operator:         "subtraction",
-		Constraint:       c,
+		OverflowingState: globalState.Copy(),
+		//OverflowingState: globalState,
+		Operator:   "subtraction",
+		Constraint: c,
 	}
 	op0.Annotate(annotation)
 }
@@ -188,10 +188,10 @@ func (dm *IntegerArithmetics) _handel_exp(globalState *state.GlobalState) {
 		constraint = op1.BvSGe(ctx.NewBitvecVal(int64(math.Ceil(256/math.Log2(float64(op0V)))), 256))
 	}
 	annotation := OverUnderflowAnnotation{
-		//OverflowingState: globalState.Copy(),
-		OverflowingState: globalState,
-		Operator:         "exponentiation",
-		Constraint:       constraint,
+		OverflowingState: globalState.Copy(),
+		//OverflowingState: globalState,
+		Operator:   "exponentiation",
+		Constraint: constraint,
 	}
 	op0.Annotate(annotation)
 }
@@ -215,7 +215,6 @@ func (dm *IntegerArithmetics) _handel_jumpi(globalState *state.GlobalState) {
 	for _, annotation := range value.Annotations.Elements() {
 		if reflect.TypeOf(annotation).String() == "modules.OverUnderflowAnnotation" {
 			stateAnnotation.OverflowingStateAnnotations.Add(annotation)
-			fmt.Println(stateAnnotation, " ", stateAnnotation.OverflowingStateAnnotations.Len())
 		}
 	}
 }

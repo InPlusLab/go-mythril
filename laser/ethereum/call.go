@@ -39,10 +39,8 @@ func GetCallParameters(globalState *state.GlobalState, withValue bool) (*z3.Bitv
 
 func getCalleeAccount(globalState *state.GlobalState, calleeAddress *z3.Bitvec) *state.Account {
 	if calleeAddress.Symbolic() {
-		fmt.Println("1")
 		return state.NewAccount(calleeAddress, globalState.WorldState.Balances, false, disassembler.NewDisasembly(""), "")
 	} else {
-		fmt.Println("2")
 		return globalState.WorldState.AccountsExistOrLoad(calleeAddress)
 	}
 }

@@ -125,7 +125,7 @@ func (m *Memory) Extend(size int) {
 func (m *Memory) GetWordAt(index int64) *z3.Bitvec {
 	mem := *m.RawMemory
 	result, ok := mem[index]
-	fmt.Println("result:", result, "ok:", ok)
+
 	if !ok {
 		var ctx *z3.Context
 		for _, v := range mem {

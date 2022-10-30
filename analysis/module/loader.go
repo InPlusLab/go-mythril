@@ -62,19 +62,20 @@ func (loader *ModuleLoader) GetDetectionModules(whiteList []string) []modules.De
 }
 
 func (loader *ModuleLoader) registerMythrilModules() {
-	loader.Modules = append(loader.Modules)//modules.NewArbitraryJump(),
-	//modules.NewArbitraryStorage(),
-	//modules.NewArbitraryDelegateCall(),
-	//modules.NewPredictableVariables(),
-	//modules.NewTxOrigin(),
-	//modules.NewEtherThief(),
-	//modules.NewExceptions(),
-	//modules.NewExternalCalls(),
-	//modules.NewIntegerArithmetics(),
-	//modules.NewMultipleSends(),
-	//modules.NewStateChangeAfterCall(),
-	//modules.NewAccidentallyKillable(),
-	//modules.NewUncheckedRetval(),
-	//modules.NewUserAssertions(),
-
+	loader.Modules = append(loader.Modules,
+		modules.NewArbitraryJump(),
+		modules.NewArbitraryStorage(),
+		modules.NewArbitraryDelegateCall(),
+		modules.NewPredictableVariables(),
+		modules.NewTxOrigin(),
+		//modules.NewEtherThief(),
+		modules.NewExceptions(),
+		modules.NewExternalCalls(),
+		modules.NewIntegerArithmetics(),
+		modules.NewMultipleSends(),
+		modules.NewStateChangeAfterCall(),
+		modules.NewAccidentallyKillable(),
+		modules.NewUncheckedRetval(),
+		modules.NewUserAssertions(),
+	)
 }

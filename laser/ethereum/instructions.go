@@ -72,8 +72,8 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	instr.ExePreHooks(globalState)
 	result := instr.Mutator(globalState)
 
-	fmt.Println("PC:", globalState.Mstate.Pc)
-	fmt.Println("Address:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name)
+	//fmt.Println("PC:", globalState.Mstate.Pc)
+	//fmt.Println("Address:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name)
 	// has the same function of StateTransition in instructions.go
 	for _, state := range result {
 		if instr.Opcode != "JUMPI" && instr.Opcode != "JUMP" && instr.Opcode != "RETURNSUB" {
@@ -95,7 +95,7 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	//	//state.Mstate.Memory.PrintMemoryOneLine()
 	//	//state.Mstate.Memory.PrintMemory()
 	//}
-	fmt.Println("------------------------------------------------------------")
+	//fmt.Println("------------------------------------------------------------")
 
 	return result
 }
@@ -987,7 +987,7 @@ func (instr *Instruction) sha3_(globalState *state.GlobalState) []*state.GlobalS
 	}
 	//fmt.Println("data:", data.BvString(), data.BvSize())
 	result, cons := function_managers.NewKeccakFunctionManager(globalState.Z3ctx).CreateKeccak(data)
-	fmt.Println("result:", result.BvString())
+
 	mstate.Stack.Append(result)
 	globalState.WorldState.Constraints.Add(cons)
 	ret = append(ret, globalState)
@@ -1307,9 +1307,7 @@ func (instr *Instruction) mload_(globalState *state.GlobalState) []*state.Global
 	} else {
 		mstate.MemExtend(offset, 32)
 		offsetV, _ := strconv.ParseInt(offset.Value(), 10, 64)
-		fmt.Println("mload-index:", offsetV, offset.Symbolic())
-		fmt.Println("memory:", mstate.Memory.RawMemory)
-		fmt.Println("mloadState:", globalState)
+
 		data := mstate.Memory.GetWordAt(offsetV)
 		mstate.Stack.Append(data)
 	}
@@ -1333,7 +1331,7 @@ func (instr *Instruction) mstore_(globalState *state.GlobalState) []*state.Globa
 
 	mstate.MemExtend(mstart, 32)
 	mstartV, _ := strconv.ParseInt(mstart.Value(), 10, 64)
-	fmt.Println("mstoreSize:", value.BvSize())
+
 	mstate.Memory.WriteWordAt(mstartV, value)
 	ret = append(ret, globalState)
 	return ret
@@ -1674,15 +1672,10 @@ func (instr *Instruction) return_(globalState *state.GlobalState) {
 	} else {
 		lenV, _ := strconv.ParseInt(length.Value(), 10, 64)
 		mstate.MemExtend(offset, int(lenV))
-		fmt.Println("1")
 		CheckGasUsageLimit(globalState)
-		fmt.Println("2")
 		offsetV, _ := strconv.ParseInt(offset.Value(), 10, 64)
-		fmt.Println("3")
 		returnData = mstate.Memory.GetItems2Bytes(offsetV, offsetV+lenV)
-		fmt.Println("4")
 	}
-	fmt.Println("5")
 	globalState.CurrentTransaction().End(globalState, returnData)
 }
 
