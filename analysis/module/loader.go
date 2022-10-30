@@ -68,7 +68,7 @@ func (loader *ModuleLoader) registerMythrilModules() {
 		modules.NewArbitraryDelegateCall(),
 		modules.NewPredictableVariables(),
 		modules.NewTxOrigin(),
-		//modules.NewEtherThief(),
+		modules.NewEtherThief(),
 		modules.NewExceptions(),
 		modules.NewExternalCalls(),
 		modules.NewIntegerArithmetics(),
