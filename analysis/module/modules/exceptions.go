@@ -28,6 +28,11 @@ func (anno LastJumpAnnotation) PersistToWorldState() bool {
 func (anno LastJumpAnnotation) PersistOverCalls() bool {
 	return false
 }
+func (anno LastJumpAnnotation) Copy() state.StateAnnotation {
+	return LastJumpAnnotation{
+		LastJump: anno.LastJump,
+	}
+}
 func (anno LastJumpAnnotation) SetLastJump(a int) {
 	anno.LastJump = a
 }

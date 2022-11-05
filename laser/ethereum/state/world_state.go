@@ -28,13 +28,13 @@ func NewWordState(ctx *z3.Context) *WorldState {
 	//balances.SetItem(ACTORS.GetAttacker(), ctx.NewBitvec("initBalance",256))
 	//balances.SetItem(ACTORS.GetSomeGuy(), ctx.NewBitvec("initBalance",256))
 
-	//startingBalances := balances.DeepCopy()
-	startingBalances := ctx.NewArray("Balance", 256, 256)
+	startingBalances := balances.DeepCopy()
+	//startingBalances := ctx.NewArray("Balance", 256, 256)
 
 	ws := &WorldState{
 		Accounts:            accounts,
 		Balances:            balances,
-		StartingBalances:    startingBalances,
+		StartingBalances:    startingBalances.(*z3.Array),
 		Constraints:         NewConstraints(),
 		TransactionSequence: make([]BaseTransaction, 0),
 	}
@@ -106,6 +106,7 @@ func (ws *WorldState) Translate(ctx *z3.Context) *WorldState {
 		newV := v.Translate(ctx)
 		newConstraints.Add(newV)
 	}
+	fmt.Println("afterWS constraints translate")
 	newAccounts := make(map[string]*Account)
 	for i, v := range ws.Accounts {
 		newAccounts[i] = v.Translate(ctx)

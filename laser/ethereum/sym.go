@@ -64,15 +64,17 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 	}
 
 	ctxList := make([]*z3.Context, 4, 4)
-	for i, _ := range ctxList {
-		ctxList[i] = z3.NewContext(cfg)
-	}
+
+	// chz
+	//for i, _ := range ctxList {
+	//	ctxList[i] = z3.NewContext(cfg)
+	//}
 
 	evm := LaserEVM{
 		ExecutionTimeout: ExecutionTimeout,
 		CreateTimeout:    CreateTimeout,
 		TransactionCount: TransactionCount,
-		WorkList:         make(chan *state.GlobalState, 1000),
+		WorkList:         make(chan *state.GlobalState, 10000),
 		OpenStates:       make([]*state.WorldState, 0),
 		//OpenStates: utils.NewSyncIssueSlice(),
 		FinalState: nil,
@@ -193,12 +195,14 @@ LOOP:
 			beforeExecSignals[signal.Id] = signal.Finished
 			//fmt.Println("beforeExecSignal:", signal.Id, signal.Finished)
 			allNoStates := true
+			//fmt.Println("#########")
 			for _, noState := range beforeExecSignals {
-				//fmt.Println(i, finished)
+				//fmt.Println(i, noState)
 				if !noState {
 					allNoStates = false
 				}
 			}
+			//fmt.Println("#########")
 
 			allEndOpCode := true
 			for _, opcode := range evm.LastOpCodeList {
@@ -206,8 +210,15 @@ LOOP:
 					allEndOpCode = false
 				}
 			}
+			flag := true
+			for _, opcode := range evm.LastOpCodeList {
+				if opcode != "" {
+					flag = false
+					break
+				}
+			}
 
-			if allNoStates && allEndOpCode && len(evm.WorkList) == 0 {
+			if allNoStates && allEndOpCode && len(evm.WorkList) == 0 && !flag {
 				fmt.Println("break in situation 2")
 				fmt.Println("workListLen:", len(evm.WorkList))
 
@@ -280,12 +291,18 @@ func (evm *LaserEVM) MultiSymExec(creationCode string, runtimeCode string, contr
 		// Reset
 		evm.BeforeExecCh = make(chan Signal)
 		evm.AfterExecCh = make(chan Signal)
-		evm.MarkList = make([]*map[int64]*z3.Bitvec, evm.GofuncCount, evm.GofuncCount)
-		for _, obj := range evm.NewCtxList {
-			obj.Close()
-		}
-		evm.NewCtxList = make([]*z3.Context, 0)
+		//evm.MarkList = make([]*map[int64]*z3.Bitvec, evm.GofuncCount, evm.GofuncCount)
+
+		// chz
+		//for _, obj := range evm.NewCtxList {
+		//	obj.Close()
+		//}
+		//evm.NewCtxList = make([]*z3.Context, 0)
+
 		evm.LastOpCodeList = make([]string, evm.GofuncCount, evm.GofuncCount)
+
+		// chz
+		evm.CtxList = make([]*z3.Context, evm.GofuncCount, evm.GofuncCount)
 	}
 }
 
@@ -420,11 +437,16 @@ func readWithSelect3(evm *LaserEVM, id int) (*state.GlobalState, error) {
 			for i, m := range evm.CtxList {
 				if i != id {
 					if globalState.Z3ctx == m {
-						//evm.WorkList <- globalState
-						return globalState, errors.New("get other's state, push it back to WorkList")
+						evm.WorkList <- globalState
+						return nil, errors.New("get other's state, push it back to WorkList")
+						//return globalState, errors.New("get other's state, push it back to WorkList")
 					}
 				}
 			}
+
+			// chz
+			evm.CtxList[id] = globalState.Z3ctx
+
 			return globalState, nil
 		}
 
@@ -445,12 +467,13 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 		//fmt.Println("Run", id, globalState == nil)
 		evm.BeforeExecCh <- Signal{
 			Id:       id,
-			Finished: globalState == nil,
+			Finished: globalState == nil && err.Error() == "evm.WorkList is empty",
 		}
 
 		if globalState != nil && err == nil {
 
-			globalState.Translate(evm.CtxList[id])
+			// chz
+			//globalState.Translate(evm.CtxList[id])
 
 			newStates, opcode := evm.ExecuteState(globalState)
 
@@ -469,7 +492,7 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 			//}
 
 			fmt.Println(id, "done", globalState, opcode, globalState.Z3ctx)
-
+			fmt.Println("evmOpenStatesLen:", len(evm.OpenStates), "evmWorkListLen:", len(evm.WorkList))
 			fmt.Println("===========================================================================")
 			if len(newStates) == 0 {
 				evm.FinalState = globalState
@@ -490,9 +513,9 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 			}
 		}
 
-		if globalState != nil && err != nil {
-			evm.WorkList <- globalState
-		}
+		//if globalState != nil && err != nil {
+		//	evm.WorkList <- globalState
+		//}
 
 		/* peilin
 		globalState := <-evm.WorkList
@@ -587,7 +610,10 @@ func ExecuteContractCreation(evm *LaserEVM, creationCode string, contractName st
 func ExecuteMessageCall(evm *LaserEVM, runtimeCode string, inputStr string, ctx *z3.Context, address *z3.Bitvec, multiple bool, cfg *z3.Config) {
 
 	if len(evm.OpenStates) <= 0 {
-		panic("ExecuteMessageCall empty openStates!")
+		//panic("ExecuteMessageCall empty openStates!")
+		fmt.Println("ExecuteMessageCall empty openStates!")
+		// only in multipleSymExec
+		return
 	}
 	for _, openState := range evm.OpenStates {
 		var txCtx *z3.Context

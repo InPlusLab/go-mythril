@@ -36,6 +36,13 @@ func (anno *MultipleSendsAnnotation) PersistToWorldState() bool {
 func (anno *MultipleSendsAnnotation) PersistOverCalls() bool {
 	return false
 }
+func (anno *MultipleSendsAnnotation) Copy() state.StateAnnotation {
+	return &MultipleSendsAnnotation{
+		IndexCounter: anno.IndexCounter,
+		// TODO: sync.map dont have copy()
+		CallOffsets: anno.CallOffsets,
+	}
+}
 func (anno *MultipleSendsAnnotation) getIndex() int {
 	anno.IndexCounter = anno.IndexCounter + 1
 	return anno.IndexCounter

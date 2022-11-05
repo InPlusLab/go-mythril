@@ -144,7 +144,7 @@ type MachineState struct {
 func NewMachineState() *MachineState {
 	stack := NewMachineStack()
 	return &MachineState{
-		GasLimit:   100000,
+		GasLimit:   8000000,
 		Pc:         0,
 		Stack:      stack,
 		Memory:     NewMemory(),
@@ -202,7 +202,7 @@ func (m *MachineState) CalculateMemoryGas(start int, size int) int {
 func (m *MachineState) CheckGas() {
 	if m.MinGasUsed > m.GasLimit {
 		fmt.Println(m.MinGasUsed, m.GasLimit)
-		panic("OutOfGasException-Mstate-CheckGas")
+		fmt.Println("OutOfGasException-Mstate-CheckGas")
 	}
 }
 

@@ -8,6 +8,8 @@ import "go-mythril/utils"
 type FuncDecl struct {
 	rawCtx      C.Z3_context
 	rawFuncDecl C.Z3_func_decl
+	domain      []*Sort
+	range_      *Sort
 }
 
 func (c *Context) NewFuncDecl(name string, domain []*Sort, range_ *Sort) *FuncDecl {
@@ -23,6 +25,8 @@ func (c *Context) NewFuncDecl(name string, domain []*Sort, range_ *Sort) *FuncDe
 	return &FuncDecl{
 		rawCtx:      c.raw,
 		rawFuncDecl: C.Z3_mk_func_decl(c.raw, sym.rawSymbol, C.uint(len(cdomain)), cdp, range_.rawSort),
+		domain:      domain,
+		range_:      range_,
 	}
 }
 
@@ -59,9 +63,10 @@ func (f *FuncDecl) ApplyBv(args ...*Bitvec) *Bitvec {
 	}
 
 	return &Bitvec{
-		rawCtx:      f.rawCtx,
-		rawAST:      C.Z3_mk_app(f.rawCtx, f.rawFuncDecl, C.uint(len(cargs)), cap),
-		rawSort:     args[0].rawSort,
+		rawCtx: f.rawCtx,
+		rawAST: C.Z3_mk_app(f.rawCtx, f.rawFuncDecl, C.uint(len(cargs)), cap),
+		//rawSort:     args[0].rawSort,
+		rawSort:     f.range_.rawSort,
 		symbolic:    symbolicValue,
 		Annotations: annotations,
 	}

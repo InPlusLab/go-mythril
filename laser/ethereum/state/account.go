@@ -47,19 +47,19 @@ func (acc *Account) Copy() *Account {
 	}
 }
 func (acc *Account) Translate(ctx *z3.Context) *Account {
-	//return &Account{
-	//	Address:      acc.Address.Translate(ctx),
-	//	Balances:     acc.Balances.Translate(ctx).(*z3.Array),
-	//	Storage:      acc.Storage.Translate(ctx),
-	//	Code:         acc.Code,
-	//	ContractName: acc.ContractName,
-	//	Deleted:      acc.Deleted,
-	//}
+	return &Account{
+		Address:      acc.Address.Translate(ctx),
+		Balances:     acc.Balances.Translate(ctx).(*z3.Array),
+		Storage:      acc.Storage.Translate(ctx),
+		Code:         acc.Code,
+		ContractName: acc.ContractName,
+		Deleted:      acc.Deleted,
+	}
 	// Tips: Account == Storage, and Translate != Copy
-	acc.Address = acc.Address.Translate(ctx)
-	acc.Balances = acc.Balances.Translate(ctx).(*z3.Array)
-	acc.Storage = acc.Storage.Translate(ctx)
-	return acc
+	//acc.Address = acc.Address.Translate(ctx)
+	//acc.Balances = acc.Balances.Translate(ctx).(*z3.Array)
+	//acc.Storage = acc.Storage.Translate(ctx)
+	//return acc
 }
 func (acc *Account) Balance() *z3.Bitvec {
 	return acc.Balances.GetItem(acc.Address)
@@ -72,6 +72,7 @@ type Storage struct {
 	Address          *z3.Bitvec
 	StandardStorage  z3.BaseArray
 	PrintableStorage map[string]*z3.Bitvec
+	//PrintableStorage sync.Map
 	// set(int)
 	StorageKeysLoaded *utils.Set
 	// set(bv)
@@ -90,11 +91,12 @@ func NewStorage(addr *z3.Bitvec, concrete bool) *Storage {
 	} else {
 		sstorage = ctx.NewArray("Storage"+addr.BvString(), 256, 256)
 	}
-
+	//var myMap sync.Map
 	return &Storage{
-		Address:           addr,
-		StandardStorage:   sstorage,
-		PrintableStorage:  make(map[string]*z3.Bitvec),
+		Address:          addr,
+		StandardStorage:  sstorage,
+		PrintableStorage: make(map[string]*z3.Bitvec),
+		//PrintableStorage: myMap,
 		StorageKeysLoaded: utils.NewSet(),
 		KeysSet:           utils.NewSet(),
 		KeysArr:           make([]*z3.Bitvec, 0),
@@ -106,8 +108,10 @@ func (s *Storage) Translate(ctx *z3.Context) *Storage {
 		key := k.Translate(ctx)
 		newKeysArr = append(newKeysArr, key)
 		pV, ok := s.PrintableStorage[key.BvString()]
+		//pV, ok := s.PrintableStorage.Load(key.BvString())
 		if ok {
 			s.PrintableStorage[key.BvString()] = pV.Translate(ctx)
+			//s.PrintableStorage.Store(key.BvString(), pV.(*z3.Bitvec).Translate(ctx))
 		}
 	}
 
@@ -139,6 +143,10 @@ func (s *Storage) DeepCopy() *Storage {
 	//}
 	for _, k := range s.KeysArr {
 		originV := s.PrintableStorage[k.BvString()]
+		//originV, ok := s.PrintableStorage.Load(k.BvString())
+		//if ok {
+		//	newStorage.SetItem(k.Copy(), originV.(*z3.Bitvec).Copy())
+		//}
 		newStorage.SetItem(k.Copy(), originV.Copy())
 	}
 	//for k, v := range s.PrintableStorage {
@@ -191,6 +199,7 @@ func (s *Storage) GetItem(item *z3.Bitvec) *z3.Bitvec {
 func (s *Storage) SetItem(key *z3.Bitvec, value *z3.Bitvec) {
 	printableStorage := s.PrintableStorage
 	printableStorage[key.BvString()] = value
+	//printableStorage.Store(key.BvString(), value)
 	s.StandardStorage.SetItem(key, value)
 	s.KeysSet.Add(key)
 	s.KeysArr = append(s.KeysArr, key)

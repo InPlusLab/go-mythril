@@ -15,6 +15,15 @@ func NewConstraints() *Constraints {
 	}
 }
 
+func (c *Constraints) Translate(ctx *z3.Context) *Constraints {
+	newCons := NewConstraints()
+	for _, v := range c.ConstraintList {
+		newV := v.Translate(ctx)
+		newCons.ConstraintList = append(newCons.ConstraintList, newV)
+	}
+	return newCons
+}
+
 // In python Mythril, constrains List'copy is shallow copy.
 func (c *Constraints) Copy() *Constraints {
 	tmp := NewConstraints()

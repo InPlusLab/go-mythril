@@ -72,8 +72,8 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	instr.ExePreHooks(globalState)
 	result := instr.Mutator(globalState)
 
-	//fmt.Println("PC:", globalState.Mstate.Pc)
-	//fmt.Println("Address:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name)
+	fmt.Println("PC:", globalState.Mstate.Pc)
+	fmt.Println("Address:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name)
 	// has the same function of StateTransition in instructions.go
 	for _, state := range result {
 		if instr.Opcode != "JUMPI" && instr.Opcode != "JUMP" && instr.Opcode != "RETURNSUB" {
@@ -1331,7 +1331,7 @@ func (instr *Instruction) mstore_(globalState *state.GlobalState) []*state.Globa
 
 	mstate.MemExtend(mstart, 32)
 	mstartV, _ := strconv.ParseInt(mstart.Value(), 10, 64)
-
+	fmt.Println("Mstore_:", value.BvString())
 	mstate.Memory.WriteWordAt(mstartV, value)
 	ret = append(ret, globalState)
 	return ret
@@ -1346,9 +1346,10 @@ func (instr *Instruction) mstore8_(globalState *state.GlobalState) []*state.Glob
 
 	mstate.MemExtend(offset, 1)
 	value2write := value.Extract(7, 0)
+	fmt.Println("mstore8:", value2write.BvString())
 	offsetV, _ := strconv.ParseInt(offset.Value(), 10, 64)
-	mstate.Memory.WriteWordAt(offsetV, value2write)
-
+	//mstate.Memory.WriteWordAt(offsetV, value2write)
+	mstate.Memory.SetItem(offsetV, value2write)
 	ret = append(ret, globalState)
 	return ret
 }

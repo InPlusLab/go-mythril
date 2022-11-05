@@ -74,10 +74,13 @@ func (dm *ArbitraryStorage) _execute(globalState *state.GlobalState) []*analysis
 }
 
 func (dm *ArbitraryStorage) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
+	//config := z3.GetConfig()
+	//newCtx := z3.NewContext(config)
+
 	writeSlot := globalState.Mstate.Stack.RawStack[globalState.Mstate.Stack.Length()-1]
 	ctx := globalState.Z3ctx
 	constrains := globalState.WorldState.Constraints.Copy()
-	fmt.Println("arbitraryWriteCons:", writeSlot.BvString())
+	//fmt.Println("arbitraryWriteCons:", writeSlot.BvString())
 	tmpVal, _ := new(big.Int).SetString("324345425435", 10)
 	constrains.Add(writeSlot.Eq(ctx.NewBitvecVal(tmpVal, 256)))
 	potentialIssue := &PotentialIssue{
@@ -91,8 +94,9 @@ func (dm *ArbitraryStorage) _analyze_state(globalState *state.GlobalState) []*Po
 		DescriptionHead: "The caller can write to arbitrary storage locations.",
 		DescriptionTail: "It is possible to write to arbitrary storage locations. By modifying the values of storage variables, attackers may bypass security controls or manipulate the business logic of the smart contract.",
 		Constraints:     constrains,
-		Detector:        dm,
+		//Constraints:     constrains.Translate(newCtx),
+		Detector: dm,
 	}
-	fmt.Println("arbitraryWrite push:", globalState.GetCurrentInstruction().Address)
+	//fmt.Println("arbitraryWrite push:", globalState.GetCurrentInstruction().Address)
 	return []*PotentialIssue{potentialIssue}
 }

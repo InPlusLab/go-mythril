@@ -39,6 +39,9 @@ func (anno OldBlockNumberUsedAnnotation) PersistToWorldState() bool {
 func (anno OldBlockNumberUsedAnnotation) PersistOverCalls() bool {
 	return false
 }
+func (anno OldBlockNumberUsedAnnotation) Copy() state.StateAnnotation {
+	return anno
+}
 
 func NewPredictableVariables() *PredictableVariables {
 	swcData := analysis.NewSWCData()

@@ -1,17 +1,18 @@
 package z3
 
 import (
+	"sync"
 	"unsafe"
 )
 
 // #include <stdlib.h>
-// #cgo LDFLAGS: -LC:/Z3/build -llibz3
+// #cgo LDFLAGS: -L/home/codepatient/z3/build -lz3
 // #include "goZ3Config.h"
 import "C"
 
 // Config is used to set configuration for Z3. This should be created with
 // NewConfig and closed with Close when you're done using it.
-// -LC:/Z3/build -llibz3   -L/usr/local/z3/build -lz3
+// -LC:/Z3/build -llibz3   -L/usr/local/z3/build -lz3   -L/home/codepatient/z3/build -lz3
 // Config structures are used to set parameters for Z3 behavior. See the
 // Z3 docs for information on available parameters. They can be set with
 // SetParamValue.
@@ -73,4 +74,14 @@ func SetGlobalParam(k, v string) {
 // Close is called.
 func (c *Config) Z3Value() C.Z3_config {
 	return c.raw
+}
+
+var config *Config
+var once sync.Once
+
+func GetConfig() *Config {
+	once.Do(func() {
+		config = NewConfig()
+	})
+	return config
 }

@@ -77,6 +77,9 @@ func (dm *EtherThief) _execute(globalState *state.GlobalState) []*analysis.Issue
 }
 
 func (dm *EtherThief) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
+	//config := z3.GetConfig()
+	//newCtx := z3.NewContext(config)
+
 	//Gstate := globalState.Copy()
 	Gstate := globalState
 	ACTORS := transaction.NewActors(Gstate.Z3ctx)
@@ -102,7 +105,8 @@ func (dm *EtherThief) _analyze_state(globalState *state.GlobalState) []*Potentia
 			"from the contract account. Verify the business logic carefully and make sure that appropriate " +
 			"security controls are in place to prevent unexpected loss of funds.",
 		Constraints: constraints,
-		Detector:    dm,
+		//Constraints: constraints.Translate(newCtx),
+		Detector: dm,
 	}
 	if sat {
 		fmt.Println("etherThief success")

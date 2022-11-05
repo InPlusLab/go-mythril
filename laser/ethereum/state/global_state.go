@@ -52,7 +52,8 @@ func (globalState *GlobalState) Copy() *GlobalState {
 	//}
 	newAnnotations := make([]StateAnnotation, 0)
 	for _, anno := range globalState.Annotations {
-		newAnnotations = append(newAnnotations, anno)
+		//newAnnotations = append(newAnnotations, anno)
+		newAnnotations = append(newAnnotations, anno.Copy())
 	}
 	newWs := globalState.WorldState.Copy()
 	newEnv := globalState.Environment.Copy()

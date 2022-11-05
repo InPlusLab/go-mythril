@@ -77,6 +77,9 @@ func (dm *ArbitraryDelegateCall) _execute(globalState *state.GlobalState) []*ana
 }
 
 func (dm *ArbitraryDelegateCall) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
+	//config := z3.GetConfig()
+	//newCtx := z3.NewContext(config)
+
 	length := globalState.Mstate.Stack.Length()
 	gas := globalState.Mstate.Stack.RawStack[length-1]
 	to := globalState.Mstate.Stack.RawStack[length-2]
@@ -110,8 +113,10 @@ func (dm *ArbitraryDelegateCall) _analyze_state(globalState *state.GlobalState) 
 		DescriptionHead: descriptionHead,
 		DescriptionTail: descriptionTail,
 		Constraints:     constraints,
-		Detector:        dm,
+		//Constraints:     constraints.Translate(newCtx),
+		Detector: dm,
 	}
+
 	issueArr = append(issueArr, potentialIssue)
 	return issueArr
 }

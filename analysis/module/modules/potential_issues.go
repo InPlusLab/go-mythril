@@ -40,6 +40,16 @@ func (anno *PotentialIssuesAnnotation) PersistToWorldState() bool {
 func (anno *PotentialIssuesAnnotation) PersistOverCalls() bool {
 	return false
 }
+func (anno *PotentialIssuesAnnotation) Copy() state.StateAnnotation {
+	newPotentialIssues := make([]*PotentialIssue, 0)
+	for _, issue := range anno.Elements() {
+		newPotentialIssues = append(newPotentialIssues, issue)
+	}
+	newStateAnnotation := &PotentialIssuesAnnotation{
+		PotentialIssues: newPotentialIssues,
+	}
+	return newStateAnnotation
+}
 func (anno *PotentialIssuesAnnotation) Append(item ...*PotentialIssue) {
 	anno.Lock()
 	defer anno.Unlock()
@@ -86,9 +96,16 @@ func CheckPotentialIssues(globalState *state.GlobalState) {
 			tmpConstraint.Add(con.Translate(globalState.Z3ctx))
 		}
 
+		//if potentialIssue.Address == 421 ||  potentialIssue.Address == 497 {
+		//	fmt.Println(potentialIssue.Address, ":")
+		//	for i, con := range tmpConstraint.ConstraintList {
+		//		fmt.Println(i, "-", con.BoolString())
+		//	}
+		//}
+
 		transactionSequence := analysis.GetTransactionSequence(globalState, tmpConstraint)
 		if transactionSequence == nil {
-			fmt.Println("unsatEror")
+			fmt.Println("unsatError")
 			// UnsatError
 			unsatPotentialIssues = append(unsatPotentialIssues, potentialIssue)
 			continue

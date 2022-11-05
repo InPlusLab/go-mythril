@@ -24,6 +24,11 @@ func (anno UncheckedRetvalAnnotation) PersistToWorldState() bool {
 func (anno UncheckedRetvalAnnotation) PersistOverCalls() bool {
 	return false
 }
+func (anno UncheckedRetvalAnnotation) Copy() state.StateAnnotation {
+	return UncheckedRetvalAnnotation{
+		RetVals: anno.RetVals.Copy(),
+	}
+}
 
 type UncheckedRetval struct {
 	Name        string

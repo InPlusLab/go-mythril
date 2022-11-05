@@ -153,7 +153,7 @@ func (m *Memory) GetWordAt(index int64) *z3.Bitvec {
 
 func (m *Memory) WriteWordAt(index int64, value *z3.Bitvec) {
 	if value.BvSize() != 256 {
-		panic("memory size error in WriteWordAt")
+		panic("memory size error in WriteWordAt" + strconv.Itoa(value.BvSize()))
 	}
 	mem := *m.RawMemory
 	for i := 0; i < 256; i = i + 8 {

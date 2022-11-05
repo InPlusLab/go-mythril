@@ -40,6 +40,17 @@ func (anno *StateChangeCallsAnnotation) PersistToWorldState() bool {
 func (anno *StateChangeCallsAnnotation) PersistOverCalls() bool {
 	return false
 }
+func (anno *StateChangeCallsAnnotation) Copy() state.StateAnnotation {
+	stateChangeStatesNew := make([]*state.GlobalState, 0)
+	for _, v := range anno.StateChangeStates {
+		stateChangeStatesNew = append(stateChangeStatesNew, v)
+	}
+	return &StateChangeCallsAnnotation{
+		CallState:          anno.CallState.Copy(),
+		StateChangeStates:  stateChangeStatesNew,
+		UserDefinedAddress: anno.UserDefinedAddress,
+	}
+}
 func (anno *StateChangeCallsAnnotation) AppendState(globalState *state.GlobalState) {
 	anno.StateChangeStates = append(anno.StateChangeStates, globalState)
 	fmt.Println("appendState!")
@@ -165,6 +176,9 @@ func (dm *StateChangeAfterCall) _execute(globalState *state.GlobalState) []*anal
 }
 
 func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
+	//config := z3.GetConfig()
+	//newCtx := z3.NewContext(config)
+
 	annotations := globalState.GetAnnotations(reflect.TypeOf(&StateChangeCallsAnnotation{}))
 	opcode := globalState.GetCurrentInstruction().OpCode
 
@@ -210,6 +224,7 @@ func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) [
 		}
 		issue := annotation.(*StateChangeCallsAnnotation).GetIssue(globalState, dm)
 		if issue != nil {
+			//issue.Constraints = issue.Constraints.Translate(newCtx)
 			vulnerabilities = append(vulnerabilities, issue)
 		}
 	}

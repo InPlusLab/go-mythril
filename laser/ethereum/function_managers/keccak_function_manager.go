@@ -31,11 +31,49 @@ func (k *KeccakFunctionManager) GetEmptyKeccakHash() *z3.Bitvec {
 	return k.Ctx.NewBitvecVal(val, 256)
 }
 
+func (k *KeccakFunctionManager) getFunction(length int) (*z3.FuncDecl, *z3.FuncDecl) {
+	domain1 := []*z3.Sort{k.Ctx.BvSort(uint(length))}
+	keccakFun := k.Ctx.NewFuncDecl("kecak256_"+strconv.Itoa(length), domain1, k.Ctx.BvSort(256))
+	domain2 := []*z3.Sort{k.Ctx.BvSort(256)}
+	inverse := k.Ctx.NewFuncDecl("kecak256_"+strconv.Itoa(length)+"-1", domain2, k.Ctx.BvSort(uint(length)))
+	return keccakFun, inverse
+}
+
+func (k *KeccakFunctionManager) createCondition(funcInput *z3.Bitvec) *z3.Bool {
+	length := funcInput.BvSize()
+	keccakFun, inverse := k.getFunction(length)
+
+	keccakRes := keccakFun.ApplyBv(funcInput)
+
+	TOTAL_PARTS := new(big.Int).Exp(big.NewInt(10), big.NewInt(40), nil)
+	PART_Molecular := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(1))
+	PART := new(big.Int).Div(PART_Molecular, TOTAL_PARTS)
+
+	index := new(big.Int).Sub(TOTAL_PARTS, big.NewInt(34534))
+	lowerBound := new(big.Int).Mul(index, PART)
+	upperBound := new(big.Int).Add(lowerBound, PART)
+
+	cond := inverse.ApplyBv(keccakRes).Eq(funcInput).And(
+		k.Ctx.NewBitvecVal(lowerBound, 256).BvULe(keccakRes),
+		keccakRes.BvULt(k.Ctx.NewBitvecVal(upperBound, 256)),
+		keccakRes.BvURem(k.Ctx.NewBitvecVal(64, 256)).Eq(k.Ctx.NewBitvecVal(0, 256)),
+	)
+	// TODO: concreteCond
+	return inverse.ApplyBv(keccakRes).Eq(funcInput).And(cond)
+}
+
 func (k *KeccakFunctionManager) CreateKeccak(data *z3.Bitvec) (*z3.Bitvec, *z3.Bool) {
 
 	var funcData *z3.Bitvec
+	var condition *z3.Bool
+
+	length := data.BvSize()
+	keccakFun, inverse := k.getFunction(length)
+
 	if data.Symbolic() {
-		funcData = k.Ctx.NewBitvec("kecak256_"+data.BvString(), 256)
+		//funcData = k.Ctx.NewBitvec("kecak256_"+funcInput.BvString(), 256)
+		funcData = keccakFun.ApplyBv(data)
+		condition = k.createCondition(data)
 	} else {
 		dataV, _ := strconv.ParseInt(data.BvString()[2:], 16, 10)
 		srcBuf := utils.IntToBytes(dataV)
@@ -44,10 +82,10 @@ func (k *KeccakFunctionManager) CreateKeccak(data *z3.Bitvec) (*z3.Bitvec, *z3.B
 		resBuf := writer.Sum(nil)
 		resInt := utils.BytesToInt(resBuf)
 		funcData = k.Ctx.NewBitvecVal(resInt, 256)
+		condition = keccakFun.ApplyBv(data).Eq(funcData).And(inverse.ApplyBv(keccakFun.ApplyBv(data)).Eq(data))
 	}
-
-	cons := k.Ctx.NewBitvecVal(1, 256).Eq(k.Ctx.NewBitvecVal(1, 256)).Simplify()
-	return funcData, cons
+	//condition = k.Ctx.NewBitvecVal(1, 256).Eq(k.Ctx.NewBitvecVal(1, 256)).Simplify()
+	return funcData, condition
 }
 
 //func (k *KeccakFunctionManager) CreateKeccak(data *z3.Bitvec) (*z3.Bitvec, *z3.Bool) {
