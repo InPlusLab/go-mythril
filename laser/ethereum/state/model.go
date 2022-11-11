@@ -26,25 +26,25 @@ func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool
 	//s := ctx.NewSolver()
 	defer s.Close()
 	//timeout := support.NewArgs().SolverTimeout
-	timeout := 2000000
+	timeout := 20000000
 	//timeout := 100000000000
 	//timeout := 30000
-	if enforceExecutionTime {
-		// GetTimeHandlerInstance().TimeRemaining()-500
-		//timeout = min(timeout, GetTimeHandlerInstance().TimeRemaining()-500)
-		if timeout <= 0 {
-			//fmt.Println("timeout")
-			return nil, false
-		}
-	}
+	//if enforceExecutionTime {
+	//	// GetTimeHandlerInstance().TimeRemaining()-500
+	//	//timeout = min(timeout, GetTimeHandlerInstance().TimeRemaining()-500)
+	//	if timeout <= 0 {
+	//		//fmt.Println("timeout")
+	//		return nil, false
+	//	}
+	//}
 	//s.SetTimeout(timeout)
 	s.RLimit(timeout)
-	for _, constraint := range constraints.ConstraintList {
-		if constraint == nil {
-			fmt.Println("constraint nil")
-			return nil, false
-		}
-	}
+	//for _, constraint := range constraints.ConstraintList {
+	//	if constraint == nil {
+	//		fmt.Println("constraint nil")
+	//		return nil, false
+	//	}
+	//}
 	for _, constraint := range constraints.ConstraintList {
 		// TODO: constraint == nil
 		s.Assert(constraint.AsAST())

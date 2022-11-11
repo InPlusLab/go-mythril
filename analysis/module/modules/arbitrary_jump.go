@@ -77,6 +77,9 @@ func (dm *ArbitraryJump) _execute(globalState *state.GlobalState) []*analysis.Is
 func (dm *ArbitraryJump) _analyze_state(globalState *state.GlobalState) []*analysis.Issue {
 
 	issueArr := make([]*analysis.Issue, 0)
+	if globalState.Mstate.Stack.Length() == 0 {
+		return issueArr
+	}
 	jumpDest := globalState.Mstate.Stack.RawStack[globalState.Mstate.Stack.Length()-1]
 	if !jumpDest.Symbolic() {
 		return issueArr

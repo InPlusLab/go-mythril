@@ -146,10 +146,15 @@ func (scd *SymbolicCalldata) Calldatasize() *z3.Bitvec {
 func (scd *SymbolicCalldata) GetWordAt(offset *z3.Bitvec) *z3.Bitvec {
 	tmp := scd.Load(offset)
 	// OutofIndex check
-	index, _ := strconv.ParseInt(offset.Value(), 10, 64)
-	for i := index + 1; i < index+32; i++ {
-		tmp = tmp.Concat(scd.Load(scd.Ctx.NewBitvecVal(i, 256)))
+	//index, _ := strconv.ParseInt(offset.Value(), 10, 64)
+	//for i := index + 1; i < index+32; i++ {
+	//	tmp = tmp.Concat(scd.Load(scd.Ctx.NewBitvecVal(i, 256)))
+	//}
+
+	for i := 1; i < 32; i++ {
+		tmp = tmp.Concat(scd.Load(offset.BvAdd(scd.Ctx.NewBitvecVal(i, 256)).Simplify()))
 	}
+
 	return tmp.Simplify()
 	//return scd.Ctx.NewBitvec("SymbolicInput-"+offset.BvString(), 256)
 }

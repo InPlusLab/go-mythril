@@ -170,14 +170,13 @@ func (dm *StateChangeAfterCall) _execute(globalState *state.GlobalState) []*anal
 	}
 	issues := dm._analyze_state(globalState)
 	annotation := GetPotentialIssuesAnnotaion(globalState)
-	//annotation.PotentialIssues = append(annotation.PotentialIssues, issues...)
 	annotation.Append(issues...)
 	return nil
 }
 
 func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
-	//config := z3.GetConfig()
-	//newCtx := z3.NewContext(config)
+	config := z3.GetConfig()
+	newCtx := z3.NewContext(config)
 
 	annotations := globalState.GetAnnotations(reflect.TypeOf(&StateChangeCallsAnnotation{}))
 	opcode := globalState.GetCurrentInstruction().OpCode
@@ -194,7 +193,7 @@ func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) [
 		for _, annotation := range annotations {
 			fmt.Println("beforeAppend:", len(annotation.(*StateChangeCallsAnnotation).StateChangeStates))
 			fmt.Println("beforeAppend:", globalState.GetAnnotations(reflect.TypeOf(&StateChangeCallsAnnotation{}))[0])
-			annotation.(*StateChangeCallsAnnotation).AppendState(globalState)
+			annotation.(*StateChangeCallsAnnotation).AppendState(globalState.Copy())
 			fmt.Println("afterAppend:", len(annotation.(*StateChangeCallsAnnotation).StateChangeStates))
 			fmt.Println("afterAppend:", globalState.GetAnnotations(reflect.TypeOf(&StateChangeCallsAnnotation{}))[0])
 		}
@@ -206,7 +205,7 @@ func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) [
 		if dm._balance_change(value, globalState) {
 			for _, annotation := range annotations {
 				fmt.Println("beforeAppend:", len(annotation.(*StateChangeCallsAnnotation).StateChangeStates))
-				annotation.(*StateChangeCallsAnnotation).AppendState(globalState)
+				annotation.(*StateChangeCallsAnnotation).AppendState(globalState.Copy())
 				fmt.Println("afterAppend:", len(annotation.(*StateChangeCallsAnnotation).StateChangeStates))
 			}
 		}
@@ -224,7 +223,7 @@ func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) [
 		}
 		issue := annotation.(*StateChangeCallsAnnotation).GetIssue(globalState, dm)
 		if issue != nil {
-			//issue.Constraints = issue.Constraints.Translate(newCtx)
+			issue.Constraints = issue.Constraints.Translate(newCtx)
 			vulnerabilities = append(vulnerabilities, issue)
 		}
 	}
@@ -250,12 +249,12 @@ func (dm *StateChangeAfterCall) _add_external_call(globalState *state.GlobalStat
 	constraints.Add(to.Eq(ctx.NewBitvecVal(tmpVal, 256)))
 	_, sat2 := state.GetModel(constraints, make([]*z3.Bool, 0), make([]*z3.Bool, 0), true, ctx)
 	if sat2 {
-		//globalState.Annotate(NewStateChangeCallsAnnotation(globalState.Copy(), true))
-		globalState.Annotate(NewStateChangeCallsAnnotation(globalState, true))
+		globalState.Annotate(NewStateChangeCallsAnnotation(globalState.Copy(), true))
+		//globalState.Annotate(NewStateChangeCallsAnnotation(globalState, true))
 		fmt.Println("NewStateAnno: sat")
 	} else {
-		//globalState.Annotate(NewStateChangeCallsAnnotation(globalState.Copy(), false))
-		globalState.Annotate(NewStateChangeCallsAnnotation(globalState, false))
+		globalState.Annotate(NewStateChangeCallsAnnotation(globalState.Copy(), false))
+		//globalState.Annotate(NewStateChangeCallsAnnotation(globalState, false))
 		fmt.Println("NewStateAnno: unsat")
 	}
 }

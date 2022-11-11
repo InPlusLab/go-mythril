@@ -202,7 +202,8 @@ func (m *MachineState) CalculateMemoryGas(start int, size int) int {
 func (m *MachineState) CheckGas() {
 	if m.MinGasUsed > m.GasLimit {
 		fmt.Println(m.MinGasUsed, m.GasLimit)
-		fmt.Println("OutOfGasException-Mstate-CheckGas")
+		panic("OutOfGasException-Mstate-CheckGas")
+		//fmt.Println("OutOfGasException-Mstate-CheckGas")
 	}
 }
 

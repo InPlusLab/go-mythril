@@ -153,19 +153,20 @@ func (b *Bitvec) GetCtx() *Context {
 
 //
 func (b *Bitvec) Copy() *Bitvec {
-	var anno *utils.Set
-	if b.Annotations == nil {
-		anno = utils.NewSet()
-	} else {
-		anno = b.Annotations.Copy()
-	}
+	//var anno *utils.Set
+	//if b.Annotations == nil {
+	//	anno = utils.NewSet()
+	//} else {
+	//	anno = b.Annotations.Copy()
+	//}
 
 	return &Bitvec{
-		rawCtx:      b.rawCtx,
-		rawAST:      b.rawAST,
-		rawSort:     b.rawSort,
-		symbolic:    b.symbolic,
-		Annotations: anno,
+		rawCtx:   b.rawCtx,
+		rawAST:   b.rawAST,
+		rawSort:  b.rawSort,
+		symbolic: b.symbolic,
+		//Annotations: anno,
+		Annotations: b.Annotations,
 	}
 }
 
@@ -474,6 +475,20 @@ func (a *Bitvec) Eq(a2 *Bitvec) *Bool {
 	return &Bool{
 		rawCtx:      a.rawCtx,
 		rawAST:      C.Z3_mk_eq(a.rawCtx, a.rawAST, a2.rawAST),
+		symbolic:    a.symbolic || a2.symbolic,
+		Annotations: a.Annotations.Union(a2.Annotations),
+	}
+}
+
+func (a *Bitvec) Neq(a2 *Bitvec) *Bool {
+	raws := make([]C.Z3_ast, 2)
+	raws[0] = a.rawAST
+	raws[1] = a2.rawAST
+
+	return &Bool{
+		rawCtx: a.rawCtx,
+		//rawAST:      C.Z3_mk_eq(a.rawCtx, a.rawAST, a2.rawAST),
+		rawAST:      C.Z3_mk_distinct(a.rawCtx, C.uint(2), (*C.Z3_ast)(unsafe.Pointer(&raws[0]))),
 		symbolic:    a.symbolic || a2.symbolic,
 		Annotations: a.Annotations.Union(a2.Annotations),
 	}

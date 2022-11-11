@@ -52,8 +52,8 @@ func (globalState *GlobalState) Copy() *GlobalState {
 	//}
 	newAnnotations := make([]StateAnnotation, 0)
 	for _, anno := range globalState.Annotations {
-		//newAnnotations = append(newAnnotations, anno)
-		newAnnotations = append(newAnnotations, anno.Copy())
+		newAnnotations = append(newAnnotations, anno)
+		//newAnnotations = append(newAnnotations, anno.Copy())
 	}
 	newWs := globalState.WorldState.Copy()
 	newEnv := globalState.Environment.Copy()
@@ -161,10 +161,13 @@ func (globalState *GlobalState) Annotate(annotation StateAnnotation) {
 
 func (globalState *GlobalState) GetAnnotations(annoType reflect.Type) []StateAnnotation {
 	annoList := make([]StateAnnotation, 0)
-	for _, v := range globalState.Annotations {
-		if annoType == reflect.TypeOf(v) {
-			annoList = append(annoList, v)
+	if globalState.Annotations != nil {
+		for _, v := range globalState.Annotations {
+			if annoType == reflect.TypeOf(v) {
+				annoList = append(annoList, v)
+			}
 		}
 	}
+
 	return annoList
 }

@@ -141,6 +141,9 @@ func (dm *MultipleSends) _analyze_state(globalState *state.GlobalState) []*analy
 			if i == 0 {
 				continue
 			}
+
+			fmt.Println("MultipleSends:")
+
 			transactionSequence := analysis.GetTransactionSequence(globalState, globalState.WorldState.Constraints)
 			if transactionSequence == nil {
 				// UnsatError

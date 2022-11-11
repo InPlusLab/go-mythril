@@ -91,6 +91,7 @@ func (dm *TxOrigin) _analyze_state(globalState *state.GlobalState) []*analysis.I
 		for _, annotation := range globalState.Mstate.Stack.RawStack[length-2].Annotations.Elements() {
 			if reflect.TypeOf(annotation).String() == "modules.TxOriginAnnotation" {
 				constraints := globalState.WorldState.Constraints.Copy()
+
 				transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
 				if transactionSequence == nil {
 					// UnsatError
@@ -115,8 +116,6 @@ func (dm *TxOrigin) _analyze_state(globalState *state.GlobalState) []*analysis.I
 					GasUsed:             []int{globalState.Mstate.MinGasUsed, globalState.Mstate.MaxGasUsed},
 					TransactionSequence: transactionSequence,
 				}
-				// TODO: globalState.annotate
-				fmt.Println("origin push:", globalState.GetCurrentInstruction().Address)
 				issues = append(issues, issue)
 			}
 		}

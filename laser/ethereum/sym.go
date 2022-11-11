@@ -8,6 +8,7 @@ import (
 	"go-mythril/analysis/module/modules"
 	"go-mythril/disassembler"
 	"go-mythril/laser/ethereum/state"
+	"go-mythril/laser/ethereum/strategy"
 	"go-mythril/laser/ethereum/transaction"
 	"go-mythril/laser/smt/z3"
 	"go-mythril/support"
@@ -18,6 +19,60 @@ import (
 )
 
 type moduleExecFunc func(globalState *state.GlobalState) []*analysis.Issue
+
+type JumpdestCountAnnotation struct {
+	IndexCounter int
+	Trace        sync.Map
+}
+
+func NewJumpdestCountAnnotation() *JumpdestCountAnnotation {
+	return &JumpdestCountAnnotation{
+		IndexCounter: 0,
+		Trace:        sync.Map{},
+	}
+}
+func (anno *JumpdestCountAnnotation) PersistToWorldState() bool {
+	return false
+}
+func (anno *JumpdestCountAnnotation) PersistOverCalls() bool {
+	return false
+}
+func (anno *JumpdestCountAnnotation) Copy() state.StateAnnotation {
+	return &JumpdestCountAnnotation{
+		IndexCounter: anno.IndexCounter,
+		// TODO: sync.map dont have copy()
+		Trace: anno.Trace,
+	}
+}
+func (anno *JumpdestCountAnnotation) getIndex() int {
+	anno.IndexCounter = anno.IndexCounter + 1
+	return anno.IndexCounter
+}
+func (anno *JumpdestCountAnnotation) Add(callOffset int) bool {
+	_, exist := anno.Trace.LoadOrStore(anno.getIndex(), callOffset)
+	return !exist
+}
+func (anno *JumpdestCountAnnotation) GetTrace() []int {
+	res := make([]int, 0)
+	for i := 0; i < anno.Len(); i++ {
+		value, ok := anno.Trace.Load(i)
+		if ok {
+			res = append(res, value.(int))
+		}
+	}
+	return res
+}
+func (anno *JumpdestCountAnnotation) Elements() []int {
+	res := make([]int, 0)
+	anno.Trace.Range(func(k, v interface{}) bool {
+		res = append(res, v.(int))
+		return true
+	})
+	return res
+}
+func (anno *JumpdestCountAnnotation) Len() int {
+	return len(anno.Elements())
+}
 
 var l sync.Mutex
 
@@ -32,10 +87,10 @@ type LaserEVM struct {
 	TransactionCount int
 	WorkList         chan *state.GlobalState
 	OpenStates       []*state.WorldState
-	//OpenStates *utils.SyncIssueSlice
-	//FinalState []*state.GlobalState
-	FinalState *state.GlobalState
-	//FinalState       chan *state.GlobalState
+	FinalState       *state.GlobalState
+	/* LoopBound */
+	LoopsStrategy strategy.BoundedLoopsStrategy
+
 	InstrPreHook  *map[string][]moduleExecFunc
 	InstrPostHook *map[string][]moduleExecFunc
 	/* Parallal */
@@ -76,9 +131,9 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		TransactionCount: TransactionCount,
 		WorkList:         make(chan *state.GlobalState, 10000),
 		OpenStates:       make([]*state.WorldState, 0),
-		//OpenStates: utils.NewSyncIssueSlice(),
-		FinalState: nil,
-		//FinalState:       make(chan *state.GlobalState),
+		FinalState:       nil,
+		LoopsStrategy:    strategy.NewBoundedLoopsStrategy(3),
+
 		InstrPreHook:  &preHook,
 		InstrPostHook: &postHook,
 
@@ -120,8 +175,36 @@ LOOP:
 		if len(evm.WorkList) == 0 {
 			break LOOP
 		}
+
 		globalState := <-evm.WorkList
 
+		// get_strategic_global_state in bounded_loops
+		annotations := globalState.GetAnnotations(reflect.TypeOf(&JumpdestCountAnnotation{}))
+		var annotation *JumpdestCountAnnotation
+		if len(annotations) == 0 {
+			annotation = NewJumpdestCountAnnotation()
+			globalState.Annotate(annotation)
+		} else {
+			annotation = annotations[0].(*JumpdestCountAnnotation)
+		}
+		curInstr := globalState.GetCurrentInstruction()
+		//evm.Trace = append(evm.Trace, curInstr.Address)
+		annotation.Add(curInstr.Address)
+
+		if curInstr.OpCode.Name == "JUMPDEST" {
+			//count := evm.LoopsStrategy.GetLoopCount(evm.Trace)
+			count := evm.LoopsStrategy.GetLoopCount(annotation.GetTrace())
+
+			if "*state.ContractCreationTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() && count < 8 {
+				goto EXEC
+			} else if count > evm.LoopsStrategy.Bound {
+				fmt.Println("Loop bound reached, skipping state", count, evm.LoopsStrategy.Bound)
+				modules.CheckPotentialIssues(globalState)
+				fmt.Println("openStatesLen:", len(evm.OpenStates))
+				continue
+			}
+		}
+	EXEC:
 		newStates, opcode := evm.ExecuteState(globalState)
 		fmt.Println(id, globalState, opcode)
 
@@ -139,9 +222,18 @@ LOOP:
 		//}
 
 		fmt.Println(id, "done", globalState, opcode)
+
+		if opcode == "JUMPI" {
+			fmt.Println("#JUMPI", globalState.GetCurrentInstruction().Address, globalState.Mstate.Pc, "lenRes:", len(newStates))
+		}
+		for _, v := range newStates {
+			fmt.Println("#LenConstraints:", v.WorldState.Constraints.Length())
+		}
+
 		fmt.Println("==============================================================================")
 
 		if len(newStates) == 0 {
+			fmt.Println("#LenConstraintsEnd:", globalState.WorldState.Constraints.Length())
 			evm.FinalState = globalState
 			if "*state.MessageCallTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() {
 				if opcode != "REVERT" && opcode != "INVALID" {
@@ -150,6 +242,7 @@ LOOP:
 				}
 			}
 			modules.CheckPotentialIssues(globalState)
+			fmt.Println("openStatesLen:", len(evm.OpenStates))
 		}
 		id++
 	}
@@ -162,7 +255,7 @@ func (evm *LaserEVM) multiExec(cfg *z3.Config) {
 	}
 
 	beforeExecSignals := make([]bool, evm.GofuncCount)
-	endOpCodeList := []string{"STOP", "RETURN", "REVERT", "INVALID"}
+	endOpCodeList := []string{"STOP", "RETURN", "REVERT", "INVALID", "JUMPDEST"}
 	//afterExecSignals := make([]bool, evm.GofuncCount)
 LOOP:
 	for {
@@ -256,7 +349,10 @@ func (evm *LaserEVM) SingleSymExec(creationCode string, runtimeCode string, cont
 
 		fmt.Println("msgTx", i, ":start")
 		ExecuteMessageCall(evm, runtimeCode, inputStrArr[i], ctx, newAccount.Address, false, nil)
+		fmt.Println("workList len:", len(evm.WorkList))
+		fmt.Println("openStates len:", len(evm.OpenStates))
 		fmt.Println("msgTx", i, ":end")
+
 	}
 }
 
@@ -474,7 +570,35 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 
 			// chz
 			//globalState.Translate(evm.CtxList[id])
+			// get_strategic_global_state in bounded_loops
+			annotations := globalState.GetAnnotations(reflect.TypeOf(&JumpdestCountAnnotation{}))
+			var annotation *JumpdestCountAnnotation
+			if len(annotations) == 0 {
+				annotation = NewJumpdestCountAnnotation()
+				globalState.Annotate(annotation)
+			} else {
+				annotation = annotations[0].(*JumpdestCountAnnotation)
+			}
+			curInstr := globalState.GetCurrentInstruction()
+			//evm.Trace = append(evm.Trace, curInstr.Address)
+			annotation.Add(curInstr.Address)
 
+			if curInstr.OpCode.Name == "JUMPDEST" {
+				//count := evm.LoopsStrategy.GetLoopCount(evm.Trace)
+				count := evm.LoopsStrategy.GetLoopCount(annotation.GetTrace())
+
+				if "*state.ContractCreationTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() && count < 8 {
+					goto EXEC
+				} else if count > evm.LoopsStrategy.Bound {
+					fmt.Println("Loop bound reached, skipping state", count, evm.LoopsStrategy.Bound)
+					modules.CheckPotentialIssues(globalState)
+					evm.LastOpCodeList[id] = "JUMPDEST"
+					fmt.Println("openStatesLen:", len(evm.OpenStates))
+					continue
+				}
+			}
+
+		EXEC:
 			newStates, opcode := evm.ExecuteState(globalState)
 
 			fmt.Println(id, globalState, opcode)
@@ -504,6 +628,24 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 				}
 
 				modules.CheckPotentialIssues(globalState)
+
+				// analysis
+				//for _, detector := range evm.Loader.Modules {
+				//	issues := detector.GetIssues()
+				//
+				//	if len(issues) > 0 {
+				//		fmt.Println("number of issues:", len(issues))
+				//	}
+				//	for _, issue := range issues {
+				//		fmt.Println("+++++++++++++++++++++++++++++++++++")
+				//		fmt.Println("ContractName:", issue.Contract)
+				//		fmt.Println("FunctionName:", issue.FunctionName)
+				//		fmt.Println("Title:", issue.Title)
+				//		fmt.Println("SWCID:", issue.SWCID)
+				//		fmt.Println("Address:", issue.Address)
+				//		fmt.Println("Severity:", issue.Severity)
+				//	}
+				//}
 			}
 
 			evm.LastOpCodeList[id] = opcode
