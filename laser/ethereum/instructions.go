@@ -806,11 +806,13 @@ func (instr *Instruction) _calldata_copy_helper(globalState *state.GlobalState,
 		}
 
 		fmt.Println("idata")
-		mstartValue, _ := strconv.ParseInt(mstart.Value(), 10, 64)
-		fmt.Println(mstartValue, "-mstartOffset ", len(newMemory), "-length")
+		//mstartValue, _ := strconv.ParseInt(mstart.Value(), 10, 64)
+		//fmt.Println(mstartValue, "-mstartOffset ", len(newMemory), "-length")
 
 		for j := 0; j < len(newMemory); j++ {
-			mstate.Memory.SetItem(mstartValue+int64(j), newMemory[j])
+			//mstate.Memory.SetItem(mstartValue+int64(j), newMemory[j])
+			offset := mstart.BvAdd(ctx.NewBitvecVal(j, 256)).Simplify()
+			mstate.Memory.SetItem(offset, newMemory[j])
 		}
 		// IndexError check
 	}
@@ -973,7 +975,7 @@ func (instr *Instruction) sha3_(globalState *state.GlobalState) []*state.GlobalS
 
 	mstate.MemExtend(index, length)
 	indexV, _ := strconv.ParseInt(index.Value(), 10, 64)
-	dataList := mstate.Memory.GetItems(indexV, indexV+int64(length))
+	dataList := mstate.Memory.GetItems(indexV, indexV+int64(length), globalState.Z3ctx)
 	var data *z3.Bitvec
 	if len(dataList) > 1 {
 		//data = dataList[0].Translate(globalState.Z3ctx)
@@ -1108,11 +1110,11 @@ func (instr *Instruction) _code_copy_helper(code []byte, memoryOffset *z3.Bitvec
 		ret = append(ret, globalState)
 		return ret
 	}
-	mOffsetV, _ := strconv.ParseInt(memoryOffset.Value(), 10, 64)
+	//mOffsetV, _ := strconv.ParseInt(memoryOffset.Value(), 10, 64)
 
 	if size.Symbolic() {
 		globalState.Mstate.MemExtend(memoryOffset, 1)
-		globalState.Mstate.Memory.SetItem(mOffsetV,
+		globalState.Mstate.Memory.SetItem(memoryOffset,
 			globalState.NewBitvec("code("+globalState.Environment.ActiveAccount.ContractName+")", 8))
 		ret = append(ret, globalState)
 		return ret
@@ -1124,7 +1126,7 @@ func (instr *Instruction) _code_copy_helper(code []byte, memoryOffset *z3.Bitvec
 		fmt.Println("Unsupported symbolic code offset in " + op)
 		globalState.Mstate.MemExtend(memoryOffset, int(sizeV))
 		for i := 0; i < int(sizeV); i++ {
-			globalState.Mstate.Memory.SetItem(mOffsetV+int64(i),
+			globalState.Mstate.Memory.SetItem(memoryOffset.BvAdd(globalState.Z3ctx.NewBitvecVal(i, 256)).Simplify(),
 				globalState.NewBitvec("code("+globalState.Environment.ActiveAccount.ContractName+")", 8))
 
 		}
@@ -1137,7 +1139,7 @@ func (instr *Instruction) _code_copy_helper(code []byte, memoryOffset *z3.Bitvec
 		if (cOffsetV + i + 1) > len(code) {
 			break
 		}
-		globalState.Mstate.Memory.SetItem(mOffsetV+int64(i),
+		globalState.Mstate.Memory.SetItem(memoryOffset.BvAdd(globalState.Z3ctx.NewBitvecVal(i, 256)).Simplify(),
 			globalState.Z3ctx.NewBitvecVal(int(code[cOffsetV+i]), 8))
 	}
 
@@ -1188,6 +1190,7 @@ func (instr *Instruction) extcodehash_(globalState *state.GlobalState) []*state.
 func (instr *Instruction) returndatacopy_(globalState *state.GlobalState) []*state.GlobalState {
 	ret := make([]*state.GlobalState, 0)
 
+	//ctx := globalState.Z3ctx
 	mstate := globalState.Mstate
 	memoryOffset := mstate.Stack.Pop()
 	returnOffset := mstate.Stack.Pop()
@@ -1212,7 +1215,7 @@ func (instr *Instruction) returndatacopy_(globalState *state.GlobalState) []*sta
 		ret = append(ret, globalState)
 		return ret
 	}
-	mOffset, _ := strconv.ParseInt(memoryOffset.Value(), 10, 64)
+	//mOffset, _ := strconv.ParseInt(memoryOffset.Value(), 10, 64)
 	rOffset, _ := strconv.ParseInt(returnOffset.Value(), 10, 64)
 	sizeV, _ := strconv.ParseInt(size.Value(), 10, 64)
 
@@ -1225,7 +1228,9 @@ func (instr *Instruction) returndatacopy_(globalState *state.GlobalState) []*sta
 		} else {
 			value = globalState.Z3ctx.NewBitvecVal(0, 8)
 		}
-		mstate.Memory.SetItem(mOffset+int64(i), value)
+		//mstate.Memory.SetItem(mOffset+int64(i), value)
+		offset := memoryOffset.BvAdd(globalState.Z3ctx.NewBitvecVal(i, 256)).Simplify()
+		mstate.Memory.SetItem(offset, value)
 	}
 
 	ret = append(ret, globalState)
@@ -1314,17 +1319,32 @@ func (instr *Instruction) mload_(globalState *state.GlobalState) []*state.Global
 	mstate := globalState.Mstate
 	offset := mstate.Stack.Pop()
 
-	if offset.Symbolic() {
-		fmt.Println("can't access memory with symbolic index!")
-		mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(0, 256))
-		//return ret
-	} else {
-		mstate.MemExtend(offset, 32)
-		offsetV, _ := strconv.ParseInt(offset.Value(), 10, 64)
+	//fmt.Println("mload_")
+	//fmt.Println("offsetSymbolic:", offset.Symbolic())
+	//fmt.Println("offset:", offset.BvString())
 
-		data := mstate.Memory.GetWordAt(offsetV)
-		mstate.Stack.Append(data)
-	}
+	//if offset.Symbolic() {
+	//	fmt.Println("can't access memory with symbolic index!")
+	//	mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(0, 256))
+	//	//return ret
+	//} else {
+	//	mstate.MemExtend(offset, 32)
+	//	offsetV, _ := strconv.ParseInt(offset.Value(), 10, 64)
+	//
+	//	data := mstate.Memory.GetWordAt(offsetV)
+	//
+	//	fmt.Println("data:", data.BvString())
+	//
+	//	mstate.Stack.Append(data)
+	//}
+
+	mstate.MemExtend(offset, 32)
+
+	data := mstate.Memory.GetWordAt(offset)
+
+	//fmt.Println("data:", data.BvString())
+
+	mstate.Stack.Append(data)
 
 	ret = append(ret, globalState)
 	return ret
@@ -1337,18 +1357,24 @@ func (instr *Instruction) mstore_(globalState *state.GlobalState) []*state.Globa
 	mstart := mstate.Stack.Pop()
 	value := mstate.Stack.Pop()
 
-	if mstart.Symbolic() {
-		fmt.Println("fail for mstore because of the symbolic index")
-		ret = append(ret, globalState)
-		return ret
-	}
+	//fmt.Println("mstore_")
+	fmt.Println("mstartSymbolic:", mstart.Symbolic())
+	//fmt.Println("mstart:", mstart.BvString())
+	//fmt.Println("value:", value.BvString())
+
+	//if mstart.Symbolic() {
+	//	fmt.Println("fail for mstore because of the symbolic index")
+	//	ret = append(ret, globalState)
+	//	return ret
+	//}
 
 	mstate.MemExtend(mstart, 32)
-	mstartV, _ := strconv.ParseInt(mstart.Value(), 10, 64)
+	//mstartV, _ := strconv.ParseInt(mstart.Value(), 10, 64)
 	//fmt.Println("Mstore_:")
 	//fmt.Println("key:", mstart.BvString())
 	//fmt.Println("value:", value.BvString())
-	mstate.Memory.WriteWordAt(mstartV, value)
+	//mstate.Memory.WriteWordAt(mstartV, value)
+	mstate.Memory.WriteWordAt(mstart, value)
 	ret = append(ret, globalState)
 	return ret
 }
@@ -1363,9 +1389,9 @@ func (instr *Instruction) mstore8_(globalState *state.GlobalState) []*state.Glob
 	mstate.MemExtend(offset, 1)
 	value2write := value.Extract(7, 0)
 	fmt.Println("mstore8:", value2write.BvString())
-	offsetV, _ := strconv.ParseInt(offset.Value(), 10, 64)
-	//mstate.Memory.WriteWordAt(offsetV, value2write)
-	mstate.Memory.SetItem(offsetV, value2write)
+	//offsetV, _ := strconv.ParseInt(offset.Value(), 10, 64)
+	//mstate.Memory.SetItem(offsetV, value2write)
+	mstate.Memory.SetItem(offset, value2write)
 	ret = append(ret, globalState)
 	return ret
 }
@@ -1480,14 +1506,6 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 	//condi := condition.Eq(zero).Not()
 	negatedCond := !negated.IsFalse()
 	positiveCond := !condi.IsFalse()
-
-	if globalState.GetCurrentInstruction().Address == 548 {
-		fmt.Println("Jumpi548")
-		fmt.Println("jumpDes:", op0.BvString())
-		fmt.Println("Condition:", condition.BvString())
-		fmt.Println("negated:", negated, "negatedCon:", negatedCond)
-		fmt.Println("positive:", condi, "positiveCon:", positiveCond)
-	}
 
 	// False case
 	if negatedCond {
@@ -1708,7 +1726,7 @@ func (instr *Instruction) return_(globalState *state.GlobalState) {
 		mstate.MemExtend(offset, int(lenV))
 		CheckGasUsageLimit(globalState)
 		offsetV, _ := strconv.ParseInt(offset.Value(), 10, 64)
-		returnData = mstate.Memory.GetItems2Bytes(offsetV, offsetV+lenV)
+		returnData = mstate.Memory.GetItems2Bytes(offsetV, offsetV+lenV, globalState.Z3ctx)
 	}
 	globalState.CurrentTransaction().End(globalState, returnData)
 }
@@ -1739,7 +1757,7 @@ func (instr *Instruction) revert_(globalState *state.GlobalState) {
 	} else {
 		startV, _ := strconv.ParseInt(offset.Value(), 10, 64)
 		lengthV, _ := strconv.ParseInt(length.Value(), 10, 64)
-		returnData = mstate.Memory.GetItems2Bytes(startV, startV+lengthV)
+		returnData = mstate.Memory.GetItems2Bytes(startV, startV+lengthV, globalState.Z3ctx)
 	}
 	globalState.CurrentTransaction().End(globalState, returnData)
 }

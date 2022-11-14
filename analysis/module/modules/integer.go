@@ -271,7 +271,7 @@ func (dm *IntegerArithmetics) _handel_return(globalState *state.GlobalState) {
 
 	stateAnnotation := getOverflowUnderflowStateAnnotation(globalState)
 
-	for _, element := range globalState.Mstate.Memory.GetItems(offsetV, offsetV+lengthV) {
+	for _, element := range globalState.Mstate.Memory.GetItems(offsetV, offsetV+lengthV, globalState.Z3ctx) {
 		for _, annotation := range element.Annotations.Elements() {
 			if reflect.TypeOf(annotation).String() == "modules.OverUnderflowAnnotation" {
 				stateAnnotation.OverflowingStateAnnotations.Add(annotation)
@@ -288,17 +288,17 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 			continue
 		}
 
-		if ostate.Z3ctx.GetRaw() != globalState.Z3ctx.GetRaw() {
-			ostate.Translate(globalState.Z3ctx)
-		}
+		//if ostate.Z3ctx.GetRaw() != globalState.Z3ctx.GetRaw() {
+		//	ostate.Translate(globalState.Z3ctx)
+		//}
 
 		if !dm.OstatesSatisfiable.Contains(ostate) {
 			//constraints := ostate.WorldState.Constraints.DeepCopy()
-			constraints := ostate.WorldState.Constraints.DeepCopy()
-			constraints.Add(annotation.(OverUnderflowAnnotation).Constraint.Translate(ostate.Z3ctx))
+			constraints := ostate.WorldState.Constraints.DeepCopy().Translate(globalState.Z3ctx)
+			constraints.Add(annotation.(OverUnderflowAnnotation).Constraint.Translate(globalState.Z3ctx))
 			//constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
-			_, sat := state.GetModel(constraints, nil, nil, false, ostate.Z3ctx)
-
+			//_, sat := state.GetModel(constraints, nil, nil, false, ostate.Z3ctx)
+			_, sat := state.GetModel(constraints, nil, nil, false, globalState.Z3ctx)
 			if sat {
 				fmt.Println("sat")
 				dm.OstatesSatisfiable.Add(ostate)

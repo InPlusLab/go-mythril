@@ -72,7 +72,7 @@ func GetCallData(globalState *state.GlobalState, memStart *z3.Bitvec, memSize *z
 	}
 
 	fmt.Println("beforeMemoryGetItems", memStartV, memSizeV)
-	callDataFromMem := mstate.Memory.GetItems(memStartV, memStartV+memSizeV)
+	callDataFromMem := mstate.Memory.GetItems(memStartV, memStartV+memSizeV, globalState.Z3ctx)
 
 	fmt.Println(memStartV, memSizeV)
 	fmt.Println("calldataFromMem:", callDataFromMem, " ", len(callDataFromMem))

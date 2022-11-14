@@ -150,7 +150,7 @@ func is_assertion_failure(globalState *state.GlobalState) bool {
 
 	offsetV, _ := strconv.ParseInt(offset.Value(), 10, 64)
 	lengthV, _ := strconv.ParseInt(length.Value(), 10, 64)
-	returnData := state.Memory.GetItems(offsetV, offsetV+lengthV)
+	returnData := state.Memory.GetItems(offsetV, offsetV+lengthV, globalState.Z3ctx)
 	if len(returnData) < 4 {
 		return false
 	}

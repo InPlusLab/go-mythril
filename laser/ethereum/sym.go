@@ -132,7 +132,7 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		WorkList:         make(chan *state.GlobalState, 10000),
 		OpenStates:       make([]*state.WorldState, 0),
 		FinalState:       nil,
-		LoopsStrategy:    strategy.NewBoundedLoopsStrategy(3),
+		LoopsStrategy:    strategy.NewBoundedLoopsStrategy(2),
 
 		InstrPreHook:  &preHook,
 		InstrPostHook: &postHook,
@@ -617,8 +617,12 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 
 			fmt.Println(id, "done", globalState, opcode, globalState.Z3ctx)
 			fmt.Println("evmOpenStatesLen:", len(evm.OpenStates), "evmWorkListLen:", len(evm.WorkList))
+			for _, v := range newStates {
+				fmt.Println("#LenConstraints:", v.WorldState.Constraints.Length())
+			}
 			fmt.Println("===========================================================================")
 			if len(newStates) == 0 {
+				fmt.Println("#LenConstraintsEnd:", globalState.WorldState.Constraints.Length())
 				evm.FinalState = globalState
 				if "*state.MessageCallTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() {
 					if opcode != "REVERT" && opcode != "INVALID" {
