@@ -5,7 +5,6 @@ import (
 	"go-mythril/analysis"
 	"go-mythril/laser/ethereum/state"
 	"go-mythril/laser/ethereum/transaction"
-	"go-mythril/laser/smt/z3"
 	"go-mythril/utils"
 	"reflect"
 	"strconv"
@@ -78,13 +77,14 @@ func (dm *ArbitraryDelegateCall) _execute(globalState *state.GlobalState) []*ana
 }
 
 func (dm *ArbitraryDelegateCall) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
-	config := z3.GetConfig()
-	newCtx := z3.NewContext(config)
+	//config := z3.GetConfig()
+	//newCtx := z3.NewContext(config)
 
 	length := globalState.Mstate.Stack.Length()
 	gas := globalState.Mstate.Stack.RawStack[length-1]
 	to := globalState.Mstate.Stack.RawStack[length-2]
-	ctx := gas.GetCtx()
+
+	ctx := globalState.Z3ctx
 	ACTORS := transaction.NewActors(ctx)
 
 	constraints := state.NewConstraints()
@@ -93,7 +93,7 @@ func (dm *ArbitraryDelegateCall) _analyze_state(globalState *state.GlobalState) 
 			ctx.NewBitvecVal(1, 256)))
 	for _, tx := range globalState.WorldState.TransactionSequence {
 		if reflect.TypeOf(tx).String() == "*state.ContractCreationTransaction" {
-			constraints.Add(tx.(*state.ContractCreationTransaction).Caller.Eq(ACTORS.GetAttacker()))
+			constraints.Add(tx.(*state.ContractCreationTransaction).Caller.Translate(ctx).Eq(ACTORS.GetAttacker()))
 		}
 	}
 	address := globalState.GetCurrentInstruction().Address
@@ -113,9 +113,9 @@ func (dm *ArbitraryDelegateCall) _analyze_state(globalState *state.GlobalState) 
 		Severity:        "High",
 		DescriptionHead: descriptionHead,
 		DescriptionTail: descriptionTail,
-		//Constraints:     constraints,
-		Constraints: constraints.Translate(newCtx),
-		Detector:    dm,
+		Constraints:     constraints,
+		//Constraints: constraints.Translate(newCtx),
+		Detector: dm,
 	}
 
 	issueArr = append(issueArr, potentialIssue)

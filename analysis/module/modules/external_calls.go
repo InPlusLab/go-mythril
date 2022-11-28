@@ -5,7 +5,6 @@ import (
 	"go-mythril/analysis"
 	"go-mythril/laser/ethereum/state"
 	"go-mythril/laser/ethereum/transaction"
-	"go-mythril/laser/smt/z3"
 	"go-mythril/utils"
 )
 
@@ -73,8 +72,8 @@ func (dm *ExternalCalls) _execute(globalState *state.GlobalState) []*analysis.Is
 }
 
 func (dm *ExternalCalls) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
-	config := z3.GetConfig()
-	newCtx := z3.NewContext(config)
+	//config := z3.GetConfig()
+	//newCtx := z3.NewContext(config)
 
 	gas := globalState.Mstate.Stack.RawStack[globalState.Mstate.Stack.Length()-1]
 	to := globalState.Mstate.Stack.RawStack[globalState.Mstate.Stack.Length()-2]
@@ -111,9 +110,9 @@ func (dm *ExternalCalls) _analyze_state(globalState *state.GlobalState) []*Poten
 		Severity:        "Low",
 		DescriptionHead: descriptionHead,
 		DescriptionTail: descriptionTail,
-		//Constraints:     constraints,
-		Constraints: constraints.Translate(newCtx),
-		Detector:    dm,
+		Constraints:     constraints,
+		//Constraints: constraints.Translate(newCtx),
+		Detector: dm,
 	}
 	fmt.Println("externalCall push:", address)
 	return []*PotentialIssue{issue}

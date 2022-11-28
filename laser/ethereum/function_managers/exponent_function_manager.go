@@ -22,6 +22,7 @@ func CreateCondition(base *z3.Bitvec, exponent *z3.Bitvec, ctx *z3.Context) (*z3
 		constExponentiation.Annotations = base.Annotations.Union(exponent.Annotations)
 
 		constraint := constExponentiation.Eq(exponentiation)
+		//constraint = ctx.NewBitvecVal(1,256).Eq(ctx.NewBitvecVal(1,256)).Simplify()
 		return constExponentiation, constraint
 	}
 	// TODO:

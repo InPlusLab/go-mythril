@@ -31,29 +31,16 @@ func NewGlobalState(worldState *WorldState, env *Environment, ctx *z3.Context, t
 	}
 }
 
-// TODO: test
 func (globalState *GlobalState) Copy() *GlobalState {
-	//worldState := globalState.WorldState.Copy()
-	//environment := globalState.Environment.Copy()
-	//mstate := globalState.Mstate.DeepCopy()
-	//var txStack []BaseTransaction
-	//// shallow copy seems to be different in python and golang?
-	//copy(txStack, globalState.TxStack)
-	//var anno []StateAnnotation
-	//copy(globalState.Annotations, anno)
-	//return &GlobalState{
-	//	WorldState:     worldState,
-	//	Environment:    environment,
-	//	Mstate:         mstate,
-	//	TxStack:        txStack,
-	//	Z3ctx:          globalState.Z3ctx,
-	//	LastReturnData: globalState.LastReturnData,
-	//	Annotations:    anno,
-	//}
+
 	newAnnotations := make([]StateAnnotation, 0)
 	for _, anno := range globalState.Annotations {
-		newAnnotations = append(newAnnotations, anno)
-		//newAnnotations = append(newAnnotations, anno.Copy())
+		//if reflect.TypeOf(anno).String() == "*ethereum.JumpdestCountAnnotation" {
+		//	newAnnotations = append(newAnnotations, anno.Copy())
+		//	continue
+		//}
+		//newAnnotations = append(newAnnotations, anno)
+		newAnnotations = append(newAnnotations, anno.Copy())
 	}
 	newWs := globalState.WorldState.Copy()
 	newEnv := globalState.Environment.Copy()
@@ -69,8 +56,6 @@ func (globalState *GlobalState) Copy() *GlobalState {
 		Z3ctx:          globalState.Z3ctx,
 		LastReturnData: globalState.LastReturnData,
 		Annotations:    newAnnotations,
-		//LastReturnData: nil,
-		//Annotations: make([]StateAnnotation, 0),
 	}
 }
 
@@ -90,8 +75,14 @@ func (globalState *GlobalState) Translate(ctx *z3.Context) {
 	// env
 	fmt.Println("glTrans3")
 	globalState.Environment = globalState.Environment.Translate(ctx)
-
+	// annotations
 	fmt.Println("glTrans4")
+	newAnnotations := make([]StateAnnotation, 0)
+	for _, anno := range globalState.Annotations {
+		newAnnotations = append(newAnnotations, anno.Translate(ctx))
+	}
+	globalState.Annotations = newAnnotations
+
 	// lastReturnData
 	//fmt.Println("changeStateContext done")
 }

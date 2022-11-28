@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go-mythril/analysis"
 	"go-mythril/laser/ethereum/state"
+	"go-mythril/laser/smt/z3"
 	"reflect"
 	"sync"
 )
@@ -22,6 +23,26 @@ type PotentialIssue struct {
 	DescriptionTail string
 	Constraints     *state.Constraints
 	Detector        DetectionModule
+}
+
+func (issue *PotentialIssue) Translate(ctx *z3.Context) *PotentialIssue {
+	issue.Constraints = issue.Constraints.Translate(ctx)
+	return issue
+}
+func (issue *PotentialIssue) Copy() *PotentialIssue {
+	return &PotentialIssue{
+		Contract:        issue.Contract,
+		FunctionName:    issue.FunctionName,
+		Address:         issue.Address,
+		SWCID:           issue.SWCID,
+		Title:           issue.Title,
+		Bytecode:        issue.Bytecode,
+		Severity:        issue.Severity,
+		DescriptionHead: issue.DescriptionHead,
+		DescriptionTail: issue.DescriptionTail,
+		Constraints:     issue.Constraints.DeepCopy(),
+		Detector:        issue.Detector,
+	}
 }
 
 type PotentialIssuesAnnotation struct {
@@ -43,7 +64,17 @@ func (anno *PotentialIssuesAnnotation) PersistOverCalls() bool {
 func (anno *PotentialIssuesAnnotation) Copy() state.StateAnnotation {
 	newPotentialIssues := make([]*PotentialIssue, 0)
 	for _, issue := range anno.Elements() {
-		newPotentialIssues = append(newPotentialIssues, issue)
+		newPotentialIssues = append(newPotentialIssues, issue.Copy())
+	}
+	newStateAnnotation := &PotentialIssuesAnnotation{
+		PotentialIssues: newPotentialIssues,
+	}
+	return newStateAnnotation
+}
+func (anno *PotentialIssuesAnnotation) Translate(ctx *z3.Context) state.StateAnnotation {
+	newPotentialIssues := make([]*PotentialIssue, 0)
+	for _, issue := range anno.Elements() {
+		newPotentialIssues = append(newPotentialIssues, issue.Translate(ctx))
 	}
 	newStateAnnotation := &PotentialIssuesAnnotation{
 		PotentialIssues: newPotentialIssues,
@@ -92,9 +123,15 @@ func CheckPotentialIssues(globalState *state.GlobalState) {
 		tmpConstraint := globalState.WorldState.Constraints.DeepCopy()
 		//tmpConstraint.Add(potentialIssue.Constraints.ConstraintList...)
 		// should translate the context here
+		test := 0
 		for _, con := range potentialIssue.Constraints.ConstraintList {
-			tmpConstraint.Add(con.Translate(globalState.Z3ctx))
+			//tmpConstraint.Add(con.Translate(globalState.Z3ctx))
+			if con.GetCtx().GetRaw() != globalState.Z3ctx.GetRaw() {
+				test = test + 1
+			}
+			tmpConstraint.Add(con)
 		}
+		fmt.Println("test:", test, len(potentialIssue.Constraints.ConstraintList))
 
 		//if potentialIssue.Address == 421 ||  potentialIssue.Address == 497 {
 		//	fmt.Println(potentialIssue.Address, ":")
@@ -102,8 +139,10 @@ func CheckPotentialIssues(globalState *state.GlobalState) {
 		//		fmt.Println(i, "-", con.BoolString())
 		//	}
 		//}
-
+		fmt.Println("beforeTx:", reflect.TypeOf(annotation))
+		fmt.Println("")
 		transactionSequence := analysis.GetTransactionSequence(globalState, tmpConstraint)
+		fmt.Println("afterTx:")
 		if transactionSequence == nil {
 			fmt.Println("unsatError")
 			// UnsatError

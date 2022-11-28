@@ -42,6 +42,9 @@ func (anno OldBlockNumberUsedAnnotation) PersistOverCalls() bool {
 func (anno OldBlockNumberUsedAnnotation) Copy() state.StateAnnotation {
 	return anno
 }
+func (anno OldBlockNumberUsedAnnotation) Translate(ctx *z3.Context) state.StateAnnotation {
+	return anno
+}
 
 func NewPredictableVariables() *PredictableVariables {
 	swcData := analysis.NewSWCData()

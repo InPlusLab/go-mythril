@@ -65,6 +65,11 @@ func (b *Bool) Translate(c *Context) *Bool {
 func (b *Bool) GetAstKind() C.Z3_ast_kind {
 	return C.Z3_get_ast_kind(b.rawCtx, b.rawAST)
 }
+func (b *Bool) GetCtx() *Context {
+	return &Context{
+		raw: b.rawCtx,
+	}
+}
 
 func (b *Bool) AsAST() *AST {
 	ast := &AST{

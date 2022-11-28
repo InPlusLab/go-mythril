@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go-mythril/analysis"
 	"go-mythril/laser/ethereum/state"
+	"go-mythril/laser/smt/z3"
 	"go-mythril/utils"
 	"reflect"
 	"strconv"
@@ -29,6 +30,11 @@ func (anno LastJumpAnnotation) PersistOverCalls() bool {
 	return false
 }
 func (anno LastJumpAnnotation) Copy() state.StateAnnotation {
+	return LastJumpAnnotation{
+		LastJump: anno.LastJump,
+	}
+}
+func (anno LastJumpAnnotation) Translate(ctx *z3.Context) state.StateAnnotation {
 	return LastJumpAnnotation{
 		LastJump: anno.LastJump,
 	}

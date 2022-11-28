@@ -234,11 +234,13 @@ type Memory struct {
 	// the value of RawMemory is (bv, 8)
 	RawMemory    *map[int64]*z3.Bitvec
 	RawSymMemory *map[*z3.Bitvec]*z3.Bitvec
+	//RawSymMemory *map[string]*z3.Bitvec
 }
 
 func NewMemory() *Memory {
 	rawM := make(map[int64]*z3.Bitvec)
 	rawSymM := make(map[*z3.Bitvec]*z3.Bitvec)
+	//rawSymM := make(map[string]*z3.Bitvec)
 	return &Memory{
 		Msize:        0,
 		RawMemory:    &rawM,
@@ -266,9 +268,18 @@ func (m *Memory) Extend(size int) {
 func (m *Memory) GetWordAt(index *z3.Bitvec) *z3.Bitvec {
 
 	if index.Symbolic() {
+		//if index.ValueInt() == 0 && index.BvString() != "#x0000000000000000000000000000000000000000000000000000000000000000" {
 		mem := *m.RawSymMemory
 		//result, ok := mem[index.Simplify().BvString()]
-		//
+		//if ok {
+		//	return result
+		//}else {
+		//	fmt.Println("before")
+		//	fmt.Println("beforeSim:", index.BvString())
+		//	fmt.Println("afterSim:", index.Simplify().BvString())
+		//	panic("shit!")
+		//}
+
 		//if !ok {
 		//	fmt.Println("didn't get obj in memory symbolic")
 		//	var ctx *z3.Context
@@ -284,7 +295,7 @@ func (m *Memory) GetWordAt(index *z3.Bitvec) *z3.Bitvec {
 		//		if mem[index.BvString()] != nil {
 		//			result = result.Concat(mem[index.BvString()])
 		//		} else {
-		//			result = result.Concat(ctx.NewBitvecVal(0, 8))
+		//			result = result.Concat(ctx.NewBitvecVal(1, 8))
 		//		}
 		//	}
 		//	result = result.Simplify()
@@ -293,6 +304,7 @@ func (m *Memory) GetWordAt(index *z3.Bitvec) *z3.Bitvec {
 		//	}
 		//	return result
 		//}
+
 		key := m.SymLoad(index)
 		if key == nil {
 			fmt.Println("didn't get obj in memory symbolic")
@@ -304,16 +316,16 @@ func (m *Memory) GetWordAt(index *z3.Bitvec) *z3.Bitvec {
 			return ctx.NewBitvecVal(0, 256)
 		} else {
 			result := mem[key]
-			ctx := result.GetCtx()
-			for i := 1; i < 32; i++ {
-				index = index.BvAdd(ctx.NewBitvecVal(i, 256)).Simplify()
-				realIndex := m.SymLoad(index)
-				if realIndex != nil {
-					result = result.Concat(mem[realIndex])
-				} else {
-					result = result.Concat(ctx.NewBitvecVal(0, 8))
-				}
-			}
+			//ctx := result.GetCtx()
+			//for i := 1; i < 32; i++ {
+			//	key = key.BvAdd(ctx.NewBitvecVal(i, 256)).Simplify()
+			//	realIndex := m.SymLoad(key)
+			//	if realIndex != nil {
+			//		result = result.Concat(mem[realIndex])
+			//	} else {
+			//		result = result.Concat(ctx.NewBitvecVal(0, 8))
+			//	}
+			//}
 			result = result.Simplify()
 			if result.BvSize() != 256 {
 				panic("memory size error in GetWordAt")
@@ -357,20 +369,32 @@ func (m *Memory) WriteWordAt(index *z3.Bitvec, value *z3.Bitvec) {
 		panic("memory size error in WriteWordAt" + strconv.Itoa(value.BvSize()))
 	}
 	if index.Symbolic() {
+		//if index.ValueInt() == 0 && index.BvString() != "#x0000000000000000000000000000000000000000000000000000000000000000" {
 		mem := *m.RawSymMemory
-		ctx := index.GetCtx()
-		for i := 0; i < 256; i = i + 8 {
-			offset := index.BvAdd(ctx.NewBitvecVal(31-(i/8), 256)).Simplify()
-			//fmt.Println(offset)
-			key := m.SymLoad(offset)
-			if key == nil {
-				mem[offset] = value.Extract(i+7, i).Simplify()
-			} else {
-				mem[key] = value.Extract(i+7, i).Simplify()
-			}
-			//mem[offset.BvString()] = value.Extract(i+7, i).Simplify()
-			//mem["index.BvString()" + strconv.Itoa(i)] = value.Extract(i+7, i).Simplify()
+		key := m.SymLoad(index)
+		if key == nil {
+			mem[index] = value
+		} else {
+			mem[key] = value
 		}
+
+		//mem[index.Simplify().BvString()] = value
+
+		//ctx := index.GetCtx()
+		//for i := 0; i < 256; i = i + 8 {
+		//	//offset := index.BvAdd(ctx.NewBitvecVal(31-(i/8), 256)).Simplify()
+		//	offset := index.BvAdd(ctx.NewBitvecVal(31, 256)).BvSub(ctx.NewBitvecVal(i/8, 256)).Simplify()
+		//
+		//	//fmt.Println(offset)
+		//	//key := m.SymLoad(offset)
+		//	//if key == nil {
+		//	//	mem[offset] = value.Extract(i+7, i).Simplify()
+		//	//} else {
+		//	//	mem[key] = value.Extract(i+7, i).Simplify()
+		//	//}
+		//	mem[offset.BvString()] = value.Extract(i+7, i).Simplify()
+		//	//mem["index.BvString()" + strconv.Itoa(i)] = value.Extract(i+7, i).Simplify()
+		//}
 	} else {
 		mem := *m.RawMemory
 		indexV, _ := strconv.ParseInt(index.Value(), 10, 64)
@@ -463,8 +487,10 @@ func (m *Memory) Copy() *Memory {
 		rawM[i] = v.Copy()
 	}
 	rawSymM := make(map[*z3.Bitvec]*z3.Bitvec)
+	//rawSymM := make(map[string]*z3.Bitvec)
 	for i, v := range *m.RawSymMemory {
 		rawSymM[i.Copy()] = v.Copy()
+		//rawSymM[i] = v.Copy()
 	}
 	return &Memory{
 		Msize:        m.Msize,
@@ -480,8 +506,10 @@ func (m *Memory) CopyTranslate(ctx *z3.Context) *Memory {
 		rawM[i] = v.Translate(ctx)
 	}
 	rawSymM := make(map[*z3.Bitvec]*z3.Bitvec)
+	//rawSymM := make(map[string]*z3.Bitvec)
 	for i, v := range *m.RawSymMemory {
 		rawSymM[i.Translate(ctx)] = v.Translate(ctx)
+		//rawSymM[i] = v.Translate(ctx)
 	}
 	return &Memory{
 		Msize:        m.Msize,

@@ -134,6 +134,7 @@ type MachineState struct {
 	// Important: PC in mythril seems to be different with others (e.g. Etherscan). Mythril.address = Others.pc. Mythril.pc seems to be the index of the evminstruction.
 	GasLimit   int
 	Pc         int
+	LastPc     int
 	Stack      *MachineStack
 	Memory     *Memory
 	Depth      int
@@ -146,6 +147,7 @@ func NewMachineState() *MachineState {
 	return &MachineState{
 		GasLimit:   8000000,
 		Pc:         0,
+		LastPc:     0,
 		Stack:      stack,
 		Memory:     NewMemory(),
 		Depth:      0,
@@ -166,6 +168,7 @@ func (m *MachineState) Translate(ctx *z3.Context) *MachineState {
 	return &MachineState{
 		GasLimit:   m.GasLimit,
 		Pc:         m.Pc,
+		LastPc:     m.LastPc,
 		Stack:      newStack,
 		Memory:     newMemory,
 		Depth:      m.Depth,
@@ -251,6 +254,7 @@ func (m *MachineState) DeepCopy() *MachineState {
 	return &MachineState{
 		GasLimit:   m.GasLimit,
 		Pc:         m.Pc,
+		LastPc:     m.LastPc,
 		Memory:     newMemory,
 		Stack:      newStack,
 		Depth:      m.Depth,

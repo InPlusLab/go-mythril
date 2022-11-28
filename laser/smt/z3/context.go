@@ -37,3 +37,9 @@ func (c *Context) GetRaw() C.Z3_context {
 func (c *Context) Z3Value() C.Z3_context {
 	return c.raw
 }
+
+func (c *Context) Copy() *Context {
+	return &Context{
+		raw: c.raw,
+	}
+}

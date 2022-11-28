@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go-mythril/analysis"
 	"go-mythril/laser/ethereum/state"
-	"go-mythril/laser/smt/z3"
 	"go-mythril/utils"
 	"math/big"
 )
@@ -75,8 +74,8 @@ func (dm *ArbitraryStorage) _execute(globalState *state.GlobalState) []*analysis
 }
 
 func (dm *ArbitraryStorage) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
-	config := z3.GetConfig()
-	newCtx := z3.NewContext(config)
+	//config := z3.GetConfig()
+	//newCtx := z3.NewContext(config)
 
 	writeSlot := globalState.Mstate.Stack.RawStack[globalState.Mstate.Stack.Length()-1]
 	ctx := globalState.Z3ctx
@@ -94,9 +93,9 @@ func (dm *ArbitraryStorage) _analyze_state(globalState *state.GlobalState) []*Po
 		Bytecode:        globalState.Environment.Code.Bytecode,
 		DescriptionHead: "The caller can write to arbitrary storage locations.",
 		DescriptionTail: "It is possible to write to arbitrary storage locations. By modifying the values of storage variables, attackers may bypass security controls or manipulate the business logic of the smart contract.",
-		//Constraints:     constrains,
-		Constraints: constrains.Translate(newCtx),
-		Detector:    dm,
+		Constraints:     constrains,
+		//Constraints: constrains.Translate(newCtx),
+		Detector: dm,
 	}
 	//fmt.Println("arbitraryWrite push:", globalState.GetCurrentInstruction().Address)
 	return []*PotentialIssue{potentialIssue}

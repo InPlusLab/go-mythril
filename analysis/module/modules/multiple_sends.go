@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go-mythril/analysis"
 	"go-mythril/laser/ethereum/state"
+	"go-mythril/laser/smt/z3"
 	"go-mythril/utils"
 	"reflect"
 	"sync"
@@ -37,11 +38,17 @@ func (anno *MultipleSendsAnnotation) PersistOverCalls() bool {
 	return false
 }
 func (anno *MultipleSendsAnnotation) Copy() state.StateAnnotation {
+	var offsetList sync.Map
+	for i, v := range anno.Elements() {
+		offsetList.Store(i, v)
+	}
 	return &MultipleSendsAnnotation{
 		IndexCounter: anno.IndexCounter,
-		// TODO: sync.map dont have copy()
-		CallOffsets: anno.CallOffsets,
+		CallOffsets:  offsetList,
 	}
+}
+func (anno *MultipleSendsAnnotation) Translate(ctx *z3.Context) state.StateAnnotation {
+	return anno.Copy()
 }
 func (anno *MultipleSendsAnnotation) getIndex() int {
 	anno.IndexCounter = anno.IndexCounter + 1

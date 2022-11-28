@@ -83,19 +83,20 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	}
 	instr.ExePostHooks(globalState)
 
-	//for _, state := range result {
-	//	// For debug
-	//	//fmt.Println("Print:", globalState.GetCurrentInstruction().OpCode.Name)
-	//	state.Mstate.Stack.PrintStackOneLine()
-	//	//state.Mstate.Stack.PrintStack()
-	//	//for i, con := range state.WorldState.Constraints.ConstraintList {
-	//	//	if i==3{
-	//	//		fmt.Println("PrintCons:", con.BoolString())
-	//	//	}
-	//	//}
-	//	//state.Mstate.Memory.PrintMemoryOneLine()
-	//	//state.Mstate.Memory.PrintMemory()
-	//}
+	for _, state := range result {
+		// For debug
+		//fmt.Println("Print:", globalState.GetCurrentInstruction().OpCode.Name)
+		//state.Mstate.Stack.PrintStackOneLine()
+		//state.Mstate.Stack.PrintStack()
+		//for i, con := range state.WorldState.Constraints.ConstraintList {
+		//	if i==3{
+		//		fmt.Println("PrintCons:", con.BoolString())
+		//	}
+		//}
+		//state.Mstate.Memory.PrintMemoryOneLine()
+		//state.Mstate.Memory.PrintMemory()
+		fmt.Println("StackLen:", state.Mstate.Stack.Length())
+	}
 	//fmt.Println("------------------------------------------------------------")
 
 	return result
@@ -316,7 +317,7 @@ func (instr *Instruction) dup_(globalState *state.GlobalState) []*state.GlobalSt
 
 	mstate := globalState.Mstate
 	// warning: panic: runtime error: index out of range [-2]
-	mstate.Stack.Append(mstate.Stack.RawStack[mstate.Stack.Length()-int(value)])
+	mstate.Stack.Append(mstate.Stack.RawStack[mstate.Stack.Length()-int(value)].Copy())
 	ret = append(ret, globalState)
 	return ret
 }
@@ -611,7 +612,8 @@ func (instr *Instruction) exp_(globalState *state.GlobalState) []*state.GlobalSt
 	exponent := mstate.Stack.Pop()
 	fmt.Println("exp:", globalState)
 
-	if base.Symbolic() || exponent.Symbolic() {
+	if (base.ValueInt() == 0 && base.BvString() != "#x0000000000000000000000000000000000000000000000000000000000000000") || (exponent.ValueInt() == 0 && exponent.BvString() != "#x0000000000000000000000000000000000000000000000000000000000000000") {
+		//if base.Symbolic() || exponent.Symbolic() {
 		res := globalState.NewBitvec("invhash("+base.BvString()+")**invhash("+exponent.BvString()+")", 256)
 		res.Annotations = base.Annotations.Union(exponent.Annotations)
 		mstate.Stack.Append(res)
@@ -744,7 +746,9 @@ func (instr *Instruction) calldataload_(globalState *state.GlobalState) []*state
 	env := globalState.Environment
 	op0 := mstate.Stack.Pop()
 	value := env.Calldata.GetWordAt(op0)
-	fmt.Println("calldataload_:", value)
+	//fmt.Println("calldataload_:", value)
+	//fmt.Println("index:", op0.BvString())
+	//fmt.Println("value:", value.BvString())
 	mstate.Stack.Append(value.Translate(globalState.Z3ctx))
 
 	ret = append(ret, globalState)
@@ -865,8 +869,7 @@ func (instr *Instruction) balance_(globalState *state.GlobalState) []*state.Glob
 			balance = z3.If(address.Eq(acc.Address), acc.Balance(), balance)
 		}
 	}
-	fmt.Println(balance.BvString())
-	fmt.Println(balance.Simplify().BvString())
+
 	mstate.Stack.Append(balance)
 
 	ret = append(ret, globalState)
@@ -998,7 +1001,7 @@ func (instr *Instruction) sha3_(globalState *state.GlobalState) []*state.GlobalS
 		return ret
 	}
 	//fmt.Println("data:", data.BvString(), data.BvSize())
-	result, cons := function_managers.NewKeccakFunctionManager(globalState.Z3ctx).CreateKeccak(data)
+	result, cons := function_managers.NewKeccakFunctionManager(globalState.Z3ctx).CreateKeccak(data.Translate(globalState.Z3ctx))
 
 	mstate.Stack.Append(result)
 	globalState.WorldState.Constraints.Add(cons)
@@ -1153,7 +1156,8 @@ func (instr *Instruction) extcodesize_(globalState *state.GlobalState) []*state.
 	mstate := globalState.Mstate
 	addr := mstate.Stack.Pop()
 
-	if addr.Symbolic() {
+	if addr.ValueInt() == 0 && addr.BvString() != "#x0000000000000000000000000000000000000000000000000000000000000000" {
+		//if addr.Symbolic() {
 		// TypeError
 		fmt.Println("unsupported symbolic address for EXTCODESIZE")
 		mstate.Stack.Append(globalState.NewBitvec("extcodesize_"+addr.BvString(), 256))
@@ -1164,6 +1168,7 @@ func (instr *Instruction) extcodesize_(globalState *state.GlobalState) []*state.
 	if globalState.WorldState.AccountsExistOrLoad(addr).Code == nil {
 		fmt.Println("code nil!!!")
 	} else {
+		//mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(len(code.Bytecode) / 2, 256))
 		mstate.Stack.Append(len(code.Bytecode) / 2)
 	}
 
@@ -1358,7 +1363,7 @@ func (instr *Instruction) mstore_(globalState *state.GlobalState) []*state.Globa
 	value := mstate.Stack.Pop()
 
 	//fmt.Println("mstore_")
-	fmt.Println("mstartSymbolic:", mstart.Symbolic())
+	//fmt.Println("mstartSymbolic:", mstart.Symbolic())
 	//fmt.Println("mstart:", mstart.BvString())
 	//fmt.Println("value:", value.BvString())
 
@@ -1370,11 +1375,9 @@ func (instr *Instruction) mstore_(globalState *state.GlobalState) []*state.Globa
 
 	mstate.MemExtend(mstart, 32)
 	//mstartV, _ := strconv.ParseInt(mstart.Value(), 10, 64)
-	//fmt.Println("Mstore_:")
-	//fmt.Println("key:", mstart.BvString())
-	//fmt.Println("value:", value.BvString())
 	//mstate.Memory.WriteWordAt(mstartV, value)
 	mstate.Memory.WriteWordAt(mstart, value)
+
 	ret = append(ret, globalState)
 	return ret
 }
@@ -1434,6 +1437,7 @@ func (instr *Instruction) jump_(globalState *state.GlobalState) []*state.GlobalS
 	disassembly := globalState.Environment.Code
 	jumpAddr := mstate.Stack.Pop()
 	if jumpAddr.Symbolic() {
+		//if jumpAddr.ValueInt() == 0 && jumpAddr.BvString() != "#x0000000000000000000000000000000000000000000000000000000000000000" {
 		defer func() {
 			if r := recover(); r != nil {
 				fmt.Println("Catch-Invalid jump argument (symbolic address)")
@@ -1469,6 +1473,7 @@ func (instr *Instruction) jump_(globalState *state.GlobalState) []*state.GlobalS
 	newState.Mstate.MaxGasUsed += maxGas
 	// manually set PC to destination
 	newState.Mstate.Pc = index
+	//newState.Mstate.LastPc = globalState.Mstate.Pc
 	newState.Mstate.Depth += 1
 
 	ret = append(ret, newState)
@@ -1522,17 +1527,35 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 		//returnData[0] = newState.Z3ctx.NewBitvecVal(0, 256)
 		//newState.LastReturnData = &returnData
 
+		//tmpCons := state.NewConstraints()
+		//for i, c := range newState.WorldState.Constraints.ConstraintList {
+		//	if i==36 {
+		//		continue
+		//	}
+		//	tmpCons.Add(c)
+		//}
+
 		fmt.Println("negativeState:", newState)
 		//ret = append(ret, newState)
 		if newState.WorldState.Constraints.IsPossible() {
+			//if tmpCons.IsPossible() {
 			ret = append(ret, newState)
 		} else {
 			fmt.Println("negativeStateGet, but ws.Constraints isn't possible")
 		}
-		//if globalState.GetCurrentInstruction().Address == 398 {
-		//	fmt.Println("Jumpi398 negativeCONSTRAINT:")
+		//if globalState.GetCurrentInstruction().Address == 1005 {
+		//	fmt.Println("Jumpi1005 negativeCONSTRAINT:", newState.WorldState.Constraints.IsPossible(),  "haha", tmpCons.IsPossible())
 		//	for i, c := range newState.WorldState.Constraints.ConstraintList {
-		//		fmt.Println(i,":", c.BoolString())
+		//		if i==9 || i==15 || i==18 || i==21 || i==32 || i==36 {
+		//			fmt.Println(i,":", c.BoolString())
+		//			continue
+		//		}
+		//		idx := strings.Index(c.BoolString(), "\n")
+		//		if idx == -1 {
+		//			fmt.Println(i,":", c.BoolString())
+		//		}else{
+		//			fmt.Println(i,":", c.BoolString()[:idx])
+		//		}
 		//	}
 		//}
 
@@ -1556,6 +1579,7 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 			newState.Mstate.MaxGasUsed += maxGas
 
 			newState.Mstate.Pc = index
+			newState.Mstate.LastPc = globalState.Mstate.Pc
 			newState.Mstate.Depth += 1
 			newState.WorldState.Constraints.Add(condi)
 
@@ -1564,8 +1588,21 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 			//newState.LastReturnData = &returnData
 
 			fmt.Println("positiveState:", newState)
-			//ret = append(ret, newState)
+
+			//if globalState.GetCurrentInstruction().Address == 1005 {
+			//	fmt.Println("Jumpi1005 positiveCONSTRAINT:", newState.WorldState.Constraints.IsPossible())
+			//	for i, c := range newState.WorldState.Constraints.ConstraintList {
+			//		idx := strings.Index(c.BoolString(), "\n")
+			//		if idx == -1 {
+			//			fmt.Println(i,":", c.BoolString())
+			//		}else{
+			//			fmt.Println(i,":", c.BoolString()[:idx])
+			//		}
+			//	}
+			//}
+
 			if newState.WorldState.Constraints.IsPossible() {
+				//if tmpCons.IsPossible(){
 				ret = append(ret, newState)
 			} else {
 				fmt.Println("positiveStateGet, but ws.Constraints isn't possible")

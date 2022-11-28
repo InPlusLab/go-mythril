@@ -2,28 +2,44 @@ package function_managers
 
 import (
 	"crypto"
+	"fmt"
 	"go-mythril/laser/smt/z3"
 	"go-mythril/utils"
 	"math/big"
 	"strconv"
+	"sync"
 )
 
 type KeccakFunctionManager struct {
 	Ctx             *z3.Context
 	HashResultStore *map[int][]*z3.Bitvec
+	ConcreteHashes  *map[*z3.Bitvec]*z3.Bitvec
 	HashMatcher     string
 }
 
-var hashStore = make(map[int][]*z3.Bitvec, 0)
-var keccakFunctionManager = &KeccakFunctionManager{
-	HashResultStore: &hashStore,
-	// This is usually the prefix for the hash in the output
-	HashMatcher: "fffffff",
-}
+var keccakFunctionManager *KeccakFunctionManager
+var once sync.Once
 
 func NewKeccakFunctionManager(ctx *z3.Context) *KeccakFunctionManager {
+	once.Do(func() {
+		hashStore := make(map[int][]*z3.Bitvec, 0)
+		concreteHashes := make(map[*z3.Bitvec]*z3.Bitvec)
+		keccakFunctionManager = &KeccakFunctionManager{
+			HashResultStore: &hashStore,
+			ConcreteHashes:  &concreteHashes,
+			// This is usually the prefix for the hash in the output
+			HashMatcher: "fffffff",
+		}
+	})
 	keccakFunctionManager.Ctx = ctx
 	return keccakFunctionManager
+}
+
+func RefreshKeccak() {
+	hashStore := make(map[int][]*z3.Bitvec, 0)
+	concreteHashes := make(map[*z3.Bitvec]*z3.Bitvec)
+	keccakFunctionManager.HashResultStore = &hashStore
+	keccakFunctionManager.ConcreteHashes = &concreteHashes
 }
 
 func (k *KeccakFunctionManager) GetEmptyKeccakHash() *z3.Bitvec {
@@ -58,8 +74,19 @@ func (k *KeccakFunctionManager) createCondition(funcInput *z3.Bitvec) *z3.Bool {
 		keccakRes.BvULt(k.Ctx.NewBitvecVal(upperBound, 256)),
 		keccakRes.BvURem(k.Ctx.NewBitvecVal(64, 256)).Eq(k.Ctx.NewBitvecVal(0, 256)),
 	)
-	// TODO: concreteCond
-	return inverse.ApplyBv(keccakRes).Eq(funcInput).And(cond)
+
+	concreteCond := k.Ctx.NewBitvecVal(1, 256).Eq(k.Ctx.NewBitvecVal(0, 256)).Simplify()
+	for key, keccak := range *k.ConcreteHashes {
+		key = key.Translate(k.Ctx)
+		keccak = keccak.Translate(k.Ctx)
+		if key.BvSize() != funcInput.BvSize() {
+			continue
+		}
+		hashEq := keccakFun.ApplyBv(funcInput).Eq(keccak).And(key.Eq(funcInput))
+		concreteCond = concreteCond.Or(hashEq)
+	}
+	return inverse.ApplyBv(keccakRes).Eq(funcInput).And(cond.Or(concreteCond))
+	//return k.Ctx.NewBitvecVal(1,256).Eq(k.Ctx.NewBitvecVal(1,256)).Simplify()
 }
 
 func (k *KeccakFunctionManager) CreateKeccak(data *z3.Bitvec) (*z3.Bitvec, *z3.Bool) {
@@ -75,14 +102,14 @@ func (k *KeccakFunctionManager) CreateKeccak(data *z3.Bitvec) (*z3.Bitvec, *z3.B
 		funcData = keccakFun.ApplyBv(data)
 		condition = k.createCondition(data)
 	} else {
-		dataV, _ := strconv.ParseInt(data.BvString()[2:], 16, 10)
-		srcBuf := utils.IntToBytes(dataV)
-		writer := crypto.SHA256.New()
-		writer.Write(srcBuf)
-		resBuf := writer.Sum(nil)
-		resInt := utils.BytesToInt(resBuf)
-		funcData = k.Ctx.NewBitvecVal(resInt, 256)
+		funcData = k.FindConcreteKeccak(data)
+		concreteHashes := *k.ConcreteHashes
+		cfg := z3.GetConfig()
+		ctx := z3.NewContext(cfg)
+		concreteHashes[data.Translate(ctx)] = funcData.Translate(ctx)
+		fmt.Println("beforeHere!", inverse)
 		condition = keccakFun.ApplyBv(data).Eq(funcData).And(inverse.ApplyBv(keccakFun.ApplyBv(data)).Eq(data))
+		fmt.Println("afterHere!")
 	}
 	//condition = k.Ctx.NewBitvecVal(1, 256).Eq(k.Ctx.NewBitvecVal(1, 256)).Simplify()
 	return funcData, condition
@@ -113,7 +140,15 @@ func (k *KeccakFunctionManager) GetConcreteHashData(model *z3.Model) *map[int][]
 }
 
 func (k *KeccakFunctionManager) FindConcreteKeccak(data *z3.Bitvec) *z3.Bitvec {
-	// TODO: Implementations of sha3 in Golang
-	keccak := k.Ctx.NewBitvecVal(0, 256)
+	//srcBuf := utils.IntToBytes(dataV)
+	srcBuf := []byte(data.BvString()[2:])
+	writer := crypto.SHA256.New()
+	writer.Write(srcBuf)
+	fmt.Println("resBuf")
+	resBuf := writer.Sum(nil)
+	fmt.Println(resBuf)
+
+	resInt := utils.BytesToInt(resBuf)
+	keccak := k.Ctx.NewBitvecVal(resInt, 256)
 	return keccak
 }

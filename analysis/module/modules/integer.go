@@ -41,6 +41,13 @@ func (anno OverUnderflowStateAnnotation) Copy() state.StateAnnotation {
 	}
 }
 
+// TODO: translate annotation
+func (anno OverUnderflowStateAnnotation) Translate(ctx *z3.Context) state.StateAnnotation {
+	return &OverUnderflowStateAnnotation{
+		OverflowingStateAnnotations: anno.OverflowingStateAnnotations.Copy(),
+	}
+}
+
 type IntegerArithmetics struct {
 	Name                 string
 	SWCID                string

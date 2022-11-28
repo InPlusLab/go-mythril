@@ -43,7 +43,7 @@ func (anno *StateChangeCallsAnnotation) PersistOverCalls() bool {
 func (anno *StateChangeCallsAnnotation) Copy() state.StateAnnotation {
 	stateChangeStatesNew := make([]*state.GlobalState, 0)
 	for _, v := range anno.StateChangeStates {
-		stateChangeStatesNew = append(stateChangeStatesNew, v)
+		stateChangeStatesNew = append(stateChangeStatesNew, v.Copy())
 	}
 	return &StateChangeCallsAnnotation{
 		CallState:          anno.CallState.Copy(),
@@ -51,9 +51,21 @@ func (anno *StateChangeCallsAnnotation) Copy() state.StateAnnotation {
 		UserDefinedAddress: anno.UserDefinedAddress,
 	}
 }
+func (anno *StateChangeCallsAnnotation) Translate(ctx *z3.Context) state.StateAnnotation {
+	stateChangeStatesNew := make([]*state.GlobalState, 0)
+	for _, v := range anno.StateChangeStates {
+		stateChangeStatesNew = append(stateChangeStatesNew, v.Copy())
+	}
+	callState := anno.CallState.Copy()
+	callState.Translate(ctx)
+	return &StateChangeCallsAnnotation{
+		CallState:          callState,
+		StateChangeStates:  stateChangeStatesNew,
+		UserDefinedAddress: anno.UserDefinedAddress,
+	}
+}
 func (anno *StateChangeCallsAnnotation) AppendState(globalState *state.GlobalState) {
 	anno.StateChangeStates = append(anno.StateChangeStates, globalState)
-	fmt.Println("appendState!")
 }
 func (anno *StateChangeCallsAnnotation) GetIssue(globalState *state.GlobalState, dm *StateChangeAfterCall) *PotentialIssue {
 	if len(anno.StateChangeStates) == 0 {
@@ -75,7 +87,6 @@ func (anno *StateChangeCallsAnnotation) GetIssue(globalState *state.GlobalState,
 	var addressType string
 	if anno.UserDefinedAddress {
 		tmpVal, _ := new(big.Int).SetString("DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF", 16)
-		// stmpV, _ := new(big.Int).SetString("DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF", 16)
 		constraints.Add(to.Eq(ctx.NewBitvecVal(tmpVal, 256)))
 		severity = "Medium"
 		addressType = "user defined"

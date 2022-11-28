@@ -13,6 +13,20 @@ type RetVal struct {
 	Address int
 	Retval  *z3.Bitvec
 }
+
+func (r *RetVal) Copy() *RetVal {
+	return &RetVal{
+		Address: r.Address,
+		Retval:  r.Retval.Copy(),
+	}
+}
+func (r *RetVal) Translate(ctx *z3.Context) *RetVal {
+	return &RetVal{
+		Address: r.Address,
+		Retval:  r.Retval.Translate(ctx),
+	}
+}
+
 type UncheckedRetvalAnnotation struct {
 	//RetVals []*RetVal
 	RetVals *utils.Set
@@ -25,8 +39,21 @@ func (anno UncheckedRetvalAnnotation) PersistOverCalls() bool {
 	return false
 }
 func (anno UncheckedRetvalAnnotation) Copy() state.StateAnnotation {
+	res := utils.NewSet()
+	for _, item := range anno.RetVals.Elements() {
+		res.Add(item.(*RetVal).Copy())
+	}
 	return UncheckedRetvalAnnotation{
-		RetVals: anno.RetVals.Copy(),
+		RetVals: res,
+	}
+}
+func (anno UncheckedRetvalAnnotation) Translate(ctx *z3.Context) state.StateAnnotation {
+	res := utils.NewSet()
+	for _, item := range anno.RetVals.Elements() {
+		res.Add(item.(*RetVal).Translate(ctx))
+	}
+	return UncheckedRetvalAnnotation{
+		RetVals: res,
 	}
 }
 
