@@ -123,15 +123,10 @@ func CheckPotentialIssues(globalState *state.GlobalState) {
 		tmpConstraint := globalState.WorldState.Constraints.DeepCopy()
 		//tmpConstraint.Add(potentialIssue.Constraints.ConstraintList...)
 		// should translate the context here
-		test := 0
 		for _, con := range potentialIssue.Constraints.ConstraintList {
-			//tmpConstraint.Add(con.Translate(globalState.Z3ctx))
-			if con.GetCtx().GetRaw() != globalState.Z3ctx.GetRaw() {
-				test = test + 1
-			}
-			tmpConstraint.Add(con)
+			tmpConstraint.Add(con.Translate(globalState.Z3ctx))
+			//tmpConstraint.Add(con)
 		}
-		fmt.Println("test:", test, len(potentialIssue.Constraints.ConstraintList))
 
 		//if potentialIssue.Address == 421 ||  potentialIssue.Address == 497 {
 		//	fmt.Println(potentialIssue.Address, ":")
@@ -139,10 +134,8 @@ func CheckPotentialIssues(globalState *state.GlobalState) {
 		//		fmt.Println(i, "-", con.BoolString())
 		//	}
 		//}
-		fmt.Println("beforeTx:", reflect.TypeOf(annotation))
-		fmt.Println("")
+
 		transactionSequence := analysis.GetTransactionSequence(globalState, tmpConstraint)
-		fmt.Println("afterTx:")
 		if transactionSequence == nil {
 			fmt.Println("unsatError")
 			// UnsatError

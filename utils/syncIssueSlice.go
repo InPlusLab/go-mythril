@@ -4,36 +4,42 @@ import (
 	"sync"
 )
 
-type SyncIssueSlice struct {
+type SyncSlice struct {
 	sync.RWMutex
 	arr []interface{}
 }
 
-func NewSyncIssueSlice() *SyncIssueSlice {
-	return &SyncIssueSlice{
+func NewSyncSlice() *SyncSlice {
+	return &SyncSlice{
 		arr: make([]interface{}, 0),
 	}
 }
 
-func (s *SyncIssueSlice) Append(item interface{}) {
+func NewSyncSliceWithArr(arr []interface{}) *SyncSlice {
+	return &SyncSlice{
+		arr: arr,
+	}
+}
+
+func (s *SyncSlice) Append(item interface{}) {
 	s.Lock()
 	defer s.Unlock()
 	s.arr = append(s.arr, item)
 }
 
-func (s *SyncIssueSlice) Load(index int) interface{} {
+func (s *SyncSlice) Load(index int) interface{} {
 	s.RLock()
 	defer s.RUnlock()
 	return s.arr[index]
 }
 
-func (s *SyncIssueSlice) Elements() []interface{} {
+func (s *SyncSlice) Elements() []interface{} {
 	s.RLock()
 	defer s.RUnlock()
 	return s.arr
 }
 
-func (s *SyncIssueSlice) Length() int {
+func (s *SyncSlice) Length() int {
 	s.RLock()
 	defer s.RUnlock()
 	return len(s.arr)

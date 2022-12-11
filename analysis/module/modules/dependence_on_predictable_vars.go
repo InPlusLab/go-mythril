@@ -17,7 +17,7 @@ type PredictableVariables struct {
 	Description string
 	PreHooks    []string
 	PostHooks   []string
-	//Issues      *utils.SyncIssueSlice
+	//Issues      *utils.SyncSlice
 	Issues []*analysis.Issue
 	Cache  *utils.Set
 }
@@ -40,10 +40,10 @@ func (anno OldBlockNumberUsedAnnotation) PersistOverCalls() bool {
 	return false
 }
 func (anno OldBlockNumberUsedAnnotation) Copy() state.StateAnnotation {
-	return anno
+	return OldBlockNumberUsedAnnotation{}
 }
 func (anno OldBlockNumberUsedAnnotation) Translate(ctx *z3.Context) state.StateAnnotation {
-	return anno
+	return OldBlockNumberUsedAnnotation{}
 }
 
 func NewPredictableVariables() *PredictableVariables {
@@ -55,13 +55,13 @@ func NewPredictableVariables() *PredictableVariables {
 			"block.gaslimit, block.timestamp or block.number.",
 		PreHooks:  []string{"JUMPI", "BLOCKHASH"},
 		PostHooks: []string{"BLOCKHASH", "COINBASE", "GASLIMIT", "TIMESTAMP", "NUMBER"},
-		//Issues:    utils.NewSyncIssueSlice(),
+		//Issues:    utils.NewSyncSlice(),
 		Issues: make([]*analysis.Issue, 0),
 		Cache:  utils.NewSet(),
 	}
 }
 func (dm *PredictableVariables) ResetModule() {
-	//dm.Issues = utils.NewSyncIssueSlice()
+	//dm.Issues = utils.NewSyncSlice()
 	dm.Issues = make([]*analysis.Issue, 0)
 }
 func (dm *PredictableVariables) Execute(target *state.GlobalState) []*analysis.Issue {

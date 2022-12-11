@@ -63,7 +63,7 @@ type UncheckedRetval struct {
 	Description string
 	PreHooks    []string
 	PostHooks   []string
-	Issues      *utils.SyncIssueSlice
+	Issues      *utils.SyncSlice
 	Cache       *utils.Set
 }
 
@@ -79,13 +79,13 @@ func NewUncheckedRetval() *UncheckedRetval {
 			"    c.call.value(0)(bytes4(sha3(\"ping(uint256)\")),1)",
 		PreHooks:  []string{"STOP", "RETURN"},
 		PostHooks: []string{"CALL", "DELEGATECALL", "STATICCALL", "CALLCODE"},
-		Issues:    utils.NewSyncIssueSlice(),
+		Issues:    utils.NewSyncSlice(),
 		Cache:     utils.NewSet(),
 	}
 }
 
 func (dm *UncheckedRetval) ResetModule() {
-	dm.Issues = utils.NewSyncIssueSlice()
+	dm.Issues = utils.NewSyncSlice()
 }
 func (dm *UncheckedRetval) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)

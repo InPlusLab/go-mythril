@@ -14,7 +14,7 @@ type TxOrigin struct {
 	Description string
 	PreHooks    []string
 	PostHooks   []string
-	Issues      *utils.SyncIssueSlice
+	Issues      *utils.SyncSlice
 	Cache       *utils.Set
 }
 type TxOriginAnnotation struct {
@@ -29,13 +29,13 @@ func NewTxOrigin() *TxOrigin {
 		Description: "Check whether control flow decisions are influenced by tx.origin",
 		PreHooks:    []string{"JUMPI"},
 		PostHooks:   []string{"ORIGIN"},
-		Issues:      utils.NewSyncIssueSlice(),
+		Issues:      utils.NewSyncSlice(),
 		Cache:       utils.NewSet(),
 	}
 }
 
 func (dm *TxOrigin) ResetModule() {
-	dm.Issues = utils.NewSyncIssueSlice()
+	dm.Issues = utils.NewSyncSlice()
 }
 func (dm *TxOrigin) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)

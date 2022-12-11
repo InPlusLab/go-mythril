@@ -15,7 +15,7 @@ type UserAssertions struct {
 	SWCID       string
 	Description string
 	PreHooks    []string
-	Issues      *utils.SyncIssueSlice
+	Issues      *utils.SyncSlice
 	Cache       *utils.Set
 }
 
@@ -25,13 +25,13 @@ func NewUserAssertions() *UserAssertions {
 		SWCID:       analysis.NewSWCData()["ASSERT_VIOLATION"],
 		Description: "Search for reachable user-supplied exceptions. Report a warning if an log message is emitted: 'emit AssertionFailed(string)",
 		PreHooks:    []string{"LOG1", "MSTORE"},
-		Issues:      utils.NewSyncIssueSlice(),
+		Issues:      utils.NewSyncSlice(),
 		Cache:       utils.NewSet(),
 	}
 }
 
 func (dm *UserAssertions) ResetModule() {
-	dm.Issues = utils.NewSyncIssueSlice()
+	dm.Issues = utils.NewSyncSlice()
 }
 func (dm *UserAssertions) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)
@@ -84,8 +84,8 @@ func (dm *UserAssertions) _analyze_state(globalState *state.GlobalState) []*anal
 	if opcode.Name == "MSTORE" {
 		value := globalState.Mstate.Stack.RawStack[stackLen-2].Simplify()
 		//fmt.Println("value:", value.BvString())
-		//if value.Symbolic() {
-		if value.ValueInt() == 0 && value.BvString() != "#x0000000000000000000000000000000000000000000000000000000000000000" {
+		if value.Symbolic() {
+			//if value.ValueInt() == 0 && value.BvString() != "#x0000000000000000000000000000000000000000000000000000000000000000" {
 			return make([]*analysis.Issue, 0)
 		}
 		mstorePattern := "cafecafecafecafecafecafecafecafecafecafecafecafecafecafecafe"

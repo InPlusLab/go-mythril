@@ -612,8 +612,8 @@ func (instr *Instruction) exp_(globalState *state.GlobalState) []*state.GlobalSt
 	exponent := mstate.Stack.Pop()
 	fmt.Println("exp:", globalState)
 
-	if (base.ValueInt() == 0 && base.BvString() != "#x0000000000000000000000000000000000000000000000000000000000000000") || (exponent.ValueInt() == 0 && exponent.BvString() != "#x0000000000000000000000000000000000000000000000000000000000000000") {
-		//if base.Symbolic() || exponent.Symbolic() {
+	//if (base.ValueInt() == 0 && base.BvString() != "#x0000000000000000000000000000000000000000000000000000000000000000") || (exponent.ValueInt() == 0 && exponent.BvString() != "#x0000000000000000000000000000000000000000000000000000000000000000") {
+	if base.Symbolic() || exponent.Symbolic() {
 		res := globalState.NewBitvec("invhash("+base.BvString()+")**invhash("+exponent.BvString()+")", 256)
 		res.Annotations = base.Annotations.Union(exponent.Annotations)
 		mstate.Stack.Append(res)
@@ -1391,7 +1391,7 @@ func (instr *Instruction) mstore8_(globalState *state.GlobalState) []*state.Glob
 
 	mstate.MemExtend(offset, 1)
 	value2write := value.Extract(7, 0)
-	fmt.Println("mstore8:", value2write.BvString())
+
 	//offsetV, _ := strconv.ParseInt(offset.Value(), 10, 64)
 	//mstate.Memory.SetItem(offsetV, value2write)
 	mstate.Memory.SetItem(offset, value2write)

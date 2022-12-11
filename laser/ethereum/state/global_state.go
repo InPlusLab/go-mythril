@@ -39,7 +39,6 @@ func (globalState *GlobalState) Copy() *GlobalState {
 		//	newAnnotations = append(newAnnotations, anno.Copy())
 		//	continue
 		//}
-		//newAnnotations = append(newAnnotations, anno)
 		newAnnotations = append(newAnnotations, anno.Copy())
 	}
 	newWs := globalState.WorldState.Copy()
@@ -87,34 +86,26 @@ func (globalState *GlobalState) Translate(ctx *z3.Context) {
 	//fmt.Println("changeStateContext done")
 }
 
-//func (globalState *GlobalState) Translate(ctx *z3.Context) *GlobalState {
-//	if globalState.Z3ctx.GetRaw() == ctx.GetRaw() {
-//		return globalState
-//	}
-//
-//	fmt.Println("before changeStateContext")
-//	// machineState stack & memory
-//	fmt.Println("glTrans1")
-//	newMstate := globalState.Mstate.Translate(ctx)
-//	// worldState constraints
-//	fmt.Println("glTrans2")
-//	newWorldState := globalState.WorldState.Translate(ctx)
-//	// env
-//	fmt.Println("glTrans3")
-//	newEnv := globalState.Environment.Translate(ctx)
-//	fmt.Println("glTrans4")
-//	// lastReturnData
-//	//fmt.Println("changeStateContext done")
-//	return &GlobalState{
-//		WorldState:  newWorldState,
-//		Mstate:      newMstate,
-//		Z3ctx :      ctx,
-//		Environment: newEnv,
-//		TxStack:        globalState.TxStack,
-//		LastReturnData: globalState.LastReturnData,
-//		Annotations:    globalState.Annotations,
-//	}
-//}
+func (globalState *GlobalState) TranslateR(ctx *z3.Context) *GlobalState {
+	newAnnotations := make([]StateAnnotation, 0)
+	for _, anno := range globalState.Annotations {
+		newAnnotations = append(newAnnotations, anno.Translate(ctx))
+	}
+	newWs := globalState.WorldState.Translate(ctx)
+	newEnv := globalState.Environment.Translate(ctx)
+	newEnv.ActiveAccount = newWs.AccountsExistOrLoad(newEnv.ActiveAccount.Address)
+	newMs := globalState.Mstate.Translate(ctx)
+
+	return &GlobalState{
+		WorldState:     newWs,
+		Environment:    newEnv,
+		Mstate:         newMs,
+		TxStack:        globalState.TxStack,
+		Z3ctx:          ctx,
+		LastReturnData: globalState.LastReturnData,
+		Annotations:    newAnnotations,
+	}
+}
 
 func (globalState *GlobalState) GetCurrentInstruction() *disassembler.EvmInstruction {
 	instructions := globalState.Environment.Code.InstructionList

@@ -15,7 +15,7 @@ type ArbitraryDelegateCall struct {
 	SWCID       string
 	Description string
 	PreHooks    []string
-	Issues      *utils.SyncIssueSlice
+	Issues      *utils.SyncSlice
 	Cache       *utils.Set
 }
 
@@ -25,13 +25,13 @@ func NewArbitraryDelegateCall() *ArbitraryDelegateCall {
 		SWCID:       analysis.NewSWCData()["DELEGATECALL_TO_UNTRUSTED_CONTRACT"],
 		Description: "Check for invocations of delegatecall to a user-supplied address.",
 		PreHooks:    []string{"DELEGATECALL"},
-		Issues:      utils.NewSyncIssueSlice(),
+		Issues:      utils.NewSyncSlice(),
 		Cache:       utils.NewSet(),
 	}
 }
 
 func (dm *ArbitraryDelegateCall) ResetModule() {
-	dm.Issues = utils.NewSyncIssueSlice()
+	dm.Issues = utils.NewSyncSlice()
 }
 
 func (dm *ArbitraryDelegateCall) Execute(target *state.GlobalState) []*analysis.Issue {

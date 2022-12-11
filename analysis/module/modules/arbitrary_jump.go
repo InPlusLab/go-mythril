@@ -12,7 +12,7 @@ type ArbitraryJump struct {
 	SWCID       string
 	Description string
 	PreHooks    []string
-	Issues      *utils.SyncIssueSlice
+	Issues      *utils.SyncSlice
 	Cache       *utils.Set
 }
 
@@ -22,13 +22,13 @@ func NewArbitraryJump() *ArbitraryJump {
 		SWCID:       analysis.NewSWCData()["ARBITRARY_JUMP"],
 		Description: "",
 		PreHooks:    []string{"JUMP", "JUMPI"},
-		Issues:      utils.NewSyncIssueSlice(),
+		Issues:      utils.NewSyncSlice(),
 		Cache:       utils.NewSet(),
 	}
 }
 
 func (dm *ArbitraryJump) ResetModule() {
-	dm.Issues = utils.NewSyncIssueSlice()
+	dm.Issues = utils.NewSyncSlice()
 }
 
 func (dm *ArbitraryJump) Execute(target *state.GlobalState) []*analysis.Issue {

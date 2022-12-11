@@ -13,7 +13,7 @@ type ArbitraryStorage struct {
 	SWCID       string
 	Description string
 	PreHooks    []string
-	Issues      *utils.SyncIssueSlice
+	Issues      *utils.SyncSlice
 	Cache       *utils.Set
 }
 
@@ -23,13 +23,13 @@ func NewArbitraryStorage() *ArbitraryStorage {
 		SWCID:       analysis.NewSWCData()["WRITE_TO_ARBITRARY_STORAGE"],
 		Description: "",
 		PreHooks:    []string{"SSTORE"},
-		Issues:      utils.NewSyncIssueSlice(),
+		Issues:      utils.NewSyncSlice(),
 		Cache:       utils.NewSet(),
 	}
 }
 
 func (dm *ArbitraryStorage) ResetModule() {
-	dm.Issues = utils.NewSyncIssueSlice()
+	dm.Issues = utils.NewSyncSlice()
 }
 
 func (dm *ArbitraryStorage) Execute(target *state.GlobalState) []*analysis.Issue {

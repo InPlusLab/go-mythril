@@ -63,6 +63,7 @@ func (loader *ModuleLoader) GetDetectionModules(whiteList []string) []modules.De
 
 func (loader *ModuleLoader) registerMythrilModules() {
 	loader.Modules = append(loader.Modules,
+		/* 14个modules，integer和stateAfterCall有单协程和多协程版本，用同一个会让单协程变久 */
 		modules.NewArbitraryJump(),
 		modules.NewArbitraryStorage(),
 		modules.NewArbitraryDelegateCall(),
@@ -71,8 +72,10 @@ func (loader *ModuleLoader) registerMythrilModules() {
 		modules.NewEtherThief(),
 		modules.NewExceptions(),
 		modules.NewExternalCalls(),
+		modules.NewIntegerArithmeticsSingle(),
 		//modules.NewIntegerArithmetics(),
 		modules.NewMultipleSends(),
+		modules.NewStateChangeAfterCallSingle(),
 		//modules.NewStateChangeAfterCall(),
 		modules.NewAccidentallyKillable(),
 		modules.NewUncheckedRetval(),

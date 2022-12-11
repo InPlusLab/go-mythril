@@ -17,7 +17,7 @@ type EtherThief struct {
 	SWCID       string
 	Description string
 	PostHooks   []string
-	Issues      *utils.SyncIssueSlice
+	Issues      *utils.SyncSlice
 	Cache       *utils.Set
 }
 
@@ -27,13 +27,13 @@ func NewEtherThief() *EtherThief {
 		SWCID:       analysis.NewSWCData()["UNPROTECTED_ETHER_WITHDRAWAL"],
 		Description: DESCRIPTION,
 		PostHooks:   []string{"CALL", "STATICCALL"},
-		Issues:      utils.NewSyncIssueSlice(),
+		Issues:      utils.NewSyncSlice(),
 		Cache:       utils.NewSet(),
 	}
 }
 
 func (dm *EtherThief) ResetModule() {
-	dm.Issues = utils.NewSyncIssueSlice()
+	dm.Issues = utils.NewSyncSlice()
 }
 func (dm *EtherThief) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)

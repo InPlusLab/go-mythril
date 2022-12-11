@@ -130,6 +130,15 @@ func (b *Bitvec) ValueInt() int {
 // Symbolic tells whether this bv is symbolic
 func (b *Bitvec) Symbolic() bool {
 	return b.symbolic
+	//return b.RealSymbolic()
+}
+
+func (b *Bitvec) SetSymbolic(flag bool) {
+	b.symbolic = flag
+}
+
+func (b *Bitvec) RealSymbolic() bool {
+	return b.ValueInt() == 0 && b.BvString() != "#x0000000000000000000000000000000000000000000000000000000000000000"
 }
 
 // BvString returns a human-friendly string version of the AST.
@@ -153,20 +162,18 @@ func (b *Bitvec) GetCtx() *Context {
 
 //
 func (b *Bitvec) Copy() *Bitvec {
-	//var anno *utils.Set
-	//if b.Annotations == nil {
-	//	anno = utils.NewSet()
-	//} else {
-	//	anno = b.Annotations.Copy()
+
+	//res := utils.NewSet()
+	//for _, item := range b.Annotations.Elements() {
+	//	res.Add(item)
 	//}
 
 	return &Bitvec{
-		rawCtx:   b.rawCtx,
-		rawAST:   b.rawAST,
-		rawSort:  b.rawSort,
-		symbolic: b.symbolic,
-		//Annotations: anno,
-		Annotations: b.Annotations,
+		rawCtx:      b.rawCtx,
+		rawAST:      b.rawAST,
+		rawSort:     b.rawSort,
+		symbolic:    b.symbolic,
+		Annotations: b.Annotations.Copy(),
 	}
 }
 

@@ -13,7 +13,7 @@ type AccidentallyKillable struct {
 	SWCID       string
 	Description string
 	PreHooks    []string
-	Issues      *utils.SyncIssueSlice
+	Issues      *utils.SyncSlice
 	Cache       *utils.Set
 }
 
@@ -24,13 +24,13 @@ func NewAccidentallyKillable() *AccidentallyKillable {
 		Description: "Check if the contact can be 'accidentally' killed by anyone." +
 			"For kill-able contracts, also check whether it is possible to direct the contract balance to the attacker.",
 		PreHooks: []string{"SELFDESTRUCT"},
-		Issues:   utils.NewSyncIssueSlice(),
+		Issues:   utils.NewSyncSlice(),
 		Cache:    utils.NewSet(),
 	}
 }
 
 func (dm *AccidentallyKillable) ResetModule() {
-	dm.Issues = utils.NewSyncIssueSlice()
+	dm.Issues = utils.NewSyncSlice()
 }
 
 func (dm *AccidentallyKillable) Execute(target *state.GlobalState) []*analysis.Issue {

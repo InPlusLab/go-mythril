@@ -30,6 +30,9 @@ func (c *Context) Close() error {
 }
 
 func (c *Context) GetRaw() C.Z3_context {
+	if c == nil {
+		return nil
+	}
 	return c.raw
 }
 

@@ -240,7 +240,6 @@ type Memory struct {
 func NewMemory() *Memory {
 	rawM := make(map[int64]*z3.Bitvec)
 	rawSymM := make(map[*z3.Bitvec]*z3.Bitvec)
-	//rawSymM := make(map[string]*z3.Bitvec)
 	return &Memory{
 		Msize:        0,
 		RawMemory:    &rawM,
@@ -330,6 +329,11 @@ func (m *Memory) GetWordAt(index *z3.Bitvec) *z3.Bitvec {
 			if result.BvSize() != 256 {
 				panic("memory size error in GetWordAt")
 			}
+			//if result.RealSymbolic() {
+			//	result.SetSymbolic(true)
+			//}else{
+			//	result.SetSymbolic(false)
+			//}
 			return result
 		}
 	} else {
@@ -358,6 +362,11 @@ func (m *Memory) GetWordAt(index *z3.Bitvec) *z3.Bitvec {
 			if result.BvSize() != 256 {
 				panic("memory size error in GetWordAt")
 			}
+			//if result.RealSymbolic() {
+			//	result.SetSymbolic(true)
+			//}else{
+			//	result.SetSymbolic(false)
+			//}
 			return result
 		}
 	}
@@ -455,12 +464,7 @@ func (m *Memory) GetItems2Bytes(start int64, stop int64, ctx *z3.Context) []byte
 
 func (m *Memory) SetItem(key *z3.Bitvec, value *z3.Bitvec) {
 
-	//if int(key) >= len(memory) {
-	//	fmt.Println("lenm")
-	//	return
-	//}
 	if value.BvSize() != 8 {
-		fmt.Println("bvsize")
 		return
 	}
 	if key.Symbolic() {

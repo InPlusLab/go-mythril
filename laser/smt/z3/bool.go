@@ -34,7 +34,7 @@ func (b *Bool) Copy() *Bool {
 		rawCtx:      b.rawCtx,
 		rawAST:      b.rawAST,
 		symbolic:    b.symbolic,
-		Annotations: b.Annotations,
+		Annotations: b.Annotations.Copy(),
 	}
 }
 

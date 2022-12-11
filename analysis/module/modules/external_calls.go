@@ -13,7 +13,7 @@ type ExternalCalls struct {
 	SWCID       string
 	Description string
 	PreHooks    []string
-	Issues      *utils.SyncIssueSlice
+	Issues      *utils.SyncSlice
 	Cache       *utils.Set
 }
 
@@ -23,12 +23,12 @@ func NewExternalCalls() *ExternalCalls {
 		SWCID:       analysis.NewSWCData()["REENTRANCY"],
 		Description: "Search for external calls with unrestricted gas to a user-specified address.",
 		PreHooks:    []string{"CALL"},
-		Issues:      utils.NewSyncIssueSlice(),
+		Issues:      utils.NewSyncSlice(),
 		Cache:       utils.NewSet(),
 	}
 }
 func (dm *ExternalCalls) ResetModule() {
-	dm.Issues = utils.NewSyncIssueSlice()
+	dm.Issues = utils.NewSyncSlice()
 }
 func (dm *ExternalCalls) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)
@@ -114,6 +114,5 @@ func (dm *ExternalCalls) _analyze_state(globalState *state.GlobalState) []*Poten
 		//Constraints: constraints.Translate(newCtx),
 		Detector: dm,
 	}
-	fmt.Println("externalCall push:", address)
 	return []*PotentialIssue{issue}
 }

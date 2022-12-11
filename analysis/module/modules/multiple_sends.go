@@ -15,7 +15,7 @@ type MultipleSends struct {
 	SWCID       string
 	Description string
 	PreHooks    []string
-	Issues      *utils.SyncIssueSlice
+	Issues      *utils.SyncSlice
 	Cache       *utils.Set
 }
 
@@ -76,12 +76,12 @@ func NewMultipleSends() *MultipleSends {
 		SWCID:       analysis.NewSWCData()["MULTIPLE_SENDS"],
 		Description: "Check for multiple sends in a single transaction",
 		PreHooks:    []string{"CALL", "DELEGATECALL", "STATICCALL", "CALLCODE", "RETURN", "STOP"},
-		Issues:      utils.NewSyncIssueSlice(),
+		Issues:      utils.NewSyncSlice(),
 		Cache:       utils.NewSet(),
 	}
 }
 func (dm *MultipleSends) ResetModule() {
-	dm.Issues = utils.NewSyncIssueSlice()
+	dm.Issues = utils.NewSyncSlice()
 }
 func (dm *MultipleSends) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)

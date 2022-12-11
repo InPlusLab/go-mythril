@@ -16,8 +16,26 @@ type handelFunc func(globalState *state.GlobalState)
 type OverUnderflowAnnotation struct {
 	// Symbol Annotation used if a BitVector can overflow
 	OverflowingState *state.GlobalState
+	Satisfy          bool
 	Operator         string
 	Constraint       *z3.Bool
+}
+
+func (anno OverUnderflowAnnotation) Copy() OverUnderflowAnnotation {
+	return OverUnderflowAnnotation{
+		OverflowingState: anno.OverflowingState,
+		Satisfy:          anno.Satisfy,
+		Operator:         anno.Operator,
+		Constraint:       anno.Constraint.Copy(),
+	}
+}
+func (anno OverUnderflowAnnotation) Translate(ctx *z3.Context) OverUnderflowAnnotation {
+	return OverUnderflowAnnotation{
+		OverflowingState: anno.OverflowingState,
+		Satisfy:          anno.Satisfy,
+		Operator:         anno.Operator,
+		Constraint:       anno.Constraint.Translate(ctx),
+	}
 }
 
 type OverUnderflowStateAnnotation struct {
@@ -29,22 +47,28 @@ func NewOverUnderflowStateAnnotation() *OverUnderflowStateAnnotation {
 		OverflowingStateAnnotations: utils.NewSet(),
 	}
 }
-func (anno OverUnderflowStateAnnotation) PersistToWorldState() bool {
+func (anno *OverUnderflowStateAnnotation) PersistToWorldState() bool {
 	return false
 }
-func (anno OverUnderflowStateAnnotation) PersistOverCalls() bool {
+func (anno *OverUnderflowStateAnnotation) PersistOverCalls() bool {
 	return false
 }
-func (anno OverUnderflowStateAnnotation) Copy() state.StateAnnotation {
+func (anno *OverUnderflowStateAnnotation) Copy() state.StateAnnotation {
+	set := utils.NewSet()
+	for _, overflowAnno := range anno.OverflowingStateAnnotations.Elements() {
+		set.Add(overflowAnno.(OverUnderflowAnnotation).Copy())
+	}
 	return &OverUnderflowStateAnnotation{
-		OverflowingStateAnnotations: anno.OverflowingStateAnnotations.Copy(),
+		OverflowingStateAnnotations: set,
 	}
 }
-
-// TODO: translate annotation
-func (anno OverUnderflowStateAnnotation) Translate(ctx *z3.Context) state.StateAnnotation {
+func (anno *OverUnderflowStateAnnotation) Translate(ctx *z3.Context) state.StateAnnotation {
+	set := utils.NewSet()
+	for _, overflowAnno := range anno.OverflowingStateAnnotations.Elements() {
+		set.Add(overflowAnno.(OverUnderflowAnnotation).Translate(ctx))
+	}
 	return &OverUnderflowStateAnnotation{
-		OverflowingStateAnnotations: anno.OverflowingStateAnnotations.Copy(),
+		OverflowingStateAnnotations: set,
 	}
 }
 
@@ -53,7 +77,7 @@ type IntegerArithmetics struct {
 	SWCID                string
 	Description          string
 	PreHooks             []string
-	Issues               *utils.SyncIssueSlice
+	Issues               *utils.SyncSlice
 	Cache                *utils.Set
 	OstatesSatisfiable   *utils.Set
 	OstatesUnsatisfiable *utils.Set
@@ -69,7 +93,7 @@ func NewIntegerArithmetics() *IntegerArithmetics {
 			"check if there's a possible state where op1 + op0 > 2^32 - 1",
 		PreHooks: []string{"ADD", "SUB", "MUL", "EXP", "SSTORE",
 			"JUMPI", "STOP", "RETURN", "CALL"},
-		Issues:               utils.NewSyncIssueSlice(),
+		Issues:               utils.NewSyncSlice(),
 		Cache:                utils.NewSet(),
 		OstatesSatisfiable:   utils.NewSet(),
 		OstatesUnsatisfiable: utils.NewSet(),
@@ -77,7 +101,7 @@ func NewIntegerArithmetics() *IntegerArithmetics {
 }
 
 func (dm *IntegerArithmetics) ResetModule() {
-	dm.Issues = utils.NewSyncIssueSlice()
+	dm.Issues = utils.NewSyncSlice()
 	dm.OstatesSatisfiable = utils.NewSet()
 	dm.OstatesUnsatisfiable = utils.NewSet()
 }
@@ -156,9 +180,14 @@ func (dm *IntegerArithmetics) _handel_add(globalState *state.GlobalState) {
 	c := op0.BvAddNoOverflow(op1, false).Not()
 	//c := op0.BvAddNoOverflow(op1, false).Not().Translate(ctx)
 
+	constraints := globalState.WorldState.Constraints.DeepCopy()
+	constraints.Add(c)
+	_, sat := state.GetModel(constraints, nil, nil, false, globalState.Z3ctx)
+
 	annotation := OverUnderflowAnnotation{
 		//OverflowingState: newState,
 		OverflowingState: globalState.Copy(),
+		Satisfy:          sat,
 		Operator:         "addition",
 		Constraint:       c,
 	}
@@ -173,9 +202,15 @@ func (dm *IntegerArithmetics) _handel_mul(globalState *state.GlobalState) {
 	op0, op1 := dm._get_args(globalState)
 	c := op0.BvMulNoOverflow(op1, false).Not()
 	//c := op0.BvMulNoOverflow(op1, false).Not().Translate(ctx)
+
+	constraints := globalState.WorldState.Constraints.DeepCopy()
+	constraints.Add(c)
+	_, sat := state.GetModel(constraints, nil, nil, false, globalState.Z3ctx)
+
 	annotation := OverUnderflowAnnotation{
 		//OverflowingState: newState,
 		OverflowingState: globalState.Copy(),
+		Satisfy:          sat,
 		Operator:         "multiplication",
 		Constraint:       c,
 	}
@@ -190,9 +225,15 @@ func (dm *IntegerArithmetics) _handel_sub(globalState *state.GlobalState) {
 	op0, op1 := dm._get_args(globalState)
 	c := op0.BvSubNoUnderflow(op1, false).Not()
 	//c := op0.BvSubNoUnderflow(op1, false).Not().Translate(ctx)
+
+	constraints := globalState.WorldState.Constraints.DeepCopy()
+	constraints.Add(c)
+	_, sat := state.GetModel(constraints, nil, nil, false, globalState.Z3ctx)
+
 	annotation := OverUnderflowAnnotation{
 		//OverflowingState: newState,
 		OverflowingState: globalState.Copy(),
+		Satisfy:          sat,
 		Operator:         "subtraction",
 		Constraint:       c,
 	}
@@ -226,9 +267,14 @@ func (dm *IntegerArithmetics) _handel_exp(globalState *state.GlobalState) {
 
 	//constraint = constraint.Translate(newCtx)
 
+	constraints := globalState.WorldState.Constraints.DeepCopy()
+	constraints.Add(constraint)
+	_, sat := state.GetModel(constraints, nil, nil, false, globalState.Z3ctx)
+
 	annotation := OverUnderflowAnnotation{
 		//OverflowingState: newState,
 		OverflowingState: globalState.Copy(),
+		Satisfy:          sat,
 		Operator:         "exponentiation",
 		Constraint:       constraint,
 	}
@@ -273,10 +319,22 @@ func (dm *IntegerArithmetics) _handel_return(globalState *state.GlobalState) {
 	stack := globalState.Mstate.Stack
 	offset := stack.RawStack[stack.Length()-1]
 	length := stack.RawStack[stack.Length()-2]
+	stateAnnotation := getOverflowUnderflowStateAnnotation(globalState)
+
+	if length.Symbolic() {
+		return
+	}
+	if offset.Symbolic() {
+		element := globalState.Mstate.Memory.GetWordAt(offset)
+		for _, annotation := range element.Annotations.Elements() {
+			if reflect.TypeOf(annotation).String() == "modules.OverUnderflowAnnotationSingle" {
+				stateAnnotation.OverflowingStateAnnotations.Add(annotation)
+			}
+		}
+	}
+
 	offsetV, _ := strconv.ParseInt(offset.Value(), 10, 64)
 	lengthV, _ := strconv.ParseInt(length.Value(), 10, 64)
-
-	stateAnnotation := getOverflowUnderflowStateAnnotation(globalState)
 
 	for _, element := range globalState.Mstate.Memory.GetItems(offsetV, offsetV+lengthV, globalState.Z3ctx) {
 		for _, annotation := range element.Annotations.Elements() {
@@ -295,22 +353,15 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 			continue
 		}
 
-		//if ostate.Z3ctx.GetRaw() != globalState.Z3ctx.GetRaw() {
-		//	ostate.Translate(globalState.Z3ctx)
-		//}
-
 		if !dm.OstatesSatisfiable.Contains(ostate) {
 			//constraints := ostate.WorldState.Constraints.DeepCopy()
-			constraints := ostate.WorldState.Constraints.DeepCopy().Translate(globalState.Z3ctx)
-			constraints.Add(annotation.(OverUnderflowAnnotation).Constraint.Translate(globalState.Z3ctx))
 			//constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
-			//_, sat := state.GetModel(constraints, nil, nil, false, ostate.Z3ctx)
-			_, sat := state.GetModel(constraints, nil, nil, false, globalState.Z3ctx)
+			//_, sat := state.GetModel(constraints, nil, nil, false, globalState.Z3ctx)
+			sat := annotation.(OverUnderflowAnnotation).Satisfy
 			if sat {
 				fmt.Println("sat")
 				dm.OstatesSatisfiable.Add(ostate)
 			} else {
-				// UnsatError
 				fmt.Println("unsat")
 				dm.OstatesUnsatisfiable.Add(ostate)
 				continue
@@ -321,15 +372,13 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 			"at transaction end address", globalState.GetCurrentInstruction().Address, "ostate address",
 			ostate.GetCurrentInstruction().Address)
 
-		//constraints := globalState.WorldState.Constraints.DeepCopy()
 		constraints := globalState.WorldState.Constraints.DeepCopy()
-		constraints.Add(annotation.(OverUnderflowAnnotation).Constraint.Translate(globalState.Z3ctx))
-		//constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
+		//constraints.Add(annotation.(OverUnderflowAnnotation).Constraint.Translate(globalState.Z3ctx))
+		constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
 
 		transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
 
 		if transactionSequence == nil {
-			// UnsatError
 			fmt.Println("unsaterror for getTxSeq")
 			continue
 		}
@@ -360,11 +409,9 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 
 		address := getAddressFromState(ostate)
 		dm.Cache.Add(address)
-		//dm.Issues = append(dm.Issues, issue)
 		dm.Issues.Append(issue)
 		fmt.Println(dm.Issues)
 	}
-	fmt.Println("handelTxEnd")
 }
 
 func getAddressFromState(globalState *state.GlobalState) int {

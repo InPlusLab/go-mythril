@@ -15,7 +15,7 @@ type Exceptions struct {
 	SWCID       string
 	Description string
 	PreHooks    []string
-	Issues      *utils.SyncIssueSlice
+	Issues      *utils.SyncSlice
 	Cache       *utils.Set
 }
 
@@ -49,13 +49,13 @@ func NewExceptions() *Exceptions {
 		SWCID:       analysis.NewSWCData()["ASSERT_VIOLATION"],
 		Description: "Checks whether any exception states are reachable.",
 		PreHooks:    []string{"INVALID", "JUMP", "REVERT"},
-		Issues:      utils.NewSyncIssueSlice(),
+		Issues:      utils.NewSyncSlice(),
 		Cache:       utils.NewSet(),
 	}
 }
 
 func (dm *Exceptions) ResetModule() {
-	dm.Issues = utils.NewSyncIssueSlice()
+	dm.Issues = utils.NewSyncSlice()
 }
 func (dm *Exceptions) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)

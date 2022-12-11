@@ -9,10 +9,9 @@ import (
 	"math/big"
 	"reflect"
 	"strconv"
-	"sync"
 )
 
-type StateChangeAfterCall struct {
+type StateChangeAfterCallSingle struct {
 	Name        string
 	SWCID       string
 	Description string
@@ -21,76 +20,58 @@ type StateChangeAfterCall struct {
 	Cache       *utils.Set
 }
 
-var lock sync.RWMutex
-
-type StateChangeCallsAnnotation struct {
-	CallState *state.GlobalState
-	//StateChangeStates  []*state.GlobalState
-	StateChangeStates  int
+type StateChangeCallsAnnotationSingle struct {
+	CallState         *state.GlobalState
+	StateChangeStates []*state.GlobalState
+	//StateChangeStates int
 	UserDefinedAddress bool
 }
 
-func NewStateChangeCallsAnnotation(globalState *state.GlobalState, userDefinedAddress bool) *StateChangeCallsAnnotation {
-	//stateList := make([]*state.GlobalState, 0)
-	return &StateChangeCallsAnnotation{
-		CallState: globalState,
-		//StateChangeStates:  stateList,
-		StateChangeStates:  0,
+func NewStateChangeCallsAnnotationSingle(globalState *state.GlobalState, userDefinedAddress bool) *StateChangeCallsAnnotationSingle {
+	stateList := make([]*state.GlobalState, 0)
+	return &StateChangeCallsAnnotationSingle{
+		CallState:         globalState,
+		StateChangeStates: stateList,
+		//StateChangeStates: 0,
 		UserDefinedAddress: userDefinedAddress,
 	}
 }
 
-func (anno *StateChangeCallsAnnotation) PersistToWorldState() bool {
+func (anno *StateChangeCallsAnnotationSingle) PersistToWorldState() bool {
 	return false
 }
-func (anno *StateChangeCallsAnnotation) PersistOverCalls() bool {
+func (anno *StateChangeCallsAnnotationSingle) PersistOverCalls() bool {
 	return false
 }
-func (anno *StateChangeCallsAnnotation) GetStateChangeStates() int {
-	lock.RLock()
-	res := anno.StateChangeStates
-	lock.RUnlock()
-	return res
-}
-func (anno *StateChangeCallsAnnotation) Copy() state.StateAnnotation {
-	//stateChangeStatesNew := make([]*state.GlobalState, 0)
-	//for _, v := range anno.StateChangeStates {
-	//	stateChangeStatesNew = append(stateChangeStatesNew, v.Copy())
-	//}
-	lock.RLock()
-	stateChangeStates := anno.StateChangeStates
-	lock.RUnlock()
-	return &StateChangeCallsAnnotation{
-		CallState: anno.CallState.Copy(),
-		//StateChangeStates:  stateChangeStatesNew,
-		StateChangeStates:  stateChangeStates,
+func (anno *StateChangeCallsAnnotationSingle) Copy() state.StateAnnotation {
+	stateChangeStatesNew := make([]*state.GlobalState, 0)
+	for _, v := range anno.StateChangeStates {
+		stateChangeStatesNew = append(stateChangeStatesNew, v.Copy())
+	}
+
+	return &StateChangeCallsAnnotationSingle{
+		CallState:          anno.CallState.Copy(),
+		StateChangeStates:  stateChangeStatesNew,
 		UserDefinedAddress: anno.UserDefinedAddress,
 	}
 }
-func (anno *StateChangeCallsAnnotation) Translate(ctx *z3.Context) state.StateAnnotation {
-	//stateChangeStatesNew := make([]*state.GlobalState, 0)
-	//for _, v := range anno.StateChangeStates {
-	//	stateChangeStatesNew = append(stateChangeStatesNew, v.Copy())
-	//}
-	lock.RLock()
-	stateChangeStates := anno.StateChangeStates
-	lock.RUnlock()
-	return &StateChangeCallsAnnotation{
-		CallState: anno.CallState.TranslateR(ctx),
-		//StateChangeStates:  stateChangeStatesNew,
-		StateChangeStates:  stateChangeStates,
+func (anno *StateChangeCallsAnnotationSingle) Translate(ctx *z3.Context) state.StateAnnotation {
+	stateChangeStatesNew := make([]*state.GlobalState, 0)
+	for _, v := range anno.StateChangeStates {
+		stateChangeStatesNew = append(stateChangeStatesNew, v.Copy())
+	}
+
+	return &StateChangeCallsAnnotationSingle{
+		CallState:          anno.CallState.TranslateR(ctx),
+		StateChangeStates:  stateChangeStatesNew,
 		UserDefinedAddress: anno.UserDefinedAddress,
 	}
 }
-func (anno *StateChangeCallsAnnotation) AppendState(globalState *state.GlobalState) {
-	//anno.StateChangeStates = append(anno.StateChangeStates, globalState)
-	lock.Lock()
-	anno.StateChangeStates = anno.StateChangeStates + 1
-	lock.Unlock()
+func (anno *StateChangeCallsAnnotationSingle) AppendState(globalState *state.GlobalState) {
+	anno.StateChangeStates = append(anno.StateChangeStates, globalState)
 }
-func (anno *StateChangeCallsAnnotation) GetIssue(globalState *state.GlobalState, dm *StateChangeAfterCall) *PotentialIssue {
-	//if len(anno.StateChangeStates) == 0 {
-	if anno.GetStateChangeStates() == 0 {
+func (anno *StateChangeCallsAnnotationSingle) GetIssue(globalState *state.GlobalState, dm *StateChangeAfterCallSingle) *PotentialIssue {
+	if len(anno.StateChangeStates) == 0 {
 		fmt.Println("AnnoGetIssue Len(States) == 0")
 		return nil
 	}
@@ -150,7 +131,7 @@ func (anno *StateChangeCallsAnnotation) GetIssue(globalState *state.GlobalState,
 	}
 }
 
-func NewStateChangeAfterCall() *StateChangeAfterCall {
+func NewStateChangeAfterCallSingle() *StateChangeAfterCall {
 	return &StateChangeAfterCall{
 		Name:        "State change after an external call",
 		SWCID:       analysis.NewSWCData()["REENTRANCY"],
@@ -163,21 +144,21 @@ func NewStateChangeAfterCall() *StateChangeAfterCall {
 	}
 }
 
-func (dm *StateChangeAfterCall) ResetModule() {
+func (dm *StateChangeAfterCallSingle) ResetModule() {
 	dm.Issues = utils.NewSyncSlice()
 }
-func (dm *StateChangeAfterCall) Execute(target *state.GlobalState) []*analysis.Issue {
+func (dm *StateChangeAfterCallSingle) Execute(target *state.GlobalState) []*analysis.Issue {
 	fmt.Println("Entering analysis module: ", dm.Name)
 	result := dm._execute(target)
 	fmt.Println("Exiting analysis module:", dm.Name)
 	return result
 }
 
-func (dm *StateChangeAfterCall) AddIssue(issue *analysis.Issue) {
+func (dm *StateChangeAfterCallSingle) AddIssue(issue *analysis.Issue) {
 	dm.Issues.Append(issue)
 }
 
-func (dm *StateChangeAfterCall) GetIssues() []*analysis.Issue {
+func (dm *StateChangeAfterCallSingle) GetIssues() []*analysis.Issue {
 	list := make([]*analysis.Issue, 0)
 	for _, v := range dm.Issues.Elements() {
 		list = append(list, v.(*analysis.Issue))
@@ -185,19 +166,19 @@ func (dm *StateChangeAfterCall) GetIssues() []*analysis.Issue {
 	return list
 }
 
-func (dm *StateChangeAfterCall) GetPreHooks() []string {
+func (dm *StateChangeAfterCallSingle) GetPreHooks() []string {
 	return dm.PreHooks
 }
 
-func (dm *StateChangeAfterCall) GetPostHooks() []string {
+func (dm *StateChangeAfterCallSingle) GetPostHooks() []string {
 	return make([]string, 0)
 }
 
-func (dm *StateChangeAfterCall) GetCache() *utils.Set {
+func (dm *StateChangeAfterCallSingle) GetCache() *utils.Set {
 	return dm.Cache
 }
 
-func (dm *StateChangeAfterCall) _execute(globalState *state.GlobalState) []*analysis.Issue {
+func (dm *StateChangeAfterCallSingle) _execute(globalState *state.GlobalState) []*analysis.Issue {
 	if dm.Cache.Contains(globalState.GetCurrentInstruction().Address) {
 		return nil
 	}
@@ -207,7 +188,7 @@ func (dm *StateChangeAfterCall) _execute(globalState *state.GlobalState) []*anal
 	return nil
 }
 
-func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
+func (dm *StateChangeAfterCallSingle) _analyze_state(globalState *state.GlobalState) []*PotentialIssue {
 	//config := z3.GetConfig()
 	//newCtx := z3.NewContext(config)
 
@@ -242,12 +223,11 @@ func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) [
 	// Check for vulnerabilities
 	vulnerabilities := make([]*PotentialIssue, 0)
 	for _, annotation := range annotations {
-		//if len(annotation.(*StateChangeCallsAnnotation).StateChangeStates) == 0 {
-		if annotation.(*StateChangeCallsAnnotation).GetStateChangeStates() == 0 {
+		if len(annotation.(*StateChangeCallsAnnotationSingle).StateChangeStates) == 0 {
 			fmt.Println("stateList == 0")
 			continue
 		}
-		issue := annotation.(*StateChangeCallsAnnotation).GetIssue(globalState, dm)
+		issue := annotation.(*StateChangeCallsAnnotationSingle).GetIssue(globalState, dm)
 		if issue != nil {
 			//issue.Constraints = issue.Constraints.Translate(newCtx)
 			vulnerabilities = append(vulnerabilities, issue)
@@ -256,7 +236,7 @@ func (dm *StateChangeAfterCall) _analyze_state(globalState *state.GlobalState) [
 	return vulnerabilities
 }
 
-func (dm *StateChangeAfterCall) _add_external_call(globalState *state.GlobalState) {
+func (dm *StateChangeAfterCallSingle) _add_external_call(globalState *state.GlobalState) {
 	stackLen := globalState.Mstate.Stack.Length()
 	gas := globalState.Mstate.Stack.RawStack[stackLen-1]
 	to := globalState.Mstate.Stack.RawStack[stackLen-2]
@@ -283,7 +263,7 @@ func (dm *StateChangeAfterCall) _add_external_call(globalState *state.GlobalStat
 	}
 }
 
-func (dm *StateChangeAfterCall) _balance_change(value *z3.Bitvec, globalState *state.GlobalState) bool {
+func (dm *StateChangeAfterCallSingle) _balance_change(value *z3.Bitvec, globalState *state.GlobalState) bool {
 	//fmt.Println("value:", value.BvString())
 	if !value.Symbolic() {
 		v, _ := strconv.Atoi(value.Value())
