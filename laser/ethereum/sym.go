@@ -134,11 +134,12 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		BeforeExecCh:      make(chan Signal),
 		LastOpCodeList:    make([]string, 4, 4),
 		LastAfterExecList: make([]int, 4),
-		CtxList:           ctxList,
-		NewCtxList:        make([]*z3.Context, 0),
-		TxCtxList:         make([]*z3.Context, 0),
-		GofuncCount:       4,
-		Loader:            moduleLoader,
+		//LastAfterExecList: utils.NewSyncSlice(),
+		CtxList:     ctxList,
+		NewCtxList:  make([]*z3.Context, 0),
+		TxCtxList:   make([]*z3.Context, 0),
+		GofuncCount: 4,
+		Loader:      moduleLoader,
 	}
 	evm.registerInstrHooks()
 	return &evm
@@ -215,6 +216,12 @@ LOOP:
 		newStates, opcode := evm.ExecuteState(globalState)
 		fmt.Println(id, globalState, opcode)
 
+		if len(newStates) == 2 {
+			ctx := newStates[1].Z3ctx.Copy()
+			evm.NewCtxList = append(evm.NewCtxList, ctx)
+			newStates[1].Z3ctx = ctx
+		}
+
 		// If args.sparse_pruning is False:
 		//newPossibleStates := make([]*state.GlobalState, 0)
 
@@ -250,9 +257,6 @@ LOOP:
 		}
 
 		for _, newState := range newStates {
-			//if newState.WorldState.Constraints.IsPossible(){
-			//	newPossibleStates = append(newPossibleStates, newState)
-			//}
 			evm.WorkList <- newState
 		}
 
@@ -272,6 +276,8 @@ func (evm *LaserEVM) multiExec(cfg *z3.Config) {
 	beforeExecSignals := make([]bool, evm.GofuncCount)
 	fmt.Println("beforeLoop:", beforeExecSignals)
 	evm.LastAfterExecList = []int{-1, -1, -1, -1}
+	//arr := []interface{}{-1,-1,-1,-1}
+	//evm.LastAfterExecList = utils.NewSyncSliceWithArr(arr)
 	//endOpCodeList := []string{"STOP", "RETURN", "REVERT", "INVALID", "JUMPDEST"}
 	//afterExecSignals := make([]bool, evm.GofuncCount)
 
@@ -351,6 +357,12 @@ LOOP:
 					break
 				}
 			}
+			//for _, resNum := range evm.LastAfterExecList.Elements() {
+			//	if resNum != 0 {
+			//		resFlag = false
+			//		break
+			//	}
+			//}
 
 			if allNoStates && resFlag && len(evm.WorkList) == 0 {
 				fmt.Println("break in situation 2")
@@ -443,8 +455,9 @@ func (evm *LaserEVM) MultiSymExec(creationCode string, runtimeCode string, contr
 		//evm.NewCtxList = make([]*z3.Context, 0)
 
 		evm.LastOpCodeList = make([]string, evm.GofuncCount, evm.GofuncCount)
-		//evm.LastAfterExecList = make([]int, evm.GofuncCount)
 		evm.LastAfterExecList = []int{-1, -1, -1, -1}
+		//arr := []interface{}{-1,-1,-1,-1}
+		//evm.LastAfterExecList = utils.NewSyncSliceWithArr(arr)
 
 		// chz
 		evm.CtxList = make([]*z3.Context, evm.GofuncCount, evm.GofuncCount)
@@ -634,6 +647,7 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 						fmt.Println("LenOpenStates:", evm.OpenStatesSync.Length())
 						evm.LastOpCodeList[id] = "JUMPDEST"
 						evm.LastAfterExecList[id] = 0
+						//evm.LastAfterExecList.SetItem(id, 0)
 						evm.CtxList[id] = nil
 						//wg.Done()
 						continue
@@ -687,6 +701,7 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 
 			evm.LastOpCodeList[id] = opcode
 			evm.LastAfterExecList[id] = len(newStates)
+			//evm.LastAfterExecList.SetItem(id, len(newStates))
 
 			for _, newState := range newStates {
 				evm.WorkList <- newState

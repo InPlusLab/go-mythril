@@ -68,9 +68,41 @@ func (instr *Instruction) ExePostHooks(globalState *state.GlobalState) {
 	}
 }
 
+//var counter int
+//var cLock sync.Mutex
+
 func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.GlobalState {
 
+	//if globalState.GetCurrentInstruction().OpCode.Name == "SUB" && globalState.GetCurrentInstruction().Address == 881 {
+	//	fmt.Println("Cons:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name )
+	//	globalState.WorldState.Constraints.PrintOneLine()
+	//
+	//	cLock.Lock()
+	//
+	//	counter = counter + 1
+	//	file, err := os.OpenFile("/home/codepatient/log/"+strconv.Itoa(counter)+".txt", os.O_WRONLY|os.O_APPEND, 0666)
+	//	if err != nil {
+	//		fmt.Println("file open fail", err)
+	//	}
+	//	defer file.Close()
+	//	write := bufio.NewWriter(file)
+	//	write.WriteString("ConstraintsLen-" + strconv.Itoa(globalState.WorldState.Constraints.Length()) + "\r\n")
+	//	for i, con := range globalState.WorldState.Constraints.ConstraintList {
+	//		str := con.BoolString()
+	//		idx := strings.Index(str, "\n")
+	//		if idx != -1 {
+	//			str = str[:idx]
+	//		}
+	//		write.WriteString(strconv.Itoa(i) + "-" + str + "\r\n")
+	//	}
+	//	write.WriteString("+++++++++++++++++++++++++++++++++\r\n")
+	//	write.Flush()
+	//
+	//	cLock.Unlock()
+	//}
+
 	instr.ExePreHooks(globalState)
+
 	result := instr.Mutator(globalState)
 
 	fmt.Println("PC:", globalState.Mstate.Pc)
@@ -86,7 +118,7 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	for _, state := range result {
 		// For debug
 		//fmt.Println("Print:", globalState.GetCurrentInstruction().OpCode.Name)
-		//state.Mstate.Stack.PrintStackOneLine()
+
 		//state.Mstate.Stack.PrintStack()
 		//for i, con := range state.WorldState.Constraints.ConstraintList {
 		//	if i==3{
@@ -1600,7 +1632,7 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 			//		}
 			//	}
 			//}
-
+			//ret = append(ret, newState)
 			if newState.WorldState.Constraints.IsPossible() {
 				//if tmpCons.IsPossible(){
 				ret = append(ret, newState)

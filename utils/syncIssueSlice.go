@@ -44,3 +44,12 @@ func (s *SyncSlice) Length() int {
 	defer s.RUnlock()
 	return len(s.arr)
 }
+
+func (s *SyncSlice) SetItem(index int, value interface{}) {
+	s.Lock()
+	defer s.Unlock()
+	if index >= len(s.arr) {
+		return
+	}
+	s.arr[index] = value
+}

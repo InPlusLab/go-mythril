@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 	"go-mythril/laser/smt/z3"
+	"strings"
 )
 
 type Constraints struct {
@@ -66,4 +67,20 @@ func (c *Constraints) Add(constraints ...*z3.Bool) bool {
 
 func (c *Constraints) Length() int {
 	return len(c.ConstraintList)
+}
+
+func (c *Constraints) PrintOneLine() {
+	if c.Length() == 0 {
+		fmt.Println("Cons: null")
+	}
+
+	for i := 0; i < c.Length(); i++ {
+		str := c.ConstraintList[i].BoolString()
+		idx := strings.Index(str, "\n")
+		if idx == -1 {
+			fmt.Println(i, "-", str)
+		} else {
+			fmt.Println(i, "-", str[:idx])
+		}
+	}
 }

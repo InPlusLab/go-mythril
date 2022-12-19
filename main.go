@@ -915,20 +915,20 @@ func main() {
 
 	start := time.Now()
 	/* 单文件中有多个合约，单协程多协程用下面 */
-	//for i := 0; i < len(creationCodes); i++ {
-	//	evm.SingleSymExec(creationCodes[i], runtimeCodes[i], "CHZ", ctx)
-	//	evm.Refresh()
-	//	x := function_managers.NewKeccakFunctionManager(ctx)
-	//	fmt.Println(x)
-	//	function_managers.RefreshKeccak()
-	//}
 	for i := 0; i < len(creationCodes); i++ {
-		evm.MultiSymExec(creationCodes[i], runtimeCodes[i], "CHZ", ctx, config)
+		evm.SingleSymExec(creationCodes[i], runtimeCodes[i], "CHZ", ctx)
 		evm.Refresh()
 		x := function_managers.NewKeccakFunctionManager(ctx)
 		fmt.Println(x)
 		function_managers.RefreshKeccak()
 	}
+	//for i := 0; i < len(creationCodes); i++ {
+	//	evm.MultiSymExec(creationCodes[i], runtimeCodes[i], "CHZ", ctx, config)
+	//	evm.Refresh()
+	//	x := function_managers.NewKeccakFunctionManager(ctx)
+	//	fmt.Println(x)
+	//	function_managers.RefreshKeccak()
+	//}
 
 	/* 单文件中只有1个合约，单协程多协程用下面 */
 	//evm.SingleSymExec(creationCode, runtimeCode, "CHZ", ctx)

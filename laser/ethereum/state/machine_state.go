@@ -106,27 +106,6 @@ func (m *MachineStack) PrintStackOneLine() {
 		} else {
 			fmt.Println("PrintStack: ", str[:idx], " ", m.RawStack[i].Annotations.Len(), m.RawStack[i].Annotations.Elements())
 		}
-		//if m.RawStack[i].Symbolic() {
-		//	if m.RawStack[i].Annotations.Len() != 0 {
-		//		fmt.Println("PrintStack: ", m.RawStack[i].String(), ' ', m.RawStack[i].Annotations)
-		//	} else {
-		//		fmt.Println("PrintStack: ", m.RawStack[i].String())
-		//	}
-		//	continue
-		//}
-		//if m.RawStack[i].GetAstKind() == z3.NumeralKindAST {
-		//	if m.RawStack[i].Annotations.Len() != 0 {
-		//		fmt.Println("PrintStack: ", decimalStr2HexStr(m.RawStack[i].Value()), ' ', m.RawStack[i].Annotations)
-		//	} else {
-		//		fmt.Println("PrintStack: ", decimalStr2HexStr(m.RawStack[i].Value()))
-		//	}
-		//} else {
-		//	if m.RawStack[i].Annotations.Len() != 0 {
-		//		fmt.Println("PrintStack: ", m.RawStack[i].String(), ' ', m.RawStack[i].Annotations)
-		//	} else {
-		//		fmt.Println("PrintStack: ", m.RawStack[i].String())
-		//	}
-		//}
 	}
 }
 
