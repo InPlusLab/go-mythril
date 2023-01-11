@@ -1,2 +1,3 @@
 go-mythril
 laser/smt/z3/goZ3Config.h
+*.txt
