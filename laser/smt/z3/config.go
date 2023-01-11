@@ -6,7 +6,7 @@ import (
 )
 
 // #include <stdlib.h>
-// #cgo LDFLAGS: -L/home/codepatient/z3/build -lz3
+// #cgo LDFLAGS: -L/usr/local/z3/build -lz3
 // #include "goZ3Config.h"
 import "C"
 
@@ -29,7 +29,6 @@ import "C"
 // model model generation for solvers, this parameter can be overwritten when creating a solver
 // model_validate validate models produced by solvers
 // unsat_core unsat-core generation for solvers, this parameter can be overwritten when creating a solver
-//
 type Config struct {
 	raw C.Z3_config
 }

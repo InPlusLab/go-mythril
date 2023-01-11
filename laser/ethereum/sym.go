@@ -100,7 +100,7 @@ type LaserEVM struct {
 
 func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, moduleLoader *module.ModuleLoader, cfg *z3.Config) *LaserEVM {
 
-	goFuncCount := 8
+	goFuncCount := 1
 
 	preHook := make(map[string][]moduleExecFunc)
 	postHook := make(map[string][]moduleExecFunc)
