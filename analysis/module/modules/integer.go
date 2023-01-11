@@ -171,8 +171,8 @@ func (dm *IntegerArithmetics) _execute(globalState *state.GlobalState) []*analys
 }
 
 func (dm *IntegerArithmetics) _handel_add(globalState *state.GlobalState) {
-	//config := z3.GetConfig()
-	//ctx := z3.NewContext(config)
+	config := z3.GetConfig()
+	ctx := z3.NewContext(config)
 	//newState := globalState.Copy()
 	//newState.Translate(ctx)
 
@@ -189,13 +189,13 @@ func (dm *IntegerArithmetics) _handel_add(globalState *state.GlobalState) {
 		OverflowingState: globalState.Copy(),
 		Satisfy:          sat,
 		Operator:         "addition",
-		Constraint:       c,
+		Constraint:       c.Translate(ctx),
 	}
 	op0.Annotate(annotation)
 }
 func (dm *IntegerArithmetics) _handel_mul(globalState *state.GlobalState) {
-	//config := z3.GetConfig()
-	//ctx := z3.NewContext(config)
+	config := z3.GetConfig()
+	ctx := z3.NewContext(config)
 	//newState := globalState.Copy()
 	//newState.Translate(ctx)
 
@@ -212,13 +212,13 @@ func (dm *IntegerArithmetics) _handel_mul(globalState *state.GlobalState) {
 		OverflowingState: globalState.Copy(),
 		Satisfy:          sat,
 		Operator:         "multiplication",
-		Constraint:       c,
+		Constraint:       c.Translate(ctx),
 	}
 	op0.Annotate(annotation)
 }
 func (dm *IntegerArithmetics) _handel_sub(globalState *state.GlobalState) {
-	//config := z3.GetConfig()
-	//ctx := z3.NewContext(config)
+	config := z3.GetConfig()
+	ctx := z3.NewContext(config)
 	//newState := globalState.Copy()
 	//newState.Translate(ctx)
 
@@ -235,13 +235,13 @@ func (dm *IntegerArithmetics) _handel_sub(globalState *state.GlobalState) {
 		OverflowingState: globalState.Copy(),
 		Satisfy:          sat,
 		Operator:         "subtraction",
-		Constraint:       c,
+		Constraint:       c.Translate(ctx),
 	}
 	op0.Annotate(annotation)
 }
 func (dm *IntegerArithmetics) _handel_exp(globalState *state.GlobalState) {
-	//config := z3.GetConfig()
-	//newCtx := z3.NewContext(config)
+	config := z3.GetConfig()
+	newCtx := z3.NewContext(config)
 	//newState := globalState.Copy()
 	//newState.Translate(newCtx)
 
@@ -276,7 +276,7 @@ func (dm *IntegerArithmetics) _handel_exp(globalState *state.GlobalState) {
 		OverflowingState: globalState.Copy(),
 		Satisfy:          sat,
 		Operator:         "exponentiation",
-		Constraint:       constraint,
+		Constraint:       constraint.Translate(newCtx),
 	}
 	op0.Annotate(annotation)
 }
@@ -373,9 +373,9 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 			ostate.GetCurrentInstruction().Address)
 
 		constraints := globalState.WorldState.Constraints.DeepCopy()
-		//constraints.Add(annotation.(OverUnderflowAnnotation).Constraint.Translate(globalState.Z3ctx))
-		constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
-
+		constraints.Add(annotation.(OverUnderflowAnnotation).Constraint.Translate(globalState.Z3ctx))
+		//constraints.Add(annotation.(OverUnderflowAnnotation).Constraint)
+		fmt.Println("beforeHere!!")
 		transactionSequence := analysis.GetTransactionSequence(globalState, constraints)
 
 		if transactionSequence == nil {

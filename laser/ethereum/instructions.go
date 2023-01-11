@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type StateTransition struct {
@@ -68,17 +69,17 @@ func (instr *Instruction) ExePostHooks(globalState *state.GlobalState) {
 	}
 }
 
-//var counter int
-//var cLock sync.Mutex
+var counter int
+var cLock sync.Mutex
 
 func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.GlobalState {
 
 	//if globalState.GetCurrentInstruction().OpCode.Name == "SUB" && globalState.GetCurrentInstruction().Address == 881 {
-	//	fmt.Println("Cons:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name )
-	//	globalState.WorldState.Constraints.PrintOneLine()
-	//
+	////	fmt.Println("Cons:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name )
+	////	globalState.WorldState.Constraints.PrintOneLine()
+	////
 	//	cLock.Lock()
-	//
+	////
 	//	counter = counter + 1
 	//	file, err := os.OpenFile("/home/codepatient/log/"+strconv.Itoa(counter)+".txt", os.O_WRONLY|os.O_APPEND, 0666)
 	//	if err != nil {
@@ -99,6 +100,10 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	//	write.Flush()
 	//
 	//	cLock.Unlock()
+	//}
+	//if globalState.WorldState.Constraints.Length() <= 24 && globalState.WorldState.Constraints.Length()>= 20 {
+	//	fmt.Println("Cons:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name )
+	//	globalState.WorldState.Constraints.PrintOneLine()
 	//}
 
 	instr.ExePreHooks(globalState)
@@ -1032,9 +1037,10 @@ func (instr *Instruction) sha3_(globalState *state.GlobalState) []*state.GlobalS
 
 		return ret
 	}
-	//fmt.Println("data:", data.BvString(), data.BvSize())
-	result, cons := function_managers.NewKeccakFunctionManager(globalState.Z3ctx).CreateKeccak(data.Translate(globalState.Z3ctx))
 
+	result, cons := function_managers.NewKeccakFunctionManager(globalState.Z3ctx).CreateKeccak(data.Translate(globalState.Z3ctx))
+	//result := globalState.Z3ctx.NewBitvecVal(1,256)
+	//cons := globalState.Z3ctx.NewBitvecVal(1, 256).Eq(globalState.Z3ctx.NewBitvecVal(1, 256)).Simplify()
 	mstate.Stack.Append(result)
 	globalState.WorldState.Constraints.Add(cons)
 	ret = append(ret, globalState)
@@ -1568,13 +1574,13 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 		//}
 
 		fmt.Println("negativeState:", newState)
-		//ret = append(ret, newState)
-		if newState.WorldState.Constraints.IsPossible() {
-			//if tmpCons.IsPossible() {
-			ret = append(ret, newState)
-		} else {
-			fmt.Println("negativeStateGet, but ws.Constraints isn't possible")
-		}
+		ret = append(ret, newState)
+		//if newState.WorldState.Constraints.IsPossible() {
+		//	//if tmpCons.IsPossible() {
+		//	ret = append(ret, newState)
+		//} else {
+		//	fmt.Println("negativeStateGet, but ws.Constraints isn't possible")
+		//}
 		//if globalState.GetCurrentInstruction().Address == 1005 {
 		//	fmt.Println("Jumpi1005 negativeCONSTRAINT:", newState.WorldState.Constraints.IsPossible(),  "haha", tmpCons.IsPossible())
 		//	for i, c := range newState.WorldState.Constraints.ConstraintList {
@@ -1632,13 +1638,13 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 			//		}
 			//	}
 			//}
-			//ret = append(ret, newState)
-			if newState.WorldState.Constraints.IsPossible() {
-				//if tmpCons.IsPossible(){
-				ret = append(ret, newState)
-			} else {
-				fmt.Println("positiveStateGet, but ws.Constraints isn't possible")
-			}
+			ret = append(ret, newState)
+			//if newState.WorldState.Constraints.IsPossible() {
+			//	//if tmpCons.IsPossible(){
+			//	ret = append(ret, newState)
+			//} else {
+			//	fmt.Println("positiveStateGet, but ws.Constraints isn't possible")
+			//}
 		} else {
 			fmt.Println("Pruned unreachable states-positive")
 		}

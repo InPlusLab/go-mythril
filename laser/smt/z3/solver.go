@@ -67,6 +67,13 @@ func (s *Solver) Check() LBool {
 	return LBool(C.Z3_solver_check(s.rawCtx, s.rawSolver))
 }
 
+func (s *Solver) Statistics() *Statistics {
+	return &Statistics{
+		RawCtx: s.rawCtx,
+		Stats:  C.Z3_solver_get_statistics(s.rawCtx, s.rawSolver),
+	}
+}
+
 // Model returns the last model from a Check.
 //
 // Maps to: Z3_solver_get_model

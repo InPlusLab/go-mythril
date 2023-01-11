@@ -15,7 +15,6 @@ import (
 	"go-mythril/utils"
 	"reflect"
 	"strconv"
-	"sync"
 )
 
 type moduleExecFunc func(globalState *state.GlobalState) []*analysis.Issue
@@ -65,8 +64,6 @@ func (anno *JumpdestCountAnnotation) GetTrace() []int {
 	return anno.Trace
 }
 
-var wg sync.WaitGroup
-
 // #signal
 type Signal struct {
 	Id       int
@@ -92,7 +89,8 @@ type LaserEVM struct {
 	LastOpCodeList    []string
 	LastAfterExecList []int
 	//LastAfterExecList *utils.SyncSlice
-	CtxList     []*z3.Context
+	CtxList []*z3.Context
+	//CtxList     *utils.SyncSlice
 	NewCtxList  []*z3.Context
 	TxCtxList   []*z3.Context
 	GofuncCount int
@@ -102,6 +100,8 @@ type LaserEVM struct {
 
 func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, moduleLoader *module.ModuleLoader, cfg *z3.Config) *LaserEVM {
 
+	goFuncCount := 8
+
 	preHook := make(map[string][]moduleExecFunc)
 	postHook := make(map[string][]moduleExecFunc)
 	opcodes := *support.NewOpcodes()
@@ -110,7 +110,7 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		postHook[v.Name] = make([]moduleExecFunc, 0)
 	}
 
-	ctxList := make([]*z3.Context, 4, 4)
+	ctxList := make([]*z3.Context, goFuncCount, goFuncCount)
 
 	// chz
 	//for i, _ := range ctxList {
@@ -121,7 +121,7 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		ExecutionTimeout: ExecutionTimeout,
 		CreateTimeout:    CreateTimeout,
 		TransactionCount: TransactionCount,
-		WorkList:         make(chan *state.GlobalState, 10000),
+		WorkList:         make(chan *state.GlobalState, 100000),
 		OpenStates:       make([]*state.WorldState, 0),
 		OpenStatesSync:   utils.NewSyncSlice(),
 		FinalState:       nil,
@@ -132,13 +132,14 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 
 		AfterExecCh:       make(chan Signal),
 		BeforeExecCh:      make(chan Signal),
-		LastOpCodeList:    make([]string, 4, 4),
-		LastAfterExecList: make([]int, 4),
+		LastOpCodeList:    make([]string, goFuncCount, goFuncCount),
+		LastAfterExecList: make([]int, goFuncCount),
 		//LastAfterExecList: utils.NewSyncSlice(),
-		CtxList:     ctxList,
+		CtxList: ctxList,
+		//CtxList:     utils.NewSyncSliceWithArr(ctxList),
 		NewCtxList:  make([]*z3.Context, 0),
 		TxCtxList:   make([]*z3.Context, 0),
-		GofuncCount: 4,
+		GofuncCount: goFuncCount,
 		Loader:      moduleLoader,
 	}
 	evm.registerInstrHooks()
@@ -159,7 +160,7 @@ func (evm *LaserEVM) registerInstrHooks() {
 }
 
 func (evm *LaserEVM) Refresh() {
-	evm.WorkList = make(chan *state.GlobalState, 10000)
+	evm.WorkList = make(chan *state.GlobalState, 100000)
 	evm.OpenStates = make([]*state.WorldState, 0)
 	evm.OpenStatesSync = utils.NewSyncSlice()
 	evm.FinalState = nil
@@ -217,6 +218,25 @@ LOOP:
 		fmt.Println(id, globalState, opcode)
 
 		if len(newStates) == 2 {
+			//if evm.goroutineAvailable(id) {
+			//	tmpStates := make([]*state.GlobalState, 0)
+			//	for _, s := range newStates {
+			//		if s.WorldState.Constraints.IsPossible() {
+			//			tmpStates = append(tmpStates, s)
+			//		}
+			//	}
+			//	newStates = tmpStates
+			//}
+			tmpStates := make([]*state.GlobalState, 0)
+			for _, s := range newStates {
+				if s.WorldState.Constraints.IsPossible() {
+					tmpStates = append(tmpStates, s)
+				}
+			}
+			newStates = tmpStates
+		}
+
+		if len(newStates) == 2 {
 			ctx := newStates[1].Z3ctx.Copy()
 			evm.NewCtxList = append(evm.NewCtxList, ctx)
 			newStates[1].Z3ctx = ctx
@@ -266,16 +286,16 @@ LOOP:
 }
 
 func (evm *LaserEVM) multiExec(cfg *z3.Config) {
-	//wg.Add(1)
 	for i := 0; i < evm.GofuncCount; i++ {
 		go evm.Run(i, cfg)
 	}
 
-	//wg.Wait()
 	// #signal
 	beforeExecSignals := make([]bool, evm.GofuncCount)
-	fmt.Println("beforeLoop:", beforeExecSignals)
-	evm.LastAfterExecList = []int{-1, -1, -1, -1}
+	evm.LastAfterExecList = make([]int, evm.GofuncCount, evm.GofuncCount)
+	for i, _ := range evm.LastAfterExecList {
+		evm.LastAfterExecList[i] = -1
+	}
 	//arr := []interface{}{-1,-1,-1,-1}
 	//evm.LastAfterExecList = utils.NewSyncSliceWithArr(arr)
 	//endOpCodeList := []string{"STOP", "RETURN", "REVERT", "INVALID", "JUMPDEST"}
@@ -424,7 +444,7 @@ func (evm *LaserEVM) MultiSymExec(creationCode string, runtimeCode string, contr
 	newAccount := ExecuteContractCreation(evm, creationCode, contractName, ctx, false, nil)
 	evm.OpenStatesSync.Append(evm.OpenStates[0])
 
-	evm.WorkList = make(chan *state.GlobalState, 10000)
+	evm.WorkList = make(chan *state.GlobalState, 100000)
 
 	// MessageTx
 	inputStrArr := support.GetArgsInstance().TransactionSequences
@@ -445,6 +465,7 @@ func (evm *LaserEVM) MultiSymExec(creationCode string, runtimeCode string, contr
 		fmt.Println("msgTx", i, ":end")
 		fmt.Println("workList len:", len(evm.WorkList))
 		fmt.Println("openStates len:", evm.OpenStatesSync.Length())
+
 		// Reset
 		evm.BeforeExecCh = make(chan Signal)
 
@@ -455,12 +476,17 @@ func (evm *LaserEVM) MultiSymExec(creationCode string, runtimeCode string, contr
 		//evm.NewCtxList = make([]*z3.Context, 0)
 
 		evm.LastOpCodeList = make([]string, evm.GofuncCount, evm.GofuncCount)
-		evm.LastAfterExecList = []int{-1, -1, -1, -1}
+		evm.LastAfterExecList = make([]int, evm.GofuncCount, evm.GofuncCount)
+		for i, _ := range evm.LastAfterExecList {
+			evm.LastAfterExecList[i] = -1
+		}
 		//arr := []interface{}{-1,-1,-1,-1}
 		//evm.LastAfterExecList = utils.NewSyncSliceWithArr(arr)
 
 		// chz
 		evm.CtxList = make([]*z3.Context, evm.GofuncCount, evm.GofuncCount)
+		//ctxList := make([]interface{}, evm.GofuncCount, evm.GofuncCount)
+		//evm.CtxList = utils.NewSyncSliceWithArr(ctxList)
 	}
 }
 
@@ -551,17 +577,17 @@ func (evm *LaserEVM) executeTransactions(address string) {
 func readWithSelect(evm *LaserEVM, id int) (*state.GlobalState, error) {
 	select {
 	case globalState := <-evm.WorkList:
-		evm.BeforeExecCh <- Signal{
-			Id:       id,
-			Finished: false,
-		}
+		//evm.BeforeExecCh <- Signal{
+		//	Id:       id,
+		//	Finished: false,
+		//}
 		return globalState, nil
 
 	default:
-		evm.BeforeExecCh <- Signal{
-			Id:       id,
-			Finished: true,
-		}
+		//evm.BeforeExecCh <- Signal{
+		//	Id:       id,
+		//	Finished: true,
+		//}
 		return nil, errors.New("evm.WorkList is empty")
 	}
 
@@ -571,7 +597,8 @@ func readWithSelect3(evm *LaserEVM, id int) (*state.GlobalState, error) {
 	select {
 	case globalState := <-evm.WorkList:
 		ctx := evm.CtxList[id]
-		if globalState.Z3ctx.GetRaw() == ctx.GetRaw() {
+		//ctx := evm.CtxList.Load(id)
+		if globalState.Z3ctx == ctx {
 			return globalState, nil
 		} else {
 			for i, m := range evm.CtxList {
@@ -584,8 +611,9 @@ func readWithSelect3(evm *LaserEVM, id int) (*state.GlobalState, error) {
 				}
 			}
 			// chz
-			if evm.CtxList[id] == nil {
+			if ctx == nil {
 				evm.CtxList[id] = globalState.Z3ctx
+				//evm.CtxList.SetItem(id, globalState.Z3ctx)
 				return globalState, nil
 			} else {
 				evm.WorkList <- globalState
@@ -596,6 +624,30 @@ func readWithSelect3(evm *LaserEVM, id int) (*state.GlobalState, error) {
 		return nil, errors.New("evm.WorkList is empty")
 	}
 }
+
+func (evm *LaserEVM) goroutineAvailable(id int) bool {
+	flag := false
+	arr := evm.CtxList
+	fmt.Println(id, "*****************************")
+	fmt.Println("ctxListLen:", len(evm.CtxList), arr)
+
+	for i, item := range arr {
+		fmt.Println(i, "cp", item, item == nil)
+		if i != id {
+			if item == nil {
+				flag = true
+				break
+			}
+		}
+	}
+	fmt.Println("*****************************")
+	return flag
+}
+
+//func (evm *LaserEVM) refreshForDeterminacy() {
+//	levels := 8
+//
+//}
 
 func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 	fmt.Println("Run")
@@ -613,8 +665,6 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 		}
 
 		if globalState != nil && err == nil {
-
-			//wg.Add(1)
 
 			fmt.Println("evm workList:", len(evm.WorkList))
 			// chz
@@ -649,7 +699,7 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 						evm.LastAfterExecList[id] = 0
 						//evm.LastAfterExecList.SetItem(id, 0)
 						evm.CtxList[id] = nil
-						//wg.Done()
+						//evm.CtxList.SetItem(id, nil)
 						continue
 					}
 				} else {
@@ -663,6 +713,26 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 			newStates, opcode := evm.ExecuteState(globalState)
 
 			fmt.Println(id, globalState, opcode)
+
+			// Decouple
+			if len(newStates) == 2 {
+				//if evm.goroutineAvailable(id) {
+				//	tmpStates := make([]*state.GlobalState, 0)
+				//	for _, s := range newStates {
+				//		if s.WorldState.Constraints.IsPossible() {
+				//			tmpStates = append(tmpStates, s)
+				//		}
+				//	}
+				//	newStates = tmpStates
+				//}
+				tmpStates := make([]*state.GlobalState, 0)
+				for _, s := range newStates {
+					if s.WorldState.Constraints.IsPossible() {
+						tmpStates = append(tmpStates, s)
+					}
+				}
+				newStates = tmpStates
+			}
 
 			if len(newStates) == 2 {
 				ctx := z3.NewContext(cfg)
@@ -696,7 +766,7 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 				}
 				modules.CheckPotentialIssues(globalState)
 				evm.CtxList[id] = nil
-				//wg.Done()
+				//evm.CtxList.SetItem(id, nil)
 			}
 
 			evm.LastOpCodeList[id] = opcode

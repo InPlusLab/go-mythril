@@ -13,7 +13,7 @@ import (
 type KeccakFunctionManager struct {
 	Ctx             *z3.Context
 	HashResultStore *map[int][]*z3.Bitvec
-	ConcreteHashes  *map[*z3.Bitvec]*z3.Bitvec
+	ConcreteHashes  *map[string]string
 	HashMatcher     string
 }
 
@@ -22,8 +22,8 @@ var once sync.Once
 
 func NewKeccakFunctionManager(ctx *z3.Context) *KeccakFunctionManager {
 	once.Do(func() {
-		hashStore := make(map[int][]*z3.Bitvec, 0)
-		concreteHashes := make(map[*z3.Bitvec]*z3.Bitvec)
+		hashStore := make(map[int][]*z3.Bitvec)
+		concreteHashes := make(map[string]string)
 		keccakFunctionManager = &KeccakFunctionManager{
 			HashResultStore: &hashStore,
 			ConcreteHashes:  &concreteHashes,
@@ -36,8 +36,8 @@ func NewKeccakFunctionManager(ctx *z3.Context) *KeccakFunctionManager {
 }
 
 func RefreshKeccak() {
-	hashStore := make(map[int][]*z3.Bitvec, 0)
-	concreteHashes := make(map[*z3.Bitvec]*z3.Bitvec)
+	hashStore := make(map[int][]*z3.Bitvec)
+	concreteHashes := make(map[string]string)
 	keccakFunctionManager.HashResultStore = &hashStore
 	keccakFunctionManager.ConcreteHashes = &concreteHashes
 }
@@ -76,15 +76,18 @@ func (k *KeccakFunctionManager) createCondition(funcInput *z3.Bitvec) *z3.Bool {
 	)
 
 	concreteCond := k.Ctx.NewBitvecVal(1, 256).Eq(k.Ctx.NewBitvecVal(0, 256)).Simplify()
-	for key, keccak := range *k.ConcreteHashes {
-		key = key.Translate(k.Ctx)
-		keccak = keccak.Translate(k.Ctx)
-		if key.BvSize() != funcInput.BvSize() {
-			continue
-		}
-		hashEq := keccakFun.ApplyBv(funcInput).Eq(keccak).And(key.Eq(funcInput))
-		concreteCond = concreteCond.Or(hashEq)
-	}
+	//for key, keccak := range *k.ConcreteHashes {
+	//	keyBigInt, _ := new(big.Int).SetString(key, 16)
+	//	keccakBigInt, _ := new(big.Int).SetString(keccak, 16)
+	//	keyBv := k.Ctx.NewBitvecVal(keyBigInt, 256)
+	//	keccakBv := k.Ctx.NewBitvecVal(keccakBigInt, 256)
+	//
+	//	if keyBv.BvSize() != funcInput.BvSize() {
+	//		continue
+	//	}
+	//	hashEq := keccakFun.ApplyBv(funcInput).Eq(keccakBv).And(keyBv.Eq(funcInput))
+	//	concreteCond = concreteCond.Or(hashEq)
+	//}
 	return inverse.ApplyBv(keccakRes).Eq(funcInput).And(cond.Or(concreteCond))
 	//return k.Ctx.NewBitvecVal(1,256).Eq(k.Ctx.NewBitvecVal(1,256)).Simplify()
 }
@@ -103,10 +106,8 @@ func (k *KeccakFunctionManager) CreateKeccak(data *z3.Bitvec) (*z3.Bitvec, *z3.B
 		condition = k.createCondition(data)
 	} else {
 		funcData = k.FindConcreteKeccak(data)
-		concreteHashes := *k.ConcreteHashes
-		cfg := z3.GetConfig()
-		ctx := z3.NewContext(cfg)
-		concreteHashes[data.Translate(ctx)] = funcData.Translate(ctx)
+		//concreteHashes := *k.ConcreteHashes
+		//concreteHashes[data.BvString()[2:]] = funcData.BvString()[2:]
 		fmt.Println("beforeHere!", inverse)
 		condition = keccakFun.ApplyBv(data).Eq(funcData).And(inverse.ApplyBv(keccakFun.ApplyBv(data)).Eq(data))
 		fmt.Println("afterHere!")

@@ -28,7 +28,7 @@ func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool
 	//timeout := support.NewArgs().SolverTimeout
 	timeout := 20000000
 	//timeout := 100000000000
-	//timeout := 30000
+	//timeout := 10000
 	//if enforceExecutionTime {
 	//	// GetTimeHandlerInstance().TimeRemaining()-500
 	//	//timeout = min(timeout, GetTimeHandlerInstance().TimeRemaining()-500)

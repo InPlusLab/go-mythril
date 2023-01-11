@@ -83,6 +83,13 @@ func (s *Optimize) Check(args ...*AST) LBool {
 	}
 }
 
+func (s *Optimize) Statistics() *Statistics {
+	return &Statistics{
+		RawCtx: s.rawCtx,
+		Stats:  C.Z3_optimize_get_statistics(s.rawCtx, s.rawOptimize),
+	}
+}
+
 // Model returns the last model from a Check.
 func (s *Optimize) Model() *Model {
 	m := &Model{

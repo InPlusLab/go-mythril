@@ -100,8 +100,8 @@ func (anno PotentialIssuesAnnotation) Replace(arr []*PotentialIssue) {
 func GetPotentialIssuesAnnotaion(globalState *state.GlobalState) *PotentialIssuesAnnotation {
 	for _, annotation := range globalState.Annotations {
 		if reflect.TypeOf(annotation).String() == "*modules.PotentialIssuesAnnotation" {
-			annotation.(*PotentialIssuesAnnotation).RLock()
-			defer annotation.(*PotentialIssuesAnnotation).RUnlock()
+			//annotation.(*PotentialIssuesAnnotation).RLock()
+			//defer annotation.(*PotentialIssuesAnnotation).RUnlock()
 			return annotation.(*PotentialIssuesAnnotation)
 		}
 	}
@@ -118,22 +118,15 @@ func CheckPotentialIssues(globalState *state.GlobalState) {
 	annotation := GetPotentialIssuesAnnotaion(globalState)
 	unsatPotentialIssues := make([]*PotentialIssue, 0)
 	for _, potentialIssue := range annotation.Elements() {
-		fmt.Println("addPotentialIssues")
+		fmt.Println("addPotentialIssuesS")
 		//tmpConstraint := globalState.WorldState.Constraints.Copy()
 		tmpConstraint := globalState.WorldState.Constraints.DeepCopy()
 		//tmpConstraint.Add(potentialIssue.Constraints.ConstraintList...)
 		// should translate the context here
 		for _, con := range potentialIssue.Constraints.ConstraintList {
-			tmpConstraint.Add(con.Translate(globalState.Z3ctx))
-			//tmpConstraint.Add(con)
+			//tmpConstraint.Add(con.Translate(globalState.Z3ctx))
+			tmpConstraint.Add(con)
 		}
-
-		//if potentialIssue.Address == 421 ||  potentialIssue.Address == 497 {
-		//	fmt.Println(potentialIssue.Address, ":")
-		//	for i, con := range tmpConstraint.ConstraintList {
-		//		fmt.Println(i, "-", con.BoolString())
-		//	}
-		//}
 
 		transactionSequence := analysis.GetTransactionSequence(globalState, tmpConstraint)
 		if transactionSequence == nil {
