@@ -123,8 +123,16 @@ func NewManager(GofuncCount int) *Manager {
 	return &m
 }
 
+func (m *Manager) LogInfo() {
+	fmt.Println("Worklist", m.WorkList, "WorklistLen", len(m.WorkList), "TotalStates", m.TotalStates, "FinishedStates", m.FinishedStates)
+}
+
+func (m *Manager) Pop() *state.GlobalState {
+	return <-m.WorkList
+}
+
 func (m *Manager) SignalLoop() {
-	fmt.Println("SignalLoop")
+	fmt.Println("SignalLoop Start")
 	for {
 		fmt.Println("wait signal")
 		signal := <-m.SignalCh
@@ -139,7 +147,7 @@ func (m *Manager) SignalLoop() {
 			break
 		}
 	}
-
+	fmt.Println("SignalLoop Stop")
 }
 
 func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, moduleLoader *module.ModuleLoader, cfg *z3.Config) *LaserEVM {
@@ -187,6 +195,9 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		Manager:     NewManager(goFuncCount),
 	}
 	evm.registerInstrHooks()
+	for i := 0; i < goFuncCount; i++ {
+		go evm.Run2(i, cfg)
+	}
 	return &evm
 }
 
@@ -204,7 +215,7 @@ func (evm *LaserEVM) registerInstrHooks() {
 }
 
 func (evm *LaserEVM) Refresh() {
-	evm.Manager.WorkList = make(chan *state.GlobalState, 100000)
+	// evm.Manager.WorkList = make(chan *state.GlobalState, 100000)
 	evm.OpenStates = make([]*state.WorldState, 0)
 	evm.OpenStatesSync = utils.NewSyncSlice()
 	evm.FinalState = nil
@@ -217,7 +228,7 @@ func (evm *LaserEVM) exec() {
 LOOP:
 	for {
 		// When there is no newState in channel, exit the iteration
-		fmt.Println("evm workList:", len(evm.Manager.WorkList))
+		fmt.Println("evm workList:", len(evm.Manager.WorkList), evm.Manager.WorkList)
 		if len(evm.Manager.WorkList) == 0 {
 			break LOOP
 		}
@@ -328,9 +339,9 @@ LOOP:
 		for _, newState := range newStates {
 			evm.Manager.WorkList <- newState
 		}
-		fmt.Println("send signal", id)
+		fmt.Println("send signal", 10086)
 		evm.Manager.SignalCh <- Signal{
-			Id:        id,
+			Id:        10086,
 			NewStates: len(newStates),
 		}
 
@@ -340,9 +351,7 @@ LOOP:
 }
 
 func (evm *LaserEVM) multiExec2(cfg *z3.Config) {
-	for i := 0; i < evm.GofuncCount; i++ {
-		go evm.Run2(i, cfg)
-	}
+	fmt.Println("multiExec2 evm.Manager.WorkList", len(evm.Manager.WorkList))
 	evm.Manager.SignalLoop()
 }
 
@@ -508,7 +517,7 @@ func (evm *LaserEVM) MultiSymExec(creationCode string, runtimeCode string, contr
 	newAccount := ExecuteContractCreation(evm, creationCode, contractName, ctx, false, nil)
 	evm.OpenStatesSync.Append(evm.OpenStates[0])
 
-	evm.Manager.WorkList = make(chan *state.GlobalState, 100000)
+	// evm.Manager.WorkList = make(chan *state.GlobalState, 100000)
 
 	// MessageTx
 	inputStrArr := support.GetArgsInstance().TransactionSequences
@@ -714,12 +723,14 @@ func (evm *LaserEVM) goroutineAvailable(id int) bool {
 //}
 
 func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
-	fmt.Println("Run2", id)
+	fmt.Println("Run2 Start", id)
 
 	for {
-		globalState := <-evm.Manager.WorkList
-
-		fmt.Println("get one , evm workList:", len(evm.Manager.WorkList))
+		fmt.Println("Run2 Wait", id)
+		evm.Manager.LogInfo()
+		globalState := evm.Manager.Pop()
+		fmt.Println("Run2 Got", id)
+		evm.Manager.LogInfo()
 		annotations := globalState.GetAnnotations(reflect.TypeOf(&JumpdestCountAnnotation{}))
 		var annotation *JumpdestCountAnnotation
 		if len(annotations) == 0 {
@@ -816,12 +827,13 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 		for _, newState := range newStates {
 			evm.Manager.WorkList <- newState
 		}
-		fmt.Println("send signal", id)
+		fmt.Println("Run2 send signal", id)
 		evm.Manager.SignalCh <- Signal{
 			Id:        id,
 			NewStates: len(newStates),
 		}
 	}
+	fmt.Println("Run2 Stop", id)
 }
 
 func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
@@ -1160,7 +1172,6 @@ func ExecuteMessageCallOnly(evm *LaserEVM, runtimeCode string, contractName stri
 }
 
 func setupGlobalStateForExecution(evm *LaserEVM, tx state.BaseTransaction) {
-	fmt.Println("setupGlobalStateForExecution")
 	globalState := tx.InitialGlobalState()
 	ACTORS := transaction.NewActors(globalState.Z3ctx)
 	constraint := tx.GetCaller().Eq(ACTORS.GetCreator()).Or(tx.GetCaller().Eq(ACTORS.GetAttacker()), tx.GetCaller().Eq(ACTORS.GetSomeGuy()))
@@ -1171,6 +1182,7 @@ func setupGlobalStateForExecution(evm *LaserEVM, tx state.BaseTransaction) {
 		Id:        -1,
 		NewStates: 1,
 	}
+	fmt.Println("setupGlobalStateForExecution evm.Manager.WorkList", len(evm.Manager.WorkList), evm.Manager.WorkList)
 }
 
 //func (evm *LaserEVM) executeTransactionNormal(creationCode string, contractName string, ctx *z3.Context) {
