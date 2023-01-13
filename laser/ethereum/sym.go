@@ -1152,17 +1152,17 @@ func OpenStateRelay(openState *state.WorldState, evm *LaserEVM, runtimeCode stri
 	txCtx = z3.NewContext(cfg)
 	openState.TransactionIdInt++
 
-	fmt.Println("OpenStateRelay", openState.TransactionIdInt, openState.TransactionCount)
+	if openState.TransactionIdInt > openState.TransactionCount {
+		fmt.Println("OpenStateRelay", openState.TransactionIdInt, openState.TransactionCount, "notneed")
+		return nil
+	}
 
 	if !openState.Constraints.IsPossible() {
-		fmt.Println("OpenStateRelay false")
+		fmt.Println("OpenStateRelay", openState.TransactionIdInt, openState.TransactionCount, "notpossible")
 		return nil
 	}
 
-	if openState.TransactionIdInt > openState.TransactionCount {
-		fmt.Println("OpenStateRelay nil")
-		return nil
-	}
+	fmt.Println("OpenStateRelay", openState.TransactionIdInt, openState.TransactionCount, "ojbk")
 
 	txId := strconv.Itoa(openState.TransactionIdInt)
 
