@@ -1113,7 +1113,7 @@ func OpenStateInit(openState *state.WorldState, evm *LaserEVM, runtimeCode strin
 	openState.TransactionIdInt++
 	fmt.Println("OpenStateInit", openState.TransactionIdInt, openState.TransactionCount)
 	openState.ContractAddress = address
-	txId := "1"
+	txId := strconv.Itoa(openState.TransactionIdInt)
 
 	externalSender := txCtx.NewBitvec("sender_"+txId, 256)
 	txCode := disassembler.NewDisasembly(runtimeCode)
@@ -1152,7 +1152,7 @@ func OpenStateRelay(openState *state.WorldState, evm *LaserEVM, runtimeCode stri
 	txCtx = z3.NewContext(cfg)
 	openState.TransactionIdInt++
 
-	if openState.TransactionIdInt > openState.TransactionCount {
+	if openState.TransactionIdInt-1 > openState.TransactionCount {
 		fmt.Println("OpenStateRelay", openState.TransactionIdInt, openState.TransactionCount, "notneed")
 		return nil
 	}

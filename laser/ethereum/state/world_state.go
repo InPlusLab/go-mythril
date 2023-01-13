@@ -41,6 +41,7 @@ func NewWordState(ctx *z3.Context) *WorldState {
 		Constraints:         NewConstraints(),
 		TransactionSequence: make([]BaseTransaction, 0),
 		ContractAddress:     ctx.NewBitvecVal(0, 256),
+		TransactionIdInt:    1,
 	}
 
 	//ws.PutAccount(attackerAcc)
