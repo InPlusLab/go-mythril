@@ -1110,6 +1110,8 @@ func OpenStateInit(openState *state.WorldState, evm *LaserEVM, runtimeCode strin
 	txCtx = z3.NewContext(cfg)
 
 	openState.TransactionCount = txCount
+	openState.TransactionIdInt++
+	fmt.Println("OpenStateInit", openState.TransactionIdInt, openState.TransactionCount)
 	openState.ContractAddress = address
 	txId := "1"
 

@@ -1,2 +1,2 @@
 go build -o go-mythril main2.go 
-./go-mythril > miaomi.txt
+./go-mythril > miaomi_pltest2_NonIsPossible.txt
