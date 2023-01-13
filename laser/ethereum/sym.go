@@ -522,16 +522,16 @@ func (evm *LaserEVM) MultiSymExec(creationCode string, runtimeCode string, contr
 	// MessageTx
 	inputStrArr := support.GetArgsInstance().TransactionSequences
 	for i := 0; i < evm.TransactionCount; i++ {
-		// fmt.Println("beforeMsgCall-OpenStatesLen:", evm.OpenStatesSync.Length())
-		// tmpOpenStates := make([]interface{}, 0)
-		// for _, ws := range evm.OpenStatesSync.Elements() {
-		// 	//tmpWs := ws.Translate(ctx)
-		// 	if ws.(*state.WorldState).Constraints.IsPossible() {
-		// 		tmpOpenStates = append(tmpOpenStates, ws)
-		// 	}
-		// }
-		// evm.OpenStatesSync = utils.NewSyncSliceWithArr(tmpOpenStates)
-		// fmt.Println("afterMsgCall-OpenStatesLen:", evm.OpenStatesSync.Length())
+		fmt.Println("beforeMsgCall-OpenStatesLen:", evm.OpenStatesSync.Length())
+		tmpOpenStates := make([]interface{}, 0)
+		for _, ws := range evm.OpenStatesSync.Elements() {
+			//tmpWs := ws.Translate(ctx)
+			if ws.(*state.WorldState).Constraints.IsPossible() {
+				tmpOpenStates = append(tmpOpenStates, ws)
+			}
+		}
+		evm.OpenStatesSync = utils.NewSyncSliceWithArr(tmpOpenStates)
+		fmt.Println("afterMsgCall-OpenStatesLen:", evm.OpenStatesSync.Length())
 
 		fmt.Println("msgTx", i, ":start")
 		ExecuteMessageCall(evm, runtimeCode, inputStrArr[i], ctx, newAccount.Address, true, cfg)
