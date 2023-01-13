@@ -1153,6 +1153,12 @@ func OpenStateRelay(openState *state.WorldState, evm *LaserEVM, runtimeCode stri
 	openState.TransactionIdInt++
 
 	fmt.Println("OpenStateRelay", openState.TransactionIdInt, openState.TransactionCount)
+
+	if !openState.Constraints.IsPossible() {
+		fmt.Println("OpenStateRelay false")
+		return nil
+	}
+
 	if openState.TransactionIdInt > openState.TransactionCount {
 		fmt.Println("OpenStateRelay nil")
 		return nil
