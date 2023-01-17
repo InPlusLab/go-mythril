@@ -115,6 +115,9 @@ type Manager struct {
 	TotalStates    int
 	FinishedStates int
 	Duration       int64
+
+	GofuncCount int
+	RespChs     map[int]chan bool
 }
 
 func NewManager(GofuncCount int) *Manager {
@@ -124,6 +127,13 @@ func NewManager(GofuncCount int) *Manager {
 		TotalStates:    0,
 		FinishedStates: 0,
 		Duration:       0,
+
+		GofuncCount: GofuncCount,
+		RespChs:     make(map[int]chan bool),
+	}
+
+	for i := 0; i < GofuncCount; i++ {
+		m.RespChs[i] = make(chan bool, 100)
 	}
 	return &m
 }
@@ -138,6 +148,9 @@ func (m *Manager) Pop() *state.GlobalState {
 
 func (m *Manager) SignalLoop() {
 	fmt.Println("SignalLoop Start")
+	for i := 0; i < m.GofuncCount; i++ {
+		m.RespChs[i] <- true
+	}
 	for {
 		fmt.Println("wait signal")
 		signal := <-m.SignalCh
@@ -153,6 +166,16 @@ func (m *Manager) SignalLoop() {
 		fmt.Println("totalDuration", m.Duration)
 		if signal.NewStates == 0 && m.TotalStates == m.FinishedStates {
 			break
+		}
+
+		if signal.Id != -1 {
+			runningWorkers := m.TotalStates - m.FinishedStates
+			canSkip := (runningWorkers+1 < m.GofuncCount)
+
+			// no jieou
+			canSkip = false
+
+			m.RespChs[signal.Id] <- canSkip
 		}
 	}
 	fmt.Println("SignalLoop Stop")
@@ -693,6 +716,8 @@ func (evm *LaserEVM) goroutineAvailable(id int) bool {
 	return flag
 }
 
+const MaxRLimitCount = 100861008610086
+
 func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 	fmt.Println("Run2 Start", id)
 
@@ -700,6 +725,8 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 		fmt.Println("Run2 Wait", id)
 		evm.Manager.LogInfo()
 		globalState := evm.Manager.Pop()
+		canSkip := <-evm.Manager.RespChs[id]
+		// TODO canSkip here?
 		if globalState.NeedIsPossible {
 			sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
 			if sat {
@@ -772,7 +799,11 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 		fmt.Println(id, globalState, opcode)
 
 		// Decouple
-		if len(newStates) == 2 {
+		// TODO canSkip here?
+		if len(newStates) == 2 && !canSkip {
+			// if globalState.RLimitCount > MaxRLimitCount {
+			// 	newStates = make([]*state.GlobalState, 0)
+			// }
 			for _, s := range newStates {
 				s.NeedIsPossible = true
 			}
@@ -786,8 +817,11 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 
 		if len(newStates) == 2 {
 			ctx := z3.NewContext(cfg)
-			evm.NewCtxList = append(evm.NewCtxList, ctx)
 			newStates[1].Translate(ctx)
+			// TODO: beng?
+			ctx0 := z3.NewContext(cfg)
+			newStates[0].Translate(ctx0)
+
 		}
 		var duration int64
 		duration = time.Since(start).Milliseconds()
