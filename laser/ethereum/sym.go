@@ -117,6 +117,7 @@ type Manager struct {
 	Duration       int64
 
 	GofuncCount int
+	ReqCh       chan int
 	RespChs     map[int]chan bool
 }
 
@@ -129,6 +130,7 @@ func NewManager(GofuncCount int) *Manager {
 		Duration:       0,
 
 		GofuncCount: GofuncCount,
+		ReqCh:       make(chan int, 100),
 		RespChs:     make(map[int]chan bool),
 	}
 
@@ -148,42 +150,40 @@ func (m *Manager) Pop() *state.GlobalState {
 
 func (m *Manager) SignalLoop() {
 	fmt.Println("SignalLoop Start")
-	for i := 0; i < m.GofuncCount; i++ {
-		m.RespChs[i] <- true
-	}
 	for {
 		fmt.Println("wait signal")
-		signal := <-m.SignalCh
-		if signal.Id != -1 {
-			m.FinishedStates += 1
-		}
-		m.TotalStates += signal.NewStates
+		select {
+		case signal := <-m.SignalCh:
+			if signal.Id != -1 {
+				m.FinishedStates += 1
+			}
+			m.TotalStates += signal.NewStates
 
-		m.Duration += signal.Time
+			m.Duration += signal.Time
 
-		fmt.Println("got signal", signal.Id, signal.NewStates)
-		fmt.Println("total", m.TotalStates, "finished", m.FinishedStates)
-		fmt.Println("totalDuration", m.Duration)
-		if signal.NewStates == 0 && m.TotalStates == m.FinishedStates {
-			break
-		}
-
-		if signal.Id != -1 {
+			fmt.Println("got signal", signal.Id, signal.NewStates)
+			fmt.Println("total", m.TotalStates, "finished", m.FinishedStates)
+			fmt.Println("totalDuration", m.Duration)
+			if signal.NewStates == 0 && m.TotalStates == m.FinishedStates {
+				goto BREAK
+			}
+		case id := <-m.ReqCh:
 			runningWorkers := m.TotalStates - m.FinishedStates
 			canSkip := (runningWorkers+1 < m.GofuncCount)
 
-			// no jieou
-			canSkip = false
+			// no skip
+			// canSkip = false
 
-			m.RespChs[signal.Id] <- canSkip
+			m.RespChs[id] <- canSkip
 		}
 	}
+BREAK:
 	fmt.Println("SignalLoop Stop")
 }
 
 func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, moduleLoader *module.ModuleLoader, cfg *z3.Config) *LaserEVM {
 
-	goFuncCount := 16
+	goFuncCount := 1
 
 	preHook := make(map[string][]moduleExecFunc)
 	postHook := make(map[string][]moduleExecFunc)
@@ -725,7 +725,6 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 		fmt.Println("Run2 Wait", id)
 		evm.Manager.LogInfo()
 		globalState := evm.Manager.Pop()
-		canSkip := <-evm.Manager.RespChs[id]
 		// TODO canSkip here?
 		if globalState.NeedIsPossible {
 			sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
@@ -800,6 +799,9 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 
 		// Decouple
 		// TODO canSkip here?
+		// canskip
+		evm.Manager.ReqCh <- id
+		canSkip := <-evm.Manager.RespChs[id]
 		if len(newStates) == 2 && !canSkip {
 			// if globalState.RLimitCount > MaxRLimitCount {
 			// 	newStates = make([]*state.GlobalState, 0)
