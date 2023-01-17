@@ -700,6 +700,19 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 		fmt.Println("Run2 Wait", id)
 		evm.Manager.LogInfo()
 		globalState := evm.Manager.Pop()
+		if globalState.NeedIsPossible {
+			sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
+			if sat {
+				globalState.RLimitCount += rlimit
+			} else {
+				fmt.Println("send signal", id)
+				evm.Manager.SignalCh <- Signal{
+					Id:        id,
+					NewStates: 0,
+				}
+				continue
+			}
+		}
 		fmt.Println("Run2 Got", id)
 
 		// decouple
@@ -760,40 +773,13 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 
 		// Decouple
 		if len(newStates) == 2 {
-			//percent, _ := cpu.Percent(0, false)
-			//if percent[0] >= 90 {
-			//	tmpStates := make([]*state.GlobalState, 0)
-			//	for _, s := range newStates {
-			//		sat, rlimit := s.WorldState.Constraints.IsPossibleRlimit()
-			//		if sat {
-			//			s.RLimitCount += rlimit
-			//			tmpStates = append(tmpStates, s)
-			//		}
-			//	}
-			//	newStates = tmpStates
-			//}
-
-			//if evm.goroutineAvailable(id) {
-			//	tmpStates := make([]*state.GlobalState, 0)
-			//	for _, s := range newStates {
-			//		sat, rlimit := s.WorldState.Constraints.IsPossibleRlimit()
-			//		if sat {
-			//			s.RLimitCount += rlimit
-			//			tmpStates = append(tmpStates, s)
-			//		}
-			//	}
-			//	newStates = tmpStates
-			//}
-
-			tmpStates := make([]*state.GlobalState, 0)
 			for _, s := range newStates {
-				sat, rlimit := s.WorldState.Constraints.IsPossibleRlimit()
-				if sat {
-					s.RLimitCount += rlimit
-					tmpStates = append(tmpStates, s)
-				}
+				s.NeedIsPossible = true
 			}
-			newStates = tmpStates
+		} else {
+			for _, s := range newStates {
+				s.NeedIsPossible = false
+			}
 		}
 
 		start := time.Now()
