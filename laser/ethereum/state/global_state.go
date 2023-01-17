@@ -17,6 +17,7 @@ type GlobalState struct {
 	LastReturnData *map[int64]*z3.Bitvec
 	Annotations    []StateAnnotation
 	RLimitCount    int
+	NeedIsPossible bool
 }
 
 func NewGlobalState(worldState *WorldState, env *Environment, ctx *z3.Context, txStack []BaseTransaction) *GlobalState {
@@ -30,6 +31,7 @@ func NewGlobalState(worldState *WorldState, env *Environment, ctx *z3.Context, t
 		LastReturnData: nil,
 		Annotations:    make([]StateAnnotation, 0),
 		RLimitCount:    0,
+		NeedIsPossible: false,
 	}
 }
 
@@ -58,6 +60,7 @@ func (globalState *GlobalState) Copy() *GlobalState {
 		LastReturnData: globalState.LastReturnData,
 		Annotations:    newAnnotations,
 		RLimitCount:    globalState.RLimitCount,
+		NeedIsPossible: globalState.NeedIsPossible,
 	}
 }
 
