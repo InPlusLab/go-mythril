@@ -120,7 +120,7 @@ func (dm *MultipleSends) _execute(globalState *state.GlobalState) []*analysis.Is
 	}
 	issues := dm._analyze_state(globalState)
 	for _, issue := range issues {
-		dm.Cache.Add(issue.Address)
+		dm.Cache.Add(issue.StateAddress)
 	}
 	for _, issue := range issues {
 		fmt.Println("multipleSends push")
@@ -164,6 +164,7 @@ func (dm *MultipleSends) _analyze_state(globalState *state.GlobalState) []*analy
 				Contract:            globalState.Environment.ActiveAccount.ContractName,
 				FunctionName:        globalState.Environment.ActiveFuncName,
 				Address:             v,
+				StateAddress:        globalState.GetCurrentInstruction().Address,
 				SWCID:               analysis.NewSWCData()["MULTIPLE_SENDS"],
 				Bytecode:            globalState.Environment.Code.Bytecode,
 				Title:               "Multiple Calls in a Single Transaction",
