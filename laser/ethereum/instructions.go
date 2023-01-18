@@ -294,7 +294,7 @@ func (instr *Instruction) Mutator(globalState *state.GlobalState) []*state.Globa
 	} else if instr.Opcode == "SELFDESTRUCT" {
 		instr.selfdestruct_(globalState)
 		ret := make([]*state.GlobalState, 0)
-		ret = append(ret, globalState)
+		//ret = append(ret, globalState)
 		return ret
 	} else if instr.Opcode == "REVERT" {
 		instr.revert_(globalState)

@@ -838,19 +838,22 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 			fmt.Println("#LenConstraints:", v.WorldState.Constraints.Length())
 		}
 		fmt.Println("===========================================================================")
-		if len(newStates) == 0 {
+
+		endOpcodeList := []string{"STOP", "RETURN", "REVERT", "SELFDESTRUCT"}
+		if utils.In(opcode, endOpcodeList) {
 			fmt.Println("#LenConstraintsEnd:", globalState.WorldState.Constraints.Length())
 			evm.FinalState = globalState
 			if "*state.MessageCallTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() {
-				if opcode != "REVERT" && opcode != "INVALID" {
+				if opcode != "REVERT" {
 					// evm.OpenStatesSync.Append(globalState.WorldState)
 					relayGlobalState := OpenStateRelay(globalState.WorldState, evm, evm.RuntimeCode, cfg)
 					if relayGlobalState != nil {
 						newStates = append(newStates, relayGlobalState)
 					}
+					modules.CheckPotentialIssues(globalState)
 				}
 			}
-			modules.CheckPotentialIssues(globalState)
+
 			// decouple
 			//evm.CtxList[id] = nil
 			evm.CtxList.SetItem(id, nil)
