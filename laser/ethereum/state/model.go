@@ -5,6 +5,12 @@ import (
 	"go-mythril/laser/smt/z3"
 )
 
+var rLimit int
+
+func SetGetModelRLimit(value int) {
+	rLimit = value
+}
+
 // TODO: implementation of LRU cache
 // default: enforceExecutionTime = true, minimize=maximize=[]
 func GetModelRlimit(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool,
@@ -14,7 +20,7 @@ func GetModelRlimit(constraints *Constraints, minimize []*z3.Bool, maximize []*z
 
 	defer s.Close()
 	//timeout := support.NewArgs().SolverTimeout
-	timeout := 5000000
+	//timeout := 5000000
 	//timeout := 100000000000
 	//timeout := 10000
 	//if enforceExecutionTime {
@@ -26,7 +32,7 @@ func GetModelRlimit(constraints *Constraints, minimize []*z3.Bool, maximize []*z
 	//	}
 	//}
 	//s.SetTimeout(timeout)
-	s.RLimit(timeout)
+	s.RLimit(rLimit)
 
 	beforeRlimit := s.Statistics().GetKeyValue("rlimit count")
 
@@ -75,7 +81,7 @@ func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool
 	//s := ctx.NewSolver()
 	defer s.Close()
 	//timeout := support.NewArgs().SolverTimeout
-	timeout := 5000000
+	//timeout := 5000000
 	//timeout := 100000000000
 	//timeout := 10000
 	//if enforceExecutionTime {
@@ -87,7 +93,7 @@ func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool
 	//	}
 	//}
 	//s.SetTimeout(timeout)
-	s.RLimit(timeout)
+	s.RLimit(rLimit)
 	//for _, constraint := range constraints.ConstraintList {
 	//	if constraint == nil {
 	//		fmt.Println("constraint nil")

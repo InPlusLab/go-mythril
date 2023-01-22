@@ -2,6 +2,7 @@ package function_managers
 
 import (
 	"crypto"
+	_ "crypto/sha256"
 	"fmt"
 	"go-mythril/laser/smt/z3"
 	"go-mythril/utils"

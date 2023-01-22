@@ -172,7 +172,7 @@ func (m *Manager) SignalLoop() {
 			canSkip := (runningWorkers+1 < m.GofuncCount)
 
 			// no skip
-			// canSkip = false
+			canSkip = false
 
 			m.RespChs[id] <- canSkip
 		}
@@ -181,9 +181,7 @@ BREAK:
 	fmt.Println("SignalLoop Stop")
 }
 
-func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, moduleLoader *module.ModuleLoader, cfg *z3.Config) *LaserEVM {
-
-	goFuncCount := 1
+func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, moduleLoader *module.ModuleLoader, cfg *z3.Config, goFuncCount int) *LaserEVM {
 
 	preHook := make(map[string][]moduleExecFunc)
 	postHook := make(map[string][]moduleExecFunc)
@@ -716,7 +714,12 @@ func (evm *LaserEVM) goroutineAvailable(id int) bool {
 	return flag
 }
 
-const MaxRLimitCount = 100861008610086
+var MaxRLimitCount int64
+
+func SetMaxRLimitCount(value int64) {
+	MaxRLimitCount = value
+	fmt.Println("MaxRLimitCount:", MaxRLimitCount)
+}
 
 func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 	fmt.Println("Run2 Start", id)
@@ -726,6 +729,9 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 		evm.Manager.LogInfo()
 		globalState := evm.Manager.Pop()
 		// TODO canSkip here?
+		evm.Manager.ReqCh <- id
+		canSkip := <-evm.Manager.RespChs[id]
+
 		if globalState.NeedIsPossible {
 			sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
 			if sat {
@@ -800,8 +806,8 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 		// Decouple
 		// TODO canSkip here?
 		// canskip
-		evm.Manager.ReqCh <- id
-		canSkip := <-evm.Manager.RespChs[id]
+		//evm.Manager.ReqCh <- id
+		//canSkip := <-evm.Manager.RespChs[id]
 		if len(newStates) == 2 && !canSkip {
 			// if globalState.RLimitCount > MaxRLimitCount {
 			// 	newStates = make([]*state.GlobalState, 0)
