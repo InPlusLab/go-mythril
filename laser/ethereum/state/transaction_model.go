@@ -29,6 +29,7 @@ type BaseTransaction interface {
 	GetWorldState() *WorldState
 	GetCalleeAccount() *Account
 	GetCode() *disassembler.Disasembly
+	GetCtx() *z3.Context
 }
 
 type MessageCallTransaction struct {
@@ -193,6 +194,10 @@ func (tx *MessageCallTransaction) GetCode() *disassembler.Disasembly {
 	return tx.Code
 }
 
+func (tx *MessageCallTransaction) GetCtx() *z3.Context {
+	return tx.Ctx
+}
+
 type ContractCreationTransaction struct {
 	WorldState    *WorldState
 	Code          *disassembler.Disasembly
@@ -337,4 +342,8 @@ func (tx *ContractCreationTransaction) GetPreWorldState() *WorldState {
 
 func (tx *ContractCreationTransaction) GetCode() *disassembler.Disasembly {
 	return tx.Code
+}
+
+func (tx *ContractCreationTransaction) GetCtx() *z3.Context {
+	return tx.Ctx
 }
