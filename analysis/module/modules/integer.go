@@ -85,6 +85,7 @@ type IntegerArithmetics struct {
 	Cache                *utils.Set
 	OstatesSatisfiable   *utils.Set
 	OstatesUnsatisfiable *utils.Set
+	CtxList              *utils.SyncSlice
 }
 
 func NewIntegerArithmetics() *IntegerArithmetics {
@@ -101,7 +102,17 @@ func NewIntegerArithmetics() *IntegerArithmetics {
 		Cache:                utils.NewSet(),
 		OstatesSatisfiable:   utils.NewSet(),
 		OstatesUnsatisfiable: utils.NewSet(),
+		CtxList:              utils.NewSyncSlice(),
 	}
+}
+
+func (dm *IntegerArithmetics) AddCtx(ctx *z3.Context) {
+	for _, item := range dm.CtxList.Elements() {
+		if item == ctx {
+			return
+		}
+	}
+	dm.CtxList.Append(ctx)
 }
 
 func (dm *IntegerArithmetics) ResetModule() {
@@ -196,6 +207,9 @@ func (dm *IntegerArithmetics) _handel_add(globalState *state.GlobalState) {
 		Constraint:       c,
 		//Constraint:       c.Translate(ctx),
 	}
+
+	dm.AddCtx(globalState.Z3ctx)
+
 	op0.Annotate(annotation)
 }
 func (dm *IntegerArithmetics) _handel_mul(globalState *state.GlobalState) {
@@ -221,6 +235,9 @@ func (dm *IntegerArithmetics) _handel_mul(globalState *state.GlobalState) {
 		Constraint:       c,
 		//Constraint:       c.Translate(ctx),
 	}
+
+	dm.AddCtx(globalState.Z3ctx)
+
 	op0.Annotate(annotation)
 }
 func (dm *IntegerArithmetics) _handel_sub(globalState *state.GlobalState) {
@@ -246,6 +263,9 @@ func (dm *IntegerArithmetics) _handel_sub(globalState *state.GlobalState) {
 		//Constraint:       c.Translate(ctx),
 		Constraint: c,
 	}
+
+	dm.AddCtx(globalState.Z3ctx)
+
 	op0.Annotate(annotation)
 }
 func (dm *IntegerArithmetics) _handel_exp(globalState *state.GlobalState) {
@@ -289,6 +309,9 @@ func (dm *IntegerArithmetics) _handel_exp(globalState *state.GlobalState) {
 		//Constraint:       constraint.Translate(newCtx),
 		Constraint: constraint,
 	}
+
+	dm.AddCtx(globalState.Z3ctx)
+
 	op0.Annotate(annotation)
 }
 

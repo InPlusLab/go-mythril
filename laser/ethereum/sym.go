@@ -721,6 +721,29 @@ func SetMaxRLimitCount(value int64) {
 	fmt.Println("MaxRLimitCount:", MaxRLimitCount)
 }
 
+func (evm *LaserEVM) inCtxList(globalState *state.GlobalState) bool {
+
+	txFlag := false
+	for _, tx := range globalState.TxStack {
+		if globalState.Z3ctx.GetRaw() == tx.GetCtx().GetRaw() {
+			txFlag = true
+			break
+		}
+	}
+
+	integerFlag := false
+	integerArr := []string{"IntegerArithmetics"}
+	integerModule := evm.Loader.GetDetectionModules(integerArr)
+	for _, item := range integerModule[0].(*modules.IntegerArithmetics).CtxList.Elements() {
+		if globalState.Z3ctx.GetRaw() == item.(*z3.Context).GetRaw() {
+			integerFlag = true
+			break
+		}
+	}
+
+	return txFlag || integerFlag
+}
+
 func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 	fmt.Println("Run2 Start", id)
 
@@ -732,7 +755,7 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 		evm.Manager.ReqCh <- id
 		canSkip := <-evm.Manager.RespChs[id]
 
-		if globalState.NeedIsPossible {
+		if globalState.NeedIsPossible && !canSkip {
 			sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
 			if sat {
 				globalState.RLimitCount += rlimit
@@ -808,7 +831,7 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 		// canskip
 		//evm.Manager.ReqCh <- id
 		//canSkip := <-evm.Manager.RespChs[id]
-		if len(newStates) == 2 && !canSkip {
+		if len(newStates) == 2 {
 			// if globalState.RLimitCount > MaxRLimitCount {
 			// 	newStates = make([]*state.GlobalState, 0)
 			// }
@@ -823,19 +846,26 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 
 		start := time.Now()
 
+		//if evm.GofuncCount > 1 {
 		if len(newStates) == 2 {
 			ctx := z3.NewContext(cfg)
 			newStates[1].Translate(ctx)
-			// TODO: beng?
 			ctx0 := z3.NewContext(cfg)
 			newStates[0].Translate(ctx0)
-
+			//globalState.Z3ctx.Close()
+			if !evm.inCtxList(globalState) {
+				fmt.Println("ctxClose")
+				globalState.Z3ctx.Close()
+			}
 		}
+
+		//}
+
 		var duration int64
 		duration = time.Since(start).Milliseconds()
 		fmt.Println("DurationInSym.go:", duration)
 
-		fmt.Println(id, "done", globalState, opcode, globalState.Z3ctx)
+		//fmt.Println(id, "done", globalState, opcode, globalState.Z3ctx)
 		fmt.Println("evmOpenStatesLen:", evm.OpenStatesSync.Length(), "evmWorkListLen:", len(evm.Manager.WorkList))
 		if opcode == "JUMPI" {
 			fmt.Println("#JUMPI", globalState.GetCurrentInstruction().Address, globalState.Mstate.Pc, "lenRes:", len(newStates))
