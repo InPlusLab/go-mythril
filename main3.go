@@ -28,6 +28,7 @@ func main() {
 	contractName := flag.String("contractName", "default", "contractName")
 	creationCode := flag.String("creationCode", "", "creationCode")
 	runtimeCode := flag.String("runtimeCode", "", "runtimeCode")
+	skipTimes := flag.Int("skipTimes", 3, "skipTimes")
 	index := flag.Int("index", 0, "index")
 
 	flag.Parse()
@@ -37,6 +38,7 @@ func main() {
 	fmt.Println("rLimit", *rLimit, reflect.TypeOf(*rLimit).String())
 	ethereum.SetMaxRLimitCount(*maxRLimit)
 	state.SetGetModelRLimit(*rLimit)
+	ethereum.SetMaxSkipTimes(*skipTimes)
 
 	runtime.GOMAXPROCS(16)
 	fmt.Println("go mythril")

@@ -18,6 +18,7 @@ type GlobalState struct {
 	Annotations    []StateAnnotation
 	RLimitCount    int
 	NeedIsPossible bool
+	SkipTimes      int
 }
 
 func NewGlobalState(worldState *WorldState, env *Environment, ctx *z3.Context, txStack []BaseTransaction) *GlobalState {
@@ -32,6 +33,7 @@ func NewGlobalState(worldState *WorldState, env *Environment, ctx *z3.Context, t
 		Annotations:    make([]StateAnnotation, 0),
 		RLimitCount:    0,
 		NeedIsPossible: false,
+		SkipTimes:      0,
 	}
 }
 
@@ -61,6 +63,7 @@ func (globalState *GlobalState) Copy() *GlobalState {
 		Annotations:    newAnnotations,
 		RLimitCount:    globalState.RLimitCount,
 		NeedIsPossible: globalState.NeedIsPossible,
+		SkipTimes:      globalState.SkipTimes,
 	}
 }
 

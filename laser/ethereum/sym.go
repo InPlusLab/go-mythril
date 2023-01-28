@@ -172,7 +172,7 @@ func (m *Manager) SignalLoop() {
 			canSkip := (runningWorkers+1 < m.GofuncCount)
 
 			// no skip
-			canSkip = false
+			//canSkip = false
 
 			m.RespChs[id] <- canSkip
 		}
@@ -715,10 +715,14 @@ func (evm *LaserEVM) goroutineAvailable(id int) bool {
 }
 
 var MaxRLimitCount int64
+var MaxSkipTimes int
 
 func SetMaxRLimitCount(value int64) {
 	MaxRLimitCount = value
 	fmt.Println("MaxRLimitCount:", MaxRLimitCount)
+}
+func SetMaxSkipTimes(value int) {
+	MaxSkipTimes = value
 }
 
 func (evm *LaserEVM) inCtxList(globalState *state.GlobalState) bool {
@@ -755,24 +759,55 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 		evm.Manager.ReqCh <- id
 		canSkip := <-evm.Manager.RespChs[id]
 
-		if globalState.NeedIsPossible && !canSkip {
-			sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
-			if sat {
-				globalState.RLimitCount += rlimit
-			} else {
-				fmt.Println("send signal", id)
-				evm.Manager.SignalCh <- Signal{
-					Id:        id,
-					NewStates: 0,
+		if globalState.NeedIsPossible {
+			if !canSkip {
+				sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
+				if sat {
+					globalState.RLimitCount += rlimit
+				} else {
+					fmt.Println("send signal", id)
+					evm.Manager.SignalCh <- Signal{
+						Id:        id,
+						NewStates: 0,
+					}
+					continue
 				}
-				continue
+			} else {
+				if globalState.SkipTimes >= MaxSkipTimes {
+					sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
+					globalState.SkipTimes = 0
+					if sat {
+						globalState.RLimitCount += rlimit
+					} else {
+						fmt.Println("send signal", id)
+						evm.Manager.SignalCh <- Signal{
+							Id:        id,
+							NewStates: 0,
+						}
+						continue
+					}
+				} else {
+					// skip success
+					globalState.SkipTimes += 1
+				}
 			}
 		}
-		fmt.Println("Run2 Got", id)
 
-		// decouple
-		//evm.CtxList[id] = globalState.Z3ctx
-		evm.CtxList.SetItem(id, globalState.Z3ctx)
+		//if globalState.NeedIsPossible && !canSkip  {
+		//	sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
+		//	if sat {
+		//		globalState.RLimitCount += rlimit
+		//	} else {
+		//		fmt.Println("send signal", id)
+		//		evm.Manager.SignalCh <- Signal{
+		//			Id:        id,
+		//			NewStates: 0,
+		//		}
+		//		continue
+		//	}
+		//}
+
+		fmt.Println("Run2 Got", id)
 
 		evm.Manager.LogInfo()
 		annotations := globalState.GetAnnotations(reflect.TypeOf(&JumpdestCountAnnotation{}))
