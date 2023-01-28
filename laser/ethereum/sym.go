@@ -852,7 +852,7 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 			newStates[1].Translate(ctx)
 			ctx0 := z3.NewContext(cfg)
 			newStates[0].Translate(ctx0)
-			//globalState.Z3ctx.Close()
+
 			if !evm.inCtxList(globalState) {
 				fmt.Println("ctxClose")
 				globalState.Z3ctx.Close()
@@ -1256,10 +1256,10 @@ func OpenStateRelay(openState *state.WorldState, evm *LaserEVM, runtimeCode stri
 		return nil
 	}
 
-	if !openState.Constraints.IsPossible() {
-		fmt.Println("OpenStateRelay", openState.TransactionIdInt, openState.TransactionCount, "notpossible")
-		return nil
-	}
+	//if !openState.Constraints.IsPossible() {
+	//	fmt.Println("OpenStateRelay", openState.TransactionIdInt, openState.TransactionCount, "notpossible")
+	//	return nil
+	//}
 
 	fmt.Println("OpenStateRelay", openState.TransactionIdInt, openState.TransactionCount, "ojbk")
 
@@ -1290,6 +1290,7 @@ func OpenStateRelay(openState *state.WorldState, evm *LaserEVM, runtimeCode stri
 	constraint := tx.GetCaller().Eq(ACTORS.GetCreator()).Or(tx.GetCaller().Eq(ACTORS.GetAttacker()), tx.GetCaller().Eq(ACTORS.GetSomeGuy()))
 	globalState.WorldState.Constraints.Add(constraint)
 	globalState.WorldState.TransactionSequence = append(globalState.WorldState.TransactionSequence, tx)
+	globalState.NeedIsPossible = true
 	return globalState
 }
 

@@ -28,6 +28,7 @@ func main() {
 	contractName := flag.String("contractName", "default", "contractName")
 	creationCode := flag.String("creationCode", "", "creationCode")
 	runtimeCode := flag.String("runtimeCode", "", "runtimeCode")
+	index := flag.Int("index", 0, "index")
 
 	flag.Parse()
 
@@ -98,7 +99,8 @@ func main() {
 	fmt.Println("Duration:", duration.Seconds())
 
 	// Save result in csv
-	file, err := os.OpenFile("result.csv", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	csvFileName := "cpu" + strconv.Itoa(*goFuncCount) + "_rlimit" + strconv.Itoa(*rLimit) + "_2translate_" + strconv.Itoa(*index) + ".csv"
+	file, err := os.OpenFile(csvFileName, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	if err != nil {
 		fmt.Println("open file is failed, err: ", err)
 	}
