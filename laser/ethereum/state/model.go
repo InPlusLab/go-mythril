@@ -22,7 +22,7 @@ func GetModelRlimit(constraints *Constraints, minimize []*z3.Bool, maximize []*z
 	//timeout := support.NewArgs().SolverTimeout
 	//timeout := 5000000
 	//timeout := 100000000000
-	//timeout := 10000
+	//timeout := 1000
 	//if enforceExecutionTime {
 	//	// GetTimeHandlerInstance().TimeRemaining()-500
 	//	//timeout = min(timeout, GetTimeHandlerInstance().TimeRemaining()-500)
@@ -83,7 +83,7 @@ func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool
 	//timeout := support.NewArgs().SolverTimeout
 	//timeout := 5000000
 	//timeout := 100000000000
-	//timeout := 10000
+	//timeout := 1000
 	//if enforceExecutionTime {
 	//	// GetTimeHandlerInstance().TimeRemaining()-500
 	//	//timeout = min(timeout, GetTimeHandlerInstance().TimeRemaining()-500)

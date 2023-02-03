@@ -150,6 +150,7 @@ func (m *Manager) Pop() *state.GlobalState {
 
 func (m *Manager) SignalLoop() {
 	fmt.Println("SignalLoop Start")
+	start := time.Now()
 	for {
 		fmt.Println("wait signal")
 		select {
@@ -164,6 +165,8 @@ func (m *Manager) SignalLoop() {
 			fmt.Println("got signal", signal.Id, signal.NewStates)
 			fmt.Println("total", m.TotalStates, "finished", m.FinishedStates)
 			fmt.Println("totalDuration", m.Duration)
+			duration := time.Since(start)
+			fmt.Println("miaomi:", duration.Seconds(), m.TotalStates-m.FinishedStates, m.TotalStates)
 			if signal.NewStates == 0 && m.TotalStates == m.FinishedStates {
 				goto BREAK
 			}
@@ -172,7 +175,9 @@ func (m *Manager) SignalLoop() {
 			canSkip := (runningWorkers+1 < m.GofuncCount)
 
 			// no skip
-			//canSkip = false
+			if MaxSkipTimes == 0 {
+				canSkip = false
+			}
 
 			m.RespChs[id] <- canSkip
 		}
@@ -760,8 +765,10 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 		canSkip := <-evm.Manager.RespChs[id]
 
 		if globalState.NeedIsPossible {
-			if !canSkip {
+			if !canSkip || globalState.SkipTimes >= MaxSkipTimes {
 				sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
+				globalState.SkipTimes = 0
+				fmt.Println("skip failed", canSkip, globalState.SkipTimes, MaxSkipTimes)
 				if sat {
 					globalState.RLimitCount += rlimit
 				} else {
@@ -773,25 +780,45 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 					continue
 				}
 			} else {
-				if globalState.SkipTimes >= MaxSkipTimes {
-					sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
-					globalState.SkipTimes = 0
-					if sat {
-						globalState.RLimitCount += rlimit
-					} else {
-						fmt.Println("send signal", id)
-						evm.Manager.SignalCh <- Signal{
-							Id:        id,
-							NewStates: 0,
-						}
-						continue
-					}
-				} else {
-					// skip success
-					globalState.SkipTimes += 1
-				}
+				// skip success
+				fmt.Println("skip success")
+				globalState.SkipTimes += 1
 			}
 		}
+
+		//if globalState.NeedIsPossible {
+		//	if !canSkip {
+		//		sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
+		//		if sat {
+		//			globalState.RLimitCount += rlimit
+		//		} else {
+		//			fmt.Println("send signal", id)
+		//			evm.Manager.SignalCh <- Signal{
+		//				Id:        id,
+		//				NewStates: 0,
+		//			}
+		//			continue
+		//		}
+		//	} else {
+		//		if globalState.SkipTimes >= MaxSkipTimes {
+		//			sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
+		//			globalState.SkipTimes = 0
+		//			if sat {
+		//				globalState.RLimitCount += rlimit
+		//			} else {
+		//				fmt.Println("send signal", id)
+		//				evm.Manager.SignalCh <- Signal{
+		//					Id:        id,
+		//					NewStates: 0,
+		//				}
+		//				continue
+		//			}
+		//		} else {
+		//			// skip success
+		//			globalState.SkipTimes += 1
+		//		}
+		//	}
+		//}
 
 		//if globalState.NeedIsPossible && !canSkip  {
 		//	sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()

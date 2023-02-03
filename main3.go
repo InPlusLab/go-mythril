@@ -101,7 +101,8 @@ func main() {
 	fmt.Println("Duration:", duration.Seconds())
 
 	// Save result in csv
-	csvFileName := "cpu" + strconv.Itoa(*goFuncCount) + "_rlimit" + strconv.Itoa(*rLimit) + "_2translate_" + strconv.Itoa(*index) + ".csv"
+	csvFileName := "cpu" + strconv.Itoa(*goFuncCount) + "_rlimit" + strconv.Itoa(*rLimit) + "_2translate" + "_skip" + strconv.Itoa(*skipTimes) + "_example" + strconv.Itoa(*index) + ".csv"
+	//csvFileName := "cpu" + strconv.Itoa(*goFuncCount) + "_timeout1000"  + "_1translate" + "_skip" + strconv.Itoa(*skipTimes) +  "_index"  + strconv.Itoa(*index) + ".csv"
 	file, err := os.OpenFile(csvFileName, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	if err != nil {
 		fmt.Println("open file is failed, err: ", err)
