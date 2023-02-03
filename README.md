@@ -1,1 +1,75 @@
+# PDD
+## Introduction
+PDD is a **Parallel**, **Deterministic** and **Decoupled** symbolic execution tool for vulnerability detection of smart contracts.  
+We implement most part of PDD in Golang.
+## Running Guide on Linux
+Before running PDD, Golang and Z3 should be installed first.  
+### Install Golang
+```bash
+wget https://studygolang.com/dl/golang/go1.20.linux-amd64.tar.gz
+rm -rf /usr/local/go && tar -C /usr/local -xzf go1.20.linux-amd64.tar.gz
+export PATH=$PATH:/usr/local/go/bin
+go version
+```
+![image](./png/1_installGolang.png)
+### Install Z3
+```bash
+git clone https://github.com/Z3Prover/z3.git
+```
+![image](./png/2_installZ3.png)
+```bash
+cd z3
+python3 scripts/mk_make.py
+```
+![image](./png/3_installZ3.png)
+```bash
+cd build
+make -j8
+```
+![image](./png/4_installZ3.png)
+```bash
+sudo make install
+```
+![image](./png/5_installZ3.png)
+### Run PDD
+Before running PDD, some configuration information should be changed.
+```bash
+mkdir ~/log
+```
+![image](./png/6_pdd.png)
+```bash
+unzip go-mythril-A8D1.zip
+cd ~/go-mythril-A8D1/go-mythril
+```
+![image](./png/7_pdd.png)  
+
+Change the z3 path in [``goZ3Config.h``](laser/smt/z3/goZ3Config.h) and [``config.go``](laser/smt/z3/config.go) with your own z3 path.
+```bash
+vim laser/smt/z3/goZ3Config.h
+```
+![image](./png/8_pdd.png)  
+![image](./png/9_pdd.png)
+```bash
+vim laser/smt/z3/config.go
+```
+![image](./png/10_pdd.png)  
+![image](./png/11_pdd.png)  
+
+If you are a root user, you should delete 'sudo' in pdd.sh.
+```bash
+vim pdd.sh
+```
+![image](./png/12_pdd.png)  
+
+Run the pdd.sh. It will load the opCode of an example smart contract and save the result as a csv file. The relevant log can be obtained in `~/log/`.
+```bash
+chmod 777 pdd.sh
+./pdd.sh
+```
+![image](./png/13_pdd.png)  
+
+The csv file displays contract's name(col A), total States(col B), vulnerabilities(col C) and detection time(col D).  
+
+![image](./png/14_result.png) 
+
 
