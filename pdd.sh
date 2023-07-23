@@ -2,7 +2,7 @@ sudo go build -o go-mythril main3.go
 
 i=0
 codeList=("","","")
-for line in `cat contractCode-example.txt |tr -d ' '| tr -d '\r'`
+for line in `cat top100-contractCode-left.txt |tr -d ' '| tr -d '\r'`
 do
   codeList[i]=$line
   # shellcheck disable=SC2006
@@ -14,7 +14,7 @@ do
     # shellcheck disable=SC2006
     # shellcheck disable=SC1116
     # shellcheck disable=SC2154
-    ./go-mythril -goFuncCount 8 -maxRLimit 1008610086 -rLimit 3200000 -contractName "${codeList[0]}" -creationCode "${codeList[1]}" -runtimeCode "${codeList[2]}" -skipTimes 0 -index 0 > ~/log/"${codeList[0]}".log
+    ./go-mythril -goFuncCount 16 -maxRLimit 9600000 -rLimit 3200000 -contractName "${codeList[0]}" -creationCode "${codeList[1]}" -runtimeCode "${codeList[2]}" -skipTimes 5 -index 0 > ~/log/top100/"${codeList[0]}".log
     i=0
   fi
 done

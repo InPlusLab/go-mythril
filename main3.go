@@ -23,7 +23,7 @@ func GetRlimit() int {
 
 func main() {
 	goFuncCount := flag.Int("goFuncCount", 1, "goFuncCount")
-	maxRLimit := flag.Int64("maxRLimit", 1008610086, "maxRLimit")
+	maxRLimit := flag.Int("maxRLimit", 1008610086, "maxRLimit")
 	rLimit := flag.Int("rLimit", 5000000, "rLimit")
 	contractName := flag.String("contractName", "default", "contractName")
 	creationCode := flag.String("creationCode", "", "creationCode")
@@ -101,7 +101,7 @@ func main() {
 	fmt.Println("Duration:", duration.Seconds())
 
 	// Save result in csv
-	csvFileName := "cpu" + strconv.Itoa(*goFuncCount) + "_rlimit" + strconv.Itoa(*rLimit) + "_2translate" + "_skip" + strconv.Itoa(*skipTimes) + "_example" + strconv.Itoa(*index) + ".csv"
+	csvFileName := "cpu" + strconv.Itoa(*goFuncCount) + "_rlimit" + strconv.Itoa(*rLimit) + "_2translate" + "_skip" + strconv.Itoa(*skipTimes) + "_example" + strconv.Itoa(*index) + "_left" + ".csv"
 	//csvFileName := "cpu" + strconv.Itoa(*goFuncCount) + "_timeout1000"  + "_1translate" + "_skip" + strconv.Itoa(*skipTimes) +  "_index"  + strconv.Itoa(*index) + ".csv"
 	file, err := os.OpenFile(csvFileName, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	if err != nil {

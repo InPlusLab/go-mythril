@@ -719,10 +719,10 @@ func (evm *LaserEVM) goroutineAvailable(id int) bool {
 	return flag
 }
 
-var MaxRLimitCount int64
+var MaxRLimitCount int
 var MaxSkipTimes int
 
-func SetMaxRLimitCount(value int64) {
+func SetMaxRLimitCount(value int) {
 	MaxRLimitCount = value
 	fmt.Println("MaxRLimitCount:", MaxRLimitCount)
 }
@@ -894,9 +894,9 @@ func (evm *LaserEVM) Run2(id int, cfg *z3.Config) {
 		//evm.Manager.ReqCh <- id
 		//canSkip := <-evm.Manager.RespChs[id]
 		if len(newStates) == 2 {
-			// if globalState.RLimitCount > MaxRLimitCount {
-			// 	newStates = make([]*state.GlobalState, 0)
-			// }
+			if globalState.RLimitCount > MaxRLimitCount {
+				newStates = make([]*state.GlobalState, 0)
+			}
 			for _, s := range newStates {
 				s.NeedIsPossible = true
 			}
