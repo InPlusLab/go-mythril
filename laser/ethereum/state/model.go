@@ -1,7 +1,6 @@
 package state
 
 import (
-	"fmt"
 	"go-mythril/laser/smt/z3"
 )
 
@@ -52,12 +51,12 @@ func GetModelRlimit(constraints *Constraints, minimize []*z3.Bool, maximize []*z
 
 	afterRlimit := s.Statistics().GetKeyValue("rlimit count")
 	rlimit := afterRlimit - beforeRlimit
-	fmt.Println("barlimit", rlimit, beforeRlimit, afterRlimit)
+	// fmt.Println("barlimit", rlimit, beforeRlimit, afterRlimit)
 
 	if result == z3.True {
 		return rlimit, true
 	} else {
-		fmt.Println("Timeout/Error encountered while solving expression using z3")
+		// fmt.Println("Timeout/Error encountered while solving expression using z3")
 		return rlimit, false
 	}
 }
@@ -119,7 +118,7 @@ func GetModel(constraints *Constraints, minimize []*z3.Bool, maximize []*z3.Bool
 		//return s.Model(), true
 		return nil, true
 	} else {
-		fmt.Println("Timeout/Error encountered while solving expression using z3")
+		// fmt.Println("Timeout/Error encountered while solving expression using z3")
 		return nil, false
 	}
 }

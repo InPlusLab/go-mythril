@@ -1,7 +1,6 @@
 package state
 
 import (
-	"fmt"
 	"go-mythril/disassembler"
 	"go-mythril/laser/smt/z3"
 	"reflect"
@@ -71,20 +70,20 @@ func (globalState *GlobalState) Translate(ctx *z3.Context) {
 	if globalState.Z3ctx.GetRaw() == ctx.GetRaw() {
 		return
 	}
-	fmt.Println("before changeStateContext:", globalState.GetCurrentInstruction().OpCode.Name, globalState, globalState.LastReturnData)
+	// fmt.Println("before changeStateContext:", globalState.GetCurrentInstruction().OpCode.Name, globalState, globalState.LastReturnData)
 
 	globalState.Z3ctx = ctx
 	// machineState stack & memory
-	fmt.Println("glTrans1")
+	// fmt.Println("glTrans1")
 	globalState.Mstate = globalState.Mstate.Translate(ctx)
 	// worldState constraints
-	fmt.Println("glTrans2")
+	// fmt.Println("glTrans2")
 	globalState.WorldState = globalState.WorldState.Translate(ctx)
 	// env
-	fmt.Println("glTrans3")
+	// fmt.Println("glTrans3")
 	globalState.Environment = globalState.Environment.Translate(ctx)
 	// annotations
-	fmt.Println("glTrans4")
+	// fmt.Println("glTrans4")
 	newAnnotations := make([]StateAnnotation, 0)
 	for _, anno := range globalState.Annotations {
 		newAnnotations = append(newAnnotations, anno.Translate(ctx))

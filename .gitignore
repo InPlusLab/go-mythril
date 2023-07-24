@@ -1,3 +1,4 @@
 go-mythril
 *.csv
 laser/smt/z3/goZ3Config.h
+log/

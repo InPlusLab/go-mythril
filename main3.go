@@ -96,6 +96,7 @@ func main() {
 			issueList += str
 		}
 	}
+	evm.Manager.LogInfo()
 	fmt.Println("+++++++++++++++++++++++++++++++++++")
 	fmt.Println(issueList)
 	fmt.Println("Duration:", duration.Seconds())

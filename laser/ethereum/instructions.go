@@ -56,7 +56,7 @@ func NewInstruction(opcode string, prehooks []moduleExecFunc, posthooks []module
 func (instr *Instruction) ExePreHooks(globalState *state.GlobalState) {
 	modules.IsPreHook = true
 	for _, hook := range instr.PreHooks {
-		fmt.Println(instr.Opcode, ": preHook execute!")
+		// fmt.Println(instr.Opcode, ": preHook execute!")
 		hook(globalState)
 	}
 }
@@ -64,7 +64,7 @@ func (instr *Instruction) ExePreHooks(globalState *state.GlobalState) {
 func (instr *Instruction) ExePostHooks(globalState *state.GlobalState) {
 	modules.IsPreHook = false
 	for _, hook := range instr.PostHooks {
-		fmt.Println(instr.Opcode, ": postHook execute!")
+		// fmt.Println(instr.Opcode, ": postHook execute!")
 		hook(globalState)
 	}
 }
@@ -110,8 +110,8 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 
 	result := instr.Mutator(globalState)
 
-	fmt.Println("PC:", globalState.Mstate.Pc)
-	fmt.Println("Address:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name)
+	// fmt.Println("PC:", globalState.Mstate.Pc)
+	// fmt.Println("Address:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name)
 	// has the same function of StateTransition in instructions.go
 	for _, state := range result {
 		if instr.Opcode != "JUMPI" && instr.Opcode != "JUMP" && instr.Opcode != "RETURNSUB" {
@@ -120,20 +120,20 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	}
 	instr.ExePostHooks(globalState)
 
-	for _, state := range result {
-		// For debug
-		//fmt.Println("Print:", globalState.GetCurrentInstruction().OpCode.Name)
+	// for _, state := range result {
+	// For debug
+	//fmt.Println("Print:", globalState.GetCurrentInstruction().OpCode.Name)
 
-		//state.Mstate.Stack.PrintStack()
-		//for i, con := range state.WorldState.Constraints.ConstraintList {
-		//	if i==3{
-		//		fmt.Println("PrintCons:", con.BoolString())
-		//	}
-		//}
-		//state.Mstate.Memory.PrintMemoryOneLine()
-		//state.Mstate.Memory.PrintMemory()
-		fmt.Println("StackLen:", state.Mstate.Stack.Length())
-	}
+	//state.Mstate.Stack.PrintStack()
+	//for i, con := range state.WorldState.Constraints.ConstraintList {
+	//	if i==3{
+	//		fmt.Println("PrintCons:", con.BoolString())
+	//	}
+	//}
+	//state.Mstate.Memory.PrintMemoryOneLine()
+	//state.Mstate.Memory.PrintMemory()
+	// fmt.Println("StackLen:", state.Mstate.Stack.Length())
+	// }
 	//fmt.Println("------------------------------------------------------------")
 
 	return result
@@ -1552,7 +1552,7 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 
 	// False case
 	if negatedCond {
-		fmt.Println("test negative nil")
+		// fmt.Println("test negative nil")
 		newState := globalState.Copy()
 		newState.Mstate.MinGasUsed += minGas
 		newState.Mstate.MaxGasUsed += maxGas
@@ -1573,7 +1573,7 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 		//	tmpCons.Add(c)
 		//}
 
-		fmt.Println("negativeState:", newState)
+		// fmt.Println("negativeState:", newState)
 		ret = append(ret, newState)
 		//if newState.WorldState.Constraints.IsPossible() {
 		//	//if tmpCons.IsPossible() {
@@ -1610,7 +1610,7 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 	instruction := disassembly.InstructionList[index]
 	if instruction.OpCode.Name == "JUMPDEST" {
 		if positiveCond {
-			fmt.Println("test positive nil")
+			// fmt.Println("test positive nil")
 
 			newState := globalState.Copy()
 			newState.Mstate.MinGasUsed += minGas
@@ -1625,7 +1625,7 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 			//returnData[0] = newState.Z3ctx.NewBitvecVal(1, 256)
 			//newState.LastReturnData = &returnData
 
-			fmt.Println("positiveState:", newState)
+			// fmt.Println("positiveState:", newState)
 
 			//if globalState.GetCurrentInstruction().Address == 1005 {
 			//	fmt.Println("Jumpi1005 positiveCONSTRAINT:", newState.WorldState.Constraints.IsPossible())

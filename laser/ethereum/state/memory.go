@@ -445,7 +445,7 @@ func (m *Memory) GetItems(start int64, stop int64, ctx *z3.Context) []*z3.Bitvec
 		if ok {
 			items = append(items, value)
 		} else {
-			fmt.Println("notGetItems")
+			// fmt.Println("notGetItems")
 		}
 	}
 	return items

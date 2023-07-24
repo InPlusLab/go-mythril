@@ -60,9 +60,9 @@ func (c *Constraints) IsPossibleRlimit() (bool, int) {
 		fmt.Println("In isPossible: empty Constraints")
 		return false, 0
 	} else {
-		fmt.Println("In ws.Constraints.isPossible")
+		// fmt.Println("In ws.Constraints.isPossible")
 		ctx := z3.GetBoolCtx(c.ConstraintList[0])
-		fmt.Println("After getCtx")
+		// fmt.Println("After getCtx")
 		rlimit, ok := GetModelRlimit(c, make([]*z3.Bool, 0), make([]*z3.Bool, 0), false, ctx)
 		return ok, rlimit
 	}

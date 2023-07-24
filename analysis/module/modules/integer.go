@@ -30,7 +30,7 @@ func (anno *OverUnderflowAnnotation) Copy() *OverUnderflowAnnotation {
 	}
 }
 func (anno *OverUnderflowAnnotation) Translate(ctx *z3.Context) *OverUnderflowAnnotation {
-	fmt.Println("inFinalTranslate")
+	// fmt.Println("inFinalTranslate")
 	//anno.Constraint = anno.Constraint.Translate(ctx)
 	//return anno
 	return &OverUnderflowAnnotation{
@@ -68,7 +68,7 @@ func (anno *OverUnderflowStateAnnotation) Copy() state.StateAnnotation {
 func (anno *OverUnderflowStateAnnotation) Translate(ctx *z3.Context) state.StateAnnotation {
 	set := utils.NewSet()
 	for _, overflowAnno := range anno.OverflowingStateAnnotations.Elements() {
-		fmt.Println("inFirstTranslate")
+		// fmt.Println("inFirstTranslate")
 		set.Add(overflowAnno.(*OverUnderflowAnnotation).Translate(ctx))
 	}
 	return &OverUnderflowStateAnnotation{
@@ -122,9 +122,9 @@ func (dm *IntegerArithmetics) ResetModule() {
 }
 
 func (dm *IntegerArithmetics) Execute(target *state.GlobalState) []*analysis.Issue {
-	fmt.Println("Entering analysis module: ", dm.Name)
+	// fmt.Println("Entering analysis module: ", dm.Name)
 	result := dm._execute(target)
-	fmt.Println("Exiting analysis module:", dm.Name)
+	// fmt.Println("Exiting analysis module:", dm.Name)
 	return result
 }
 
@@ -393,10 +393,10 @@ func (dm *IntegerArithmetics) _handel_transaction_end(globalState *state.GlobalS
 			//_, sat := state.GetModel(constraints, nil, nil, false, globalState.Z3ctx)
 			sat := annotation.(*OverUnderflowAnnotation).Satisfy
 			if sat {
-				fmt.Println("sat")
+				// fmt.Println("sat")
 				dm.OstatesSatisfiable.Add(ostate)
 			} else {
-				fmt.Println("unsat")
+				// fmt.Println("unsat")
 				dm.OstatesUnsatisfiable.Add(ostate)
 				continue
 			}

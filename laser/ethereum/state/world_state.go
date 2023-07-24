@@ -1,7 +1,6 @@
 package state
 
 import (
-	"fmt"
 	"go-mythril/disassembler"
 	"go-mythril/laser/smt/z3"
 )
@@ -80,7 +79,7 @@ func (ws *WorldState) AccountsExistOrLoad(addr *z3.Bitvec) *Account {
 		return acc
 	} else {
 		// TODO: find in dynamicLoader
-		fmt.Println("don't getAccount in ws!")
+		// fmt.Println("don't getAccount in ws!")
 		return NewAccount(addr, ws.Balances, false, disassembler.NewDisasembly(""), "")
 	}
 }
@@ -114,7 +113,7 @@ func (ws *WorldState) Translate(ctx *z3.Context) *WorldState {
 		newV := v.Translate(ctx)
 		newConstraints.Add(newV)
 	}
-	fmt.Println("afterWS constraints translate")
+	// fmt.Println("afterWS constraints translate")
 	newAccounts := make(map[string]*Account)
 	for i, v := range ws.Accounts {
 		newAccounts[i] = v.Translate(ctx)
