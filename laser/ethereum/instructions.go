@@ -105,7 +105,7 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	//	fmt.Println("Cons:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name )
 	//	globalState.WorldState.Constraints.PrintOneLine()
 	//}
-
+	
 	instr.ExePreHooks(globalState)
 
 	result := instr.Mutator(globalState)
@@ -118,13 +118,16 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 			state.Mstate.Pc++
 		}
 	}
+
+	// globalState.Mstate.Stack.PrintStack()
+
 	instr.ExePostHooks(globalState)
 
 	// for _, state := range result {
 	// For debug
 	//fmt.Println("Print:", globalState.GetCurrentInstruction().OpCode.Name)
 
-	//state.Mstate.Stack.PrintStack()
+	
 	//for i, con := range state.WorldState.Constraints.ConstraintList {
 	//	if i==3{
 	//		fmt.Println("PrintCons:", con.BoolString())
@@ -807,8 +810,8 @@ func (instr *Instruction) _calldata_copy_helper(globalState *state.GlobalState,
 	mstate *state.MachineState, mstart *z3.Bitvec, dstart *z3.Bitvec, size *z3.Bitvec) []*state.GlobalState {
 
 	ret := make([]*state.GlobalState, 0)
-	env := globalState.Environment
-	ctx := globalState.Z3ctx
+	// env := globalState.Environment
+	// ctx := globalState.Z3ctx
 
 	if mstart.Symbolic() {
 		fmt.Println("Unsupported symbolic memory offset in CALLDATACOPY")
@@ -833,29 +836,32 @@ func (instr *Instruction) _calldata_copy_helper(globalState *state.GlobalState,
 
 	if sizeV > 0 {
 		fmt.Println("size>0", sizeV)
-		mstate.MemExtend(mstart, sizeV)
-		// TODO: TypeError check for memExtend()
+		// mstate.MemExtend(mstart, sizeV)
+		// // TODO: TypeError check for memExtend()
 
-		iData := dstart
-		newMemory := make([]*z3.Bitvec, 0)
-		for i := 0; i < sizeV; i++ {
-			value := env.Calldata.Load(iData)
-			newMemory = append(newMemory, value)
-			//idataValue, _ := strconv.Atoi(iData.Value())
-			//iData = ctx.NewBitvecVal(idataValue+1, iData.BvSize())
-			iData = iData.BvAdd(ctx.NewBitvecVal(1, iData.BvSize())).Simplify()
-		}
+		// iData := dstart
+		// newMemory := make([]*z3.Bitvec, 0)
+		// for i := 0; i < sizeV; i++ {
+		// 	value := env.Calldata.Load(iData)
+		// 	newMemory = append(newMemory, value)
+		// 	//idataValue, _ := strconv.Atoi(iData.Value())
+		// 	//iData = ctx.NewBitvecVal(idataValue+1, iData.BvSize())
+		// 	iData = iData.BvAdd(ctx.NewBitvecVal(1, iData.BvSize())).Simplify()
+		// }
 
-		fmt.Println("idata")
-		//mstartValue, _ := strconv.ParseInt(mstart.Value(), 10, 64)
-		//fmt.Println(mstartValue, "-mstartOffset ", len(newMemory), "-length")
+		// fmt.Println("idata")
+		// //mstartValue, _ := strconv.ParseInt(mstart.Value(), 10, 64)
+		// //fmt.Println(mstartValue, "-mstartOffset ", len(newMemory), "-length")
 
-		for j := 0; j < len(newMemory); j++ {
-			//mstate.Memory.SetItem(mstartValue+int64(j), newMemory[j])
-			offset := mstart.BvAdd(ctx.NewBitvecVal(j, 256)).Simplify()
-			mstate.Memory.SetItem(offset, newMemory[j])
-		}
+		// for j := 0; j < len(newMemory); j++ {
+		// 	//mstate.Memory.SetItem(mstartValue+int64(j), newMemory[j])
+		// 	offset := mstart.BvAdd(ctx.NewBitvecVal(j, 256)).Simplify()
+		// 	mstate.Memory.SetItem(offset, newMemory[j])
+		// }
 		// IndexError check
+
+		mstate.MemExtend(mstart, 1)
+		mstate.Memory.SetItem(mstart, globalState.NewBitvec("calldata_calldata_copy", 8))
 	}
 
 	ret = append(ret, globalState)
@@ -980,7 +986,7 @@ func (instr *Instruction) codesize_(globalState *state.GlobalState) []*state.Glo
 	default:
 		noOfBytes = len(disassembly.Bytecode) / 2
 	}
-	mstate.Stack.Append(noOfBytes)
+	mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(noOfBytes, 256))
 
 	ret = append(ret, globalState)
 	return ret
