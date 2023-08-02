@@ -1,9 +1,9 @@
-# PDD
+# PSG: Faster Vulnerability Detection of Smart Contracts
 ## Introduction
-PDD is a **Parallel**, **Deterministic** and **Decoupled** symbolic execution tool for vulnerability detection of smart contracts.  
-We implement most part of PDD in Golang.
+PSG is a symbolic execution tool for vulnerability detection of smart contracts based on a **P**arallel-friendly architecture. PSG uses **S**tate-complexity-oriented halting algorithm and **G**reedy state exploration algorithm to improve its performance.
+We implement most part of PSG in Golang.
 ## Running Guide on Linux
-Before running PDD, Golang and Z3 should be installed first.  
+Before running PSG, Golang and Z3 should be installed first.  
 ### Install Golang
 ```bash
 wget https://studygolang.com/dl/golang/go1.20.linux-amd64.tar.gz
@@ -31,8 +31,8 @@ make -j8
 sudo make install
 ```
 ![image](./png/5_installZ3.png)
-### Run PDD
-Before running PDD, some configuration information should be changed.
+### Run PSG
+Before running PSG, some configuration information should be changed.
 ```bash
 mkdir ~/log
 ```
@@ -55,16 +55,16 @@ vim laser/smt/z3/config.go
 ![image](./png/10_pdd.png)  
 ![image](./png/11_pdd.png)  
 
-If you are a root user, you should delete 'sudo' in pdd.sh.
+If you are a root user, you should delete 'sudo' in psg.sh.
 ```bash
-vim pdd.sh
+vim psg.sh
 ```
 ![image](./png/12_pdd.png)  
 
-Run the pdd.sh. It will load the opCode of an example smart contract and save the result as a csv file. The relevant log can be obtained in `~/log/`.
+Run the psg.sh. It will load the opCode of an example smart contract and save the result as a csv file. The relevant log can be obtained in `~/log/`.
 ```bash
-chmod 777 pdd.sh
-./pdd.sh
+chmod 777 psg.sh
+./psg.sh
 ```
 ![image](./png/13_pdd.png)  
 
