@@ -1,6 +1,7 @@
 go-mythril
 *.csv
 laser/smt/z3/goZ3Config.h
+laser/smt/z3/config.go
 log/
 lognew/
 top*.txt

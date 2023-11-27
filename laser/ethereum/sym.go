@@ -145,7 +145,7 @@ func (m *Manager) Pop() *state.GlobalState {
 
 func (m *Manager) SignalLoop() {
 	fmt.Println("SignalLoop Start")
-	start := time.Now()
+	//start := time.Now()
 	for {
 		// fmt.Println("wait signal")
 		select {
@@ -157,10 +157,10 @@ func (m *Manager) SignalLoop() {
 
 			m.Duration += signal.Time
 
-			if signal.Id == 0 {
-				duration := time.Since(start)
-				fmt.Println("miaomi:", duration.Seconds(), m.TotalStates-m.FinishedStates-len(m.WorkList), m.TotalStates, signal.Time)
-			}
+			//if signal.Id == 0 {
+			//	duration := time.Since(start)
+			//	fmt.Println("miaomi:", duration.Seconds(), m.TotalStates-m.FinishedStates-len(m.WorkList), m.TotalStates, signal.Time)
+			//}
 			if signal.NewStates == 0 && m.TotalStates == m.FinishedStates {
 				goto BREAK
 			}
@@ -296,7 +296,7 @@ LOOP:
 		}
 	EXEC:
 		newStates, opcode := evm.ExecuteState(globalState)
-		// fmt.Println(id, globalState, opcode)
+		fmt.Println(id, globalState, opcode)
 
 		if len(newStates) == 2 {
 			tmpStates := make([]*state.GlobalState, 0)
@@ -314,8 +314,8 @@ LOOP:
 			newStates[1].Z3ctx = ctx
 		}
 
-		// fmt.Println(id, "done", globalState, opcode)
-		// fmt.Println("==============================================================================")
+		fmt.Println(id, "done", globalState, opcode)
+		fmt.Println("==============================================================================")
 
 		if len(newStates) == 0 {
 			fmt.Println("#LenConstraintsEnd:", globalState.WorldState.Constraints.Length())
@@ -364,7 +364,6 @@ func (evm *LaserEVM) SingleSymExec(creationCode string, runtimeCode string, cont
 		for _, ws := range evm.OpenStates {
 			if ws.Constraints.IsPossible() {
 				tmpOpenStates = append(tmpOpenStates, ws)
-				fmt.Println(ws)
 			}
 		}
 		evm.OpenStates = tmpOpenStates
@@ -440,6 +439,7 @@ var MaxRLimitCount int
 var MaxSkipTimes int
 
 func SetMaxRLimitCount(value int) {
+
 	MaxRLimitCount = value
 	fmt.Println("MaxRLimitCount:", MaxRLimitCount)
 }
@@ -554,7 +554,7 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 	EXEC:
 		newStates, opcode := evm.ExecuteState(globalState)
 
-		// fmt.Println(id, globalState, opcode)
+		fmt.Println(id, opcode)
 
 		// Decouple
 		// TODO canSkip here?
@@ -602,8 +602,8 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 		var duration int64
 		duration = time.Since(start).Milliseconds()
 
-		// //fmt.Println(id, "done", globalState, opcode, globalState.Z3ctx)
-		// fmt.Println("===========================================================================")
+		fmt.Println(id, "done", opcode)
+		fmt.Println("===========================================================================")
 
 		endOpcodeList := []string{"STOP", "RETURN", "REVERT", "SELFDESTRUCT"}
 		if utils.In(opcode, endOpcodeList) {

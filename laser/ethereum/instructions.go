@@ -2,6 +2,7 @@ package ethereum
 
 import (
 	"fmt"
+	uuid "github.com/satori/go.uuid"
 	"go-mythril/analysis/module/modules"
 	"go-mythril/laser/ethereum/function_managers"
 	"go-mythril/laser/ethereum/state"
@@ -118,6 +119,18 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 			state.Mstate.Pc++
 		}
 	}
+
+	// create symNode
+	parentId := globalState.AddrId
+	//parentId := fmt.Sprintf("%p", &globalState)
+	for _, state := range result {
+		opcode := state.Environment.Code.InstructionList[state.Mstate.Pc].OpCode.Name
+		uid := uuid.NewV1()
+		id := uid.String()
+		state.AddrId = id
+		BuildSymTreeWithNode(opcode, id, parentId)
+	}
+
 
 	// globalState.Mstate.Stack.PrintStack()
 
