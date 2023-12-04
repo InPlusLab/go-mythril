@@ -22,6 +22,7 @@ func GetRlimit() int {
 }
 
 func main() {
+	// test
 	goFuncCount := flag.Int("goFuncCount", 1, "goFuncCount")
 	maxRLimit := flag.Int("maxRLimit", 1008610086, "maxRLimit")
 	rLimit := flag.Int("rLimit", 5000000, "rLimit")
