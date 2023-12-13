@@ -17,6 +17,7 @@ import (
 	"time"
 )
 
+
 type moduleExecFunc func(globalState *state.GlobalState) []*analysis.Issue
 
 type JumpdestCountAnnotation struct {
@@ -70,6 +71,7 @@ type Signal struct {
 	NewStates int
 	Finished  bool
 	Time      int64
+	ForkFlag bool
 }
 
 type LaserEVM struct {
@@ -109,6 +111,7 @@ type Manager struct {
 
 	TotalStates    int
 	FinishedStates int
+	FinalStates int
 	Duration       int64
 
 	GofuncCount int
@@ -145,7 +148,7 @@ func (m *Manager) Pop() *state.GlobalState {
 
 func (m *Manager) SignalLoop() {
 	fmt.Println("SignalLoop Start")
-	start := time.Now()
+	//start := time.Now()
 	for {
 		// fmt.Println("wait signal")
 		select {
@@ -157,10 +160,20 @@ func (m *Manager) SignalLoop() {
 
 			m.Duration += signal.Time
 
-			if signal.Id == 0 {
-				duration := time.Since(start)
-				fmt.Println("miaomi:", duration.Seconds(), m.TotalStates-m.FinishedStates-len(m.WorkList), m.TotalStates, signal.Time)
+			//if signal.Id == 0 {
+			//	duration := time.Since(start)
+			//	fmt.Println("miaomi:", duration.Seconds(), m.TotalStates-m.FinishedStates-len(m.WorkList), m.TotalStates, signal.Time)
+			//}
+
+			if signal.ForkFlag {
+				m.FinalStates += int(signal.Time)
+				fmt.Println(signal.Id, "relayStates++", m.FinalStates)
 			}
+			//if !signal.ForkFlag && signal.Id != -1 {
+			//	m.FinalStates += 1
+			//	fmt.Println(signal.Id, "relayStates++", m.FinalStates)
+			//}
+
 			if signal.NewStates == 0 && m.TotalStates == m.FinishedStates {
 				goto BREAK
 			}
@@ -178,6 +191,7 @@ func (m *Manager) SignalLoop() {
 	}
 BREAK:
 	fmt.Println("SignalLoop Stop")
+	fmt.Println("totalStates:",m.TotalStates, "relayStates:", m.FinalStates)
 }
 
 func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, moduleLoader *module.ModuleLoader, cfg *z3.Config, goFuncCount int) *LaserEVM {
@@ -213,7 +227,7 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		Loader:      moduleLoader,
 		Manager:     NewManager(goFuncCount),
 	}
-	evm.registerInstrHooks()
+	//evm.registerInstrHooks()
 	for i := 0; i < goFuncCount; i++ {
 		go evm.Run(i, cfg)
 	}
@@ -471,175 +485,434 @@ func (evm *LaserEVM) inCtxList(globalState *state.GlobalState) bool {
 }
 
 func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
-	//	fmt.Println("Run Start", id)
-
 	for {
-		// fmt.Println("Run Wait", id)
-		// evm.Manager.LogInfo()
+		jumpiCount := 0
 		globalState := evm.Manager.Pop()
-		// TODO canSkip here?
-		evm.Manager.ReqCh <- id
-		canSkip := <-evm.Manager.RespChs[id]
 
-		if globalState.NeedIsPossible {
-			if !canSkip || globalState.SkipTimes >= MaxSkipTimes {
-				sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
-				globalState.SkipTimes = 0
-				// fmt.Println("skip failed", canSkip, globalState.SkipTimes, MaxSkipTimes)
-				if sat {
-					globalState.RLimitCount += rlimit
+		fmt.Println("====pop from channel======", globalState.RootState == nil)
+		//
+		if globalState.ForkId != "?" {
+			fmt.Println(id, "#here")
+			fmt.Println(id, "here3", globalState.RootState == nil)
+			rootState := globalState.RootState.Copy()
+			rootState2 := rootState.Copy()
+			rootState.RootState = rootState2
+			fmt.Println(id, "here2", rootState == nil)
+			instrs := rootState.Environment.Code.InstructionList
+			opcode := instrs[rootState.Mstate.Pc].OpCode.Name
+			fmt.Println(id, "here4", opcode, rootState.Mstate.Pc)
+			fmt.Println(id, "here5", globalState.ForkId)
+			newCtx := z3.NewContext(cfg)
+			rootState.Translate(newCtx)
+			evm.RunWhenFork(id, globalState.ForkId, rootState ,cfg)
+		} else {
+		EXECFor:
+			fmt.Println(id, "EXECFor")
+			// TODO canSkip here?
+			evm.Manager.ReqCh <- id
+			canSkip := <-evm.Manager.RespChs[id]
+
+			if globalState.NeedIsPossible {
+				if !canSkip || globalState.SkipTimes >= MaxSkipTimes {
+					sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
+					//sat := globalState.WorldState.Constraints.IsPossible()
+					globalState.SkipTimes = 0
+					// fmt.Println("skip failed", canSkip, globalState.SkipTimes, MaxSkipTimes)
+					if sat {
+						globalState.RLimitCount += rlimit
+						//fmt.Println("sat")
+					} else {
+						// fmt.Println("send signal", id)
+						evm.Manager.SignalCh <- Signal{
+							Id:        id,
+							NewStates: 0,
+						}
+						continue
+					}
 				} else {
-					// fmt.Println("send signal", id)
-					evm.Manager.SignalCh <- Signal{
-						Id:        id,
-						NewStates: 0,
-					}
-					continue
+					// skip success
+					// fmt.Println("skip success")
+					globalState.SkipTimes += 1
 				}
-			} else {
-				// skip success
-				// fmt.Println("skip success")
-				globalState.SkipTimes += 1
 			}
-		}
 
-		// fmt.Println("Run Got", id)
+			annotations := globalState.GetAnnotations(reflect.TypeOf(&JumpdestCountAnnotation{}))
+			var annotation *JumpdestCountAnnotation
+			if len(annotations) == 0 {
+				annotation = NewJumpdestCountAnnotation()
+				globalState.Annotate(annotation)
+			} else {
+				annotation = annotations[0].(*JumpdestCountAnnotation)
+			}
+			curInstr := globalState.GetCurrentInstruction()
+			//evm.Trace = append(evm.Trace, curInstr.Address)
+			annotation.Add(curInstr.Address)
 
-		annotations := globalState.GetAnnotations(reflect.TypeOf(&JumpdestCountAnnotation{}))
-		var annotation *JumpdestCountAnnotation
-		if len(annotations) == 0 {
-			annotation = NewJumpdestCountAnnotation()
-			globalState.Annotate(annotation)
-		} else {
-			annotation = annotations[0].(*JumpdestCountAnnotation)
-		}
-		curInstr := globalState.GetCurrentInstruction()
-		//evm.Trace = append(evm.Trace, curInstr.Address)
-		annotation.Add(curInstr.Address)
+			lastInstr := globalState.Environment.Code.InstructionList[globalState.Mstate.LastPc]
+			if curInstr.OpCode.Name == "JUMPDEST" {
+				// fmt.Println("InJumpdest-LastPc:", globalState.Mstate.LastPc)
 
-		lastInstr := globalState.Environment.Code.InstructionList[globalState.Mstate.LastPc]
-		if curInstr.OpCode.Name == "JUMPDEST" {
-			// fmt.Println("InJumpdest-LastPc:", globalState.Mstate.LastPc)
+				if globalState.Mstate.LastPc == 0 {
+					count := evm.LoopsStrategy.GetLoopCount(annotation.GetTrace())
+					if "*state.ContractCreationTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() && count < 8 {
+						goto EXEC
+					} else if count > evm.LoopsStrategy.Bound {
+						fmt.Println("hahah", lastInstr.OpCode.Name, lastInstr.Address)
+						fmt.Println("Loop bound reached, skipping state", count, evm.LoopsStrategy.Bound)
+						modules.CheckPotentialIssues(globalState)
+						fmt.Println("LenOpenStates:", evm.OpenStatesSync.Length())
+						evm.LastOpCodeList[id] = "JUMPDEST"
+						evm.LastAfterExecList[id] = 0
+						//evm.LastAfterExecList.SetItem(id, 0)
+						// decouple
+						//evm.CtxList[id] = nil
+						evm.CtxList.SetItem(id, nil)
 
-			if globalState.Mstate.LastPc == 0 {
-				count := evm.LoopsStrategy.GetLoopCount(annotation.GetTrace())
-				if "*state.ContractCreationTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() && count < 8 {
+						fmt.Println("send signal", id)
+						evm.Manager.SignalCh <- Signal{
+							Id:        id,
+							NewStates: 0,
+						}
+						continue
+					}
+				} else {
+					// after jumpi
+					globalState.Mstate.LastPc = 0
 					goto EXEC
-				} else if count > evm.LoopsStrategy.Bound {
-					fmt.Println("hahah", lastInstr.OpCode.Name, lastInstr.Address)
-					fmt.Println("Loop bound reached, skipping state", count, evm.LoopsStrategy.Bound)
-					modules.CheckPotentialIssues(globalState)
-					fmt.Println("LenOpenStates:", evm.OpenStatesSync.Length())
-					evm.LastOpCodeList[id] = "JUMPDEST"
-					evm.LastAfterExecList[id] = 0
-					//evm.LastAfterExecList.SetItem(id, 0)
-					// decouple
-					//evm.CtxList[id] = nil
-					evm.CtxList.SetItem(id, nil)
+				}
+			}
 
-					fmt.Println("send signal", id)
-					evm.Manager.SignalCh <- Signal{
-						Id:        id,
-						NewStates: 0,
-					}
-					continue
+		EXEC:
+			newStates, opcode := evm.ExecuteState(globalState)
+
+			fmt.Println(id,  opcode)
+
+			// Decouple
+			// TODO canSkip here?
+			// canskip
+			//evm.Manager.ReqCh <- id
+			//canSkip := <-evm.Manager.RespChs[id]
+			if len(newStates) == 2 {
+				if globalState.RLimitCount > MaxRLimitCount {
+					newStates = make([]*state.GlobalState, 0)
+				}
+				for _, s := range newStates {
+					s.NeedIsPossible = false
 				}
 			} else {
-				// after jumpi
-				globalState.Mstate.LastPc = 0
-				goto EXEC
-			}
-		}
-
-	EXEC:
-		newStates, opcode := evm.ExecuteState(globalState)
-
-		// fmt.Println(id, globalState, opcode)
-
-		// Decouple
-		// TODO canSkip here?
-		// canskip
-		//evm.Manager.ReqCh <- id
-		//canSkip := <-evm.Manager.RespChs[id]
-		if len(newStates) == 2 {
-			if globalState.RLimitCount > MaxRLimitCount {
-				newStates = make([]*state.GlobalState, 0)
-			}
-			for _, s := range newStates {
-				s.NeedIsPossible = true
-			}
-		} else {
-			for _, s := range newStates {
-				s.NeedIsPossible = false
-			}
-		}
-
-		start := time.Now()
-
-		//if evm.GofuncCount > 1 {
-		if len(newStates) == 2 {
-			ctx := z3.NewContext(cfg)
-			newStates[1].Translate(ctx)
-			ctx0 := z3.NewContext(cfg)
-			newStates[0].Translate(ctx0)
-
-			if !evm.inCtxList(globalState) {
-				// fmt.Println("ctxClose")
-				globalState.Z3ctx.Close()
-			}
-		}
-
-		// if len(newStates) == 1 {
-		// 	ctx0 := z3.NewContext(cfg)
-		// 	newStates[0].Translate(ctx0)
-		// 	if !evm.inCtxList(globalState) {
-		// 		globalState.Z3ctx.Close()
-		// 	} //
-		// }
-
-		//}
-
-		var duration int64
-		duration = time.Since(start).Milliseconds()
-
-		// //fmt.Println(id, "done", globalState, opcode, globalState.Z3ctx)
-		// fmt.Println("===========================================================================")
-
-		endOpcodeList := []string{"STOP", "RETURN", "REVERT", "SELFDESTRUCT"}
-		if utils.In(opcode, endOpcodeList) {
-			fmt.Println("#LenConstraintsEnd:", globalState.WorldState.Constraints.Length())
-			evm.FinalState = globalState
-			if "*state.MessageCallTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() {
-				if opcode != "REVERT" {
-					// evm.OpenStatesSync.Append(globalState.WorldState)
-					relayGlobalState := OpenStateRelay(globalState.WorldState, evm, evm.RuntimeCode, cfg)
-					if relayGlobalState != nil {
-						newStates = append(newStates, relayGlobalState)
-					}
-					modules.CheckPotentialIssues(globalState)
+				for _, s := range newStates {
+					s.NeedIsPossible = false
 				}
 			}
 
-			// decouple
-			//evm.CtxList[id] = nil
-			evm.CtxList.SetItem(id, nil)
+			start := time.Now()
+
+			if len(newStates) == 2 {
+				ctx := z3.NewContext(cfg)
+				newStates[1].Translate(ctx)
+				ctx0 := z3.NewContext(cfg)
+				newStates[0].Translate(ctx0)
+
+				if !evm.inCtxList(globalState) {
+					globalState.Z3ctx.Close()
+				}
+				// set forkId
+				jumpiCount++
+				//if globalState.ForkId == "?" {
+				//	newStates[0].ForkId = "0"
+				//	newStates[1].ForkId = "1"
+				//}else {
+				//	newStates[0].ForkId += "0"
+				//	newStates[1].ForkId += "1"
+				//}
+				fmt.Println("jumpi:", jumpiCount, newStates[0].ForkId, newStates[1].ForkId)
+			}
+
+			var duration int64
+			duration = time.Since(start).Milliseconds()
+
+			fmt.Println(id, "done", opcode)
+			fmt.Println("===========================================================================")
+
+			endOpcodeList := []string{"STOP", "RETURN", "REVERT", "SELFDESTRUCT"}
+			if utils.In(opcode, endOpcodeList) {
+				fmt.Println("#LenConstraintsEnd:", globalState.WorldState.Constraints.Length())
+				evm.FinalState = globalState
+				if "*state.MessageCallTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() {
+					if opcode != "REVERT" {
+						// evm.OpenStatesSync.Append(globalState.WorldState)
+						relayGlobalState := OpenStateRelay(globalState.WorldState, evm, evm.RuntimeCode, cfg)
+						if relayGlobalState != nil {
+							newStates = append(newStates, relayGlobalState)
+						}
+						modules.CheckPotentialIssues(globalState)
+						// for OpenStateRelay!!!
+						evm.Manager.SignalCh <- Signal{
+							Id:        id,
+							NewStates: len(newStates),
+							Time:      duration,
+						}
+						if len(newStates) == 1 {
+							evm.Manager.WorkList <- newStates[0]
+						}
+						continue
+					}
+				}
+
+				// decouple
+				//evm.CtxList[id] = nil
+				evm.CtxList.SetItem(id, nil)
+			}
+
+			evm.LastOpCodeList[id] = opcode
+			evm.LastAfterExecList[id] = len(newStates)
+
+			if len(newStates) == 2 {
+				fmt.Println("#1")
+				evm.Manager.WorkList <- newStates[1]
+				fmt.Println("#2")
+				globalState = newStates[0]
+			}
+
+			if len(newStates) == 1 {
+				globalState = newStates[0]
+			}
+
+			evm.Manager.SignalCh <- Signal{
+				Id:        id,
+				NewStates: len(newStates),
+				Time:      duration,
+			}
+
+			if len(newStates) != 0 {
+				fmt.Println("#4")
+				goto EXECFor
+			}
+			fmt.Println(id, "#5")
+		}
 		}
 
-		evm.LastOpCodeList[id] = opcode
-		evm.LastAfterExecList[id] = len(newStates)
-
-		for _, newState := range newStates {
-			evm.Manager.WorkList <- newState
-		}
-		// fmt.Println("Run send signal", id)
-		evm.Manager.SignalCh <- Signal{
-			Id:        id,
-			NewStates: len(newStates),
-			Time:      duration,
-		}
-	}
 	fmt.Println("Run Stop", id)
 }
+
+func (evm *LaserEVM) RunWhenFork(id int, forkId string, globalState *state.GlobalState, cfg *z3.Config) {
+	jumpiCount := 0
+	relayCount := 0
+	//globalState.RootState = globalState
+EXECFor:
+	// TODO canSkip here?
+	evm.Manager.ReqCh <- id
+	canSkip := <-evm.Manager.RespChs[id]
+
+	fmt.Println(id, "RunWhenFork", "EXECFor", globalState.RootState == nil)
+
+	//newCtx := z3.NewContext(cfg)
+	//globalState.Translate(newCtx)
+
+	if globalState.NeedIsPossible {
+		if !canSkip || globalState.SkipTimes >= MaxSkipTimes {
+			sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
+			//sat := globalState.WorldState.Constraints.IsPossible()
+			globalState.SkipTimes = 0
+			// fmt.Println("skip failed", canSkip, globalState.SkipTimes, MaxSkipTimes)
+			if sat {
+				globalState.RLimitCount += rlimit
+				//fmt.Println("sat")
+			} else {
+				// fmt.Println("send signal", id)
+				evm.Manager.SignalCh <- Signal{
+					Id:        id,
+					NewStates: 0,
+				}
+				return
+			}
+		} else {
+			// skip success
+			// fmt.Println("skip success")
+			globalState.SkipTimes += 1
+		}
+	}
+
+	annotations := globalState.GetAnnotations(reflect.TypeOf(&JumpdestCountAnnotation{}))
+	var annotation *JumpdestCountAnnotation
+	if len(annotations) == 0 {
+		annotation = NewJumpdestCountAnnotation()
+		globalState.Annotate(annotation)
+	} else {
+		annotation = annotations[0].(*JumpdestCountAnnotation)
+	}
+	curInstr := globalState.GetCurrentInstruction()
+	//evm.Trace = append(evm.Trace, curInstr.Address)
+	annotation.Add(curInstr.Address)
+
+	lastInstr := globalState.Environment.Code.InstructionList[globalState.Mstate.LastPc]
+	if curInstr.OpCode.Name == "JUMPDEST" {
+		// fmt.Println("InJumpdest-LastPc:", globalState.Mstate.LastPc)
+
+		if globalState.Mstate.LastPc == 0 {
+			count := evm.LoopsStrategy.GetLoopCount(annotation.GetTrace())
+			if "*state.ContractCreationTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() && count < 8 {
+				goto EXEC
+			} else if count > evm.LoopsStrategy.Bound {
+				fmt.Println("hahah", lastInstr.OpCode.Name, lastInstr.Address)
+				fmt.Println("Loop bound reached, skipping state", count, evm.LoopsStrategy.Bound)
+				modules.CheckPotentialIssues(globalState)
+				fmt.Println("LenOpenStates:", evm.OpenStatesSync.Length())
+				evm.LastOpCodeList[id] = "JUMPDEST"
+				evm.LastAfterExecList[id] = 0
+				//evm.LastAfterExecList.SetItem(id, 0)
+				// decouple
+				//evm.CtxList[id] = nil
+				evm.CtxList.SetItem(id, nil)
+
+				fmt.Println("send signal", id)
+				evm.Manager.SignalCh <- Signal{
+					Id:        id,
+					NewStates: 0,
+				}
+				return
+			}
+		} else {
+			// after jumpi
+			globalState.Mstate.LastPc = 0
+			goto EXEC
+		}
+	}
+
+EXEC:
+	fmt.Println("RunWhenFork, before")
+	newStates, opcode := evm.ExecuteState(globalState)
+	fmt.Println(id, opcode)
+	fmt.Println("-----RunWhenFork------")
+	fmt.Println(id, "done", opcode)
+	fmt.Println("===========================================================================")
+
+	if jumpiCount < len(forkId) {
+		relayCount += 1
+	}
+
+	if len(newStates) == 2 {
+		if globalState.RLimitCount > MaxRLimitCount {
+			newStates = make([]*state.GlobalState, 0)
+		}
+		for _, s := range newStates {
+			s.NeedIsPossible = false
+		}
+		// set forkId
+		jumpiCount++
+		//if globalState.ForkId == "?" {
+		//	newStates[0].ForkId = "0"
+		//	newStates[1].ForkId = "1"
+		//}else {
+		//	newStates[0].ForkId += "0"
+		//	newStates[1].ForkId += "1"
+		//}
+
+		/* choose one path */
+		if jumpiCount > len(forkId){
+			// when a new "jumpi" op comes
+			//ctx := z3.NewContext(cfg)
+			//newStates[1].Translate(ctx)
+			//ctx0 := z3.NewContext(cfg)
+			//newStates[0].Translate(ctx0)
+
+			if !evm.inCtxList(globalState) {
+				globalState.Z3ctx.Close()
+			}
+
+			evm.Manager.WorkList <- newStates[1]
+			globalState = newStates[0]
+			evm.Manager.SignalCh <- Signal{
+				Id:        id,
+				NewStates: len(newStates),
+				Time:      0,
+				// not relay part
+				ForkFlag: false,
+			}
+			goto EXECFor
+		}else{
+			// select one side directly
+			pathMark := string(forkId[jumpiCount-1])
+			if pathMark == "0" {
+				globalState = newStates[0]
+			}else{
+				globalState = newStates[1]
+			}
+			// SetNeedIsPossible
+			globalState.NeedIsPossible = false
+
+			evm.Manager.SignalCh <- Signal{
+				Id:        id,
+				NewStates: 1,
+				Time:      0,
+				ForkFlag: false,
+			}
+			goto EXECFor
+		}
+	}else {
+		for _, s := range newStates {
+			s.NeedIsPossible = false
+		}
+
+		//relayFlag := jumpiCount < len(forkId)
+
+		if len(newStates) == 1 {
+			globalState = newStates[0]
+
+			evm.Manager.SignalCh <- Signal{
+				Id:        id,
+				NewStates: len(newStates),
+				Time:      0,
+				ForkFlag: false,
+			}
+
+			goto EXECFor
+		}else {
+			endOpcodeList := []string{"STOP", "RETURN", "REVERT", "SELFDESTRUCT"}
+			if utils.In(opcode, endOpcodeList) {
+				fmt.Println("#LenConstraintsEnd:", globalState.WorldState.Constraints.Length())
+				evm.FinalState = globalState
+				if "*state.MessageCallTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() {
+					if opcode != "REVERT" {
+						// evm.OpenStatesSync.Append(globalState.WorldState)
+						relayGlobalState := OpenStateRelay(globalState.WorldState, evm, evm.RuntimeCode, cfg)
+						if relayGlobalState != nil {
+							newStates = append(newStates, relayGlobalState)
+						}
+						modules.CheckPotentialIssues(globalState)
+						// for OpenStateRelay!!!
+						evm.Manager.SignalCh <- Signal{
+							Id:        id,
+							NewStates: len(newStates),
+							Time:      int64(relayCount),
+							ForkFlag: true,
+						}
+						if len(newStates) == 1 {
+							evm.Manager.WorkList <- newStates[0]
+						}
+						return
+					}
+				}
+
+				// decouple
+				//evm.CtxList[id] = nil
+				evm.CtxList.SetItem(id, nil)
+			}
+
+			evm.Manager.SignalCh <- Signal{
+				Id:        id,
+				NewStates: len(newStates),
+				Time:      int64(relayCount),
+				ForkFlag: true,
+			}
+
+			evm.LastOpCodeList[id] = opcode
+			evm.LastAfterExecList[id] = len(newStates)
+
+		}
+	}
+}
+
 
 func ExecuteContractCreation(evm *LaserEVM, creationCode string, contractName string, ctx *z3.Context, multiple bool, cfg *z3.Config) *state.Account {
 
@@ -672,7 +945,7 @@ func ExecuteContractCreation(evm *LaserEVM, creationCode string, contractName st
 	fmt.Println("########################################################################################")
 	fmt.Println("CreationTx Execute!")
 	if !multiple {
-		evm.exec()
+		//evm.exec()
 		evm.Manager.SignalLoop()
 	} else {
 		evm.multiExec(cfg)
@@ -792,10 +1065,19 @@ func OpenStateInit(openState *state.WorldState, evm *LaserEVM, runtimeCode strin
 	}
 
 	globalState := tx.InitialGlobalState()
+
 	ACTORS := transaction.NewActors(globalState.Z3ctx)
 	constraint := tx.GetCaller().Eq(ACTORS.GetCreator()).Or(tx.GetCaller().Eq(ACTORS.GetAttacker()), tx.GetCaller().Eq(ACTORS.GetSomeGuy()))
 	globalState.WorldState.Constraints.Add(constraint)
 	globalState.WorldState.TransactionSequence = append(globalState.WorldState.TransactionSequence, tx)
+
+	// setRoot
+	rootState := globalState.Copy()
+	globalState.RootState = rootState
+	instrs := rootState.Environment.Code.InstructionList
+	opcode := instrs[rootState.Mstate.Pc].OpCode.Name
+	fmt.Println("+++++OpenStateInit++++", opcode, rootState.Mstate.Pc)
+
 	evm.Manager.WorkList <- globalState
 	evm.Manager.SignalCh <- Signal{
 		Id:        -1,
@@ -847,7 +1129,15 @@ func OpenStateRelay(openState *state.WorldState, evm *LaserEVM, runtimeCode stri
 	constraint := tx.GetCaller().Eq(ACTORS.GetCreator()).Or(tx.GetCaller().Eq(ACTORS.GetAttacker()), tx.GetCaller().Eq(ACTORS.GetSomeGuy()))
 	globalState.WorldState.Constraints.Add(constraint)
 	globalState.WorldState.TransactionSequence = append(globalState.WorldState.TransactionSequence, tx)
-	globalState.NeedIsPossible = true
+	globalState.NeedIsPossible = false
+
+	// setRoot
+	rootState := globalState.Copy()
+	globalState.RootState = rootState
+	instrs := rootState.Environment.Code.InstructionList
+	opcode := instrs[rootState.Mstate.Pc].OpCode.Name
+	fmt.Println("+++++OpenStateRelay++++", opcode, rootState.Mstate.Pc)
+
 	return globalState
 }
 
@@ -931,10 +1221,19 @@ func ExecuteMessageCallOnly(evm *LaserEVM, runtimeCode string, contractName stri
 
 func setupGlobalStateForExecution(evm *LaserEVM, tx state.BaseTransaction) {
 	globalState := tx.InitialGlobalState()
+
 	ACTORS := transaction.NewActors(globalState.Z3ctx)
 	constraint := tx.GetCaller().Eq(ACTORS.GetCreator()).Or(tx.GetCaller().Eq(ACTORS.GetAttacker()), tx.GetCaller().Eq(ACTORS.GetSomeGuy()))
 	globalState.WorldState.Constraints.Add(constraint)
 	globalState.WorldState.TransactionSequence = append(globalState.WorldState.TransactionSequence, tx)
+
+	// setRoot
+	rootState := globalState.Copy()
+	globalState.RootState = rootState
+	instrs := rootState.Environment.Code.InstructionList
+	opcode := instrs[rootState.Mstate.Pc].OpCode.Name
+	fmt.Println("+++++setupGlobalStateForExecution++++", opcode, rootState.Mstate.Pc)
+
 	evm.Manager.WorkList <- globalState
 	evm.Manager.SignalCh <- Signal{
 		Id:        -1,

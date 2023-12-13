@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"go-mythril/disassembler"
 	"go-mythril/laser/smt/z3"
 	"reflect"
@@ -18,11 +19,13 @@ type GlobalState struct {
 	RLimitCount    int
 	NeedIsPossible bool
 	SkipTimes      int
+	// for cloud9
+	ForkId string
+	RootState *GlobalState
 }
 
 func NewGlobalState(worldState *WorldState, env *Environment, ctx *z3.Context, txStack []BaseTransaction) *GlobalState {
-
-	return &GlobalState{
+	state := &GlobalState{
 		WorldState:     worldState,
 		Mstate:         NewMachineState(),
 		Z3ctx:          ctx,
@@ -33,10 +36,21 @@ func NewGlobalState(worldState *WorldState, env *Environment, ctx *z3.Context, t
 		RLimitCount:    0,
 		NeedIsPossible: false,
 		SkipTimes:      0,
+		ForkId: "?",
+		RootState: nil,
 	}
+	//rootState := state.Copy()
+	//state.RootState = rootState
+
+	return state
 }
 
 func (globalState *GlobalState) Copy() *GlobalState {
+
+	if globalState == nil {
+		fmt.Println("copy nil!")
+		return nil
+	}
 
 	newAnnotations := make([]StateAnnotation, 0)
 	for _, anno := range globalState.Annotations {
@@ -63,10 +77,16 @@ func (globalState *GlobalState) Copy() *GlobalState {
 		RLimitCount:    globalState.RLimitCount,
 		NeedIsPossible: globalState.NeedIsPossible,
 		SkipTimes:      globalState.SkipTimes,
+		ForkId: globalState.ForkId,
+		RootState: globalState.RootState,
 	}
 }
 
 func (globalState *GlobalState) Translate(ctx *z3.Context) {
+	if globalState == nil {
+		return
+	}
+
 	if globalState.Z3ctx.GetRaw() == ctx.GetRaw() {
 		return
 	}
@@ -90,8 +110,7 @@ func (globalState *GlobalState) Translate(ctx *z3.Context) {
 	}
 	globalState.Annotations = newAnnotations
 
-	// lastReturnData
-	//fmt.Println("changeStateContext done")
+	//globalState.RootState.Translate(ctx)
 }
 
 func (globalState *GlobalState) TranslateR(ctx *z3.Context) *GlobalState {
@@ -112,6 +131,11 @@ func (globalState *GlobalState) TranslateR(ctx *z3.Context) *GlobalState {
 		Z3ctx:          ctx,
 		LastReturnData: globalState.LastReturnData,
 		Annotations:    newAnnotations,
+		RLimitCount: globalState.RLimitCount,
+		NeedIsPossible: globalState.NeedIsPossible,
+		SkipTimes: globalState.SkipTimes,
+		ForkId: globalState.ForkId,
+		RootState: globalState.RootState,
 	}
 }
 

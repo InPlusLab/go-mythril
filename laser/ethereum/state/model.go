@@ -5,9 +5,12 @@ import (
 )
 
 var rLimit int
-
+var timeout int
 func SetGetModelRLimit(value int) {
 	rLimit = value
+}
+func SetTimeout(value int) {
+	timeout = value
 }
 
 // TODO: implementation of LRU cache

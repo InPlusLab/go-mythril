@@ -138,6 +138,11 @@ func (tx *MessageCallTransaction) InitialGlobalStateFromEnvironment(worldState *
 	senderV := globalState.WorldState.Balances.GetItem(sender)
 	globalState.WorldState.Balances.SetItem(receiver, receiverV.BvAdd(value).Simplify())
 	globalState.WorldState.Balances.SetItem(sender, senderV.BvSub(value).Simplify())
+
+	// setRootState
+	//rootState := globalState.Copy()
+	//globalState.RootState = rootState
+
 	return globalState
 }
 
@@ -268,6 +273,9 @@ func (tx *ContractCreationTransaction) InitialGlobalStateFromEnvironment(worldSt
 	senderV := globalState.WorldState.Balances.GetItem(sender)
 	globalState.WorldState.Balances.SetItem(receiver, receiverV.BvAdd(value).Simplify())
 	globalState.WorldState.Balances.SetItem(sender, senderV.BvSub(value).Simplify())
+	// setRootState
+	//rootState := globalState.Copy()
+	//globalState.RootState = rootState
 
 	return globalState
 }
