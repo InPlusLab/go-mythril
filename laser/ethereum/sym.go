@@ -14,6 +14,7 @@ import (
 	"go-mythril/utils"
 	"reflect"
 	"strconv"
+	"time"
 )
 
 
@@ -147,7 +148,7 @@ func (m *Manager) Pop() *state.GlobalState {
 
 func (m *Manager) SignalLoop() {
 	fmt.Println("SignalLoop Start")
-	//start := time.Now()
+	start := time.Now()
 	for {
 		// fmt.Println("wait signal")
 		select {
@@ -159,18 +160,18 @@ func (m *Manager) SignalLoop() {
 
 			m.Duration += signal.Time
 
-			//if signal.Id == 0 {
-			//	duration := time.Since(start)
-			//	fmt.Println("miaomi:", duration.Seconds(), m.TotalStates-m.FinishedStates-len(m.WorkList), m.TotalStates, signal.Time)
-			//}
 
-			if signal.ForkFlag {
-				m.FinalStates += int(signal.Time)
-				//fmt.Println(signal.Id, "relayStates++", m.FinalStates)
+			//if signal.ForkFlag {
+			//	m.FinalStates += int(signal.Time)
+			//	//fmt.Println(signal.Id, "relayStates++", m.FinalStates)
+			//}
+			if !signal.ForkFlag && signal.Id != -1 {
+				m.FinalStates += 1
 			}
-			//if !signal.ForkFlag && signal.Id != -1 {
-			//	m.FinalStates += 1
-			//	fmt.Println(signal.Id, "relayStates++", m.FinalStates)
+
+			//if signal.Id == 0 {
+			duration := time.Since(start)
+			fmt.Println("miaomi:", duration.Seconds(), m.FinalStates)
 			//}
 
 			if signal.NewStates == 0 && m.TotalStates == m.FinishedStates {
@@ -782,7 +783,7 @@ EXEC:
 				Id:        id,
 				NewStates: 1,
 				Time:      0,
-				ForkFlag: false,
+				ForkFlag: true,
 			}
 			goto EXECFor
 		}
@@ -790,7 +791,7 @@ EXEC:
 		for _, s := range newStates {
 			s.NeedIsPossible = false
 		}
-
+		relayFlag := jumpiCount < len(forkId)
 		if len(newStates) == 1 {
 			globalState = newStates[0]
 
@@ -798,7 +799,7 @@ EXEC:
 				Id:        id,
 				NewStates: len(newStates),
 				Time:      0,
-				ForkFlag: false,
+				ForkFlag: relayFlag,
 			}
 
 			goto EXECFor
@@ -820,7 +821,7 @@ EXEC:
 							Id:        id,
 							NewStates: len(newStates),
 							Time:      int64(relayCount),
-							ForkFlag: true,
+							ForkFlag: false,
 						}
 						if len(newStates) == 1 {
 							evm.Manager.WorkList <- newStates[0]
@@ -838,7 +839,7 @@ EXEC:
 				Id:        id,
 				NewStates: len(newStates),
 				Time:      int64(relayCount),
-				ForkFlag: true,
+				ForkFlag: false,
 			}
 
 			evm.LastOpCodeList[id] = opcode

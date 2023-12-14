@@ -14,8 +14,8 @@ import (
 )
 func main() {
 
-	ethereum.SetMaxRLimitCount(4000000)
-	state.SetGetModelRLimit(2000000)
+	ethereum.SetMaxRLimitCount(2000000)
+	state.SetGetModelRLimit(1000000)
 	//state.SetTimeout(1000)
 	ethereum.SetMaxSkipTimes(0)
 
