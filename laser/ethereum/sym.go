@@ -213,7 +213,7 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		Loader:      moduleLoader,
 		Manager:     NewManager(goFuncCount),
 	}
-	evm.registerInstrHooks()
+	// evm.registerInstrHooks()
 	for i := 0; i < goFuncCount; i++ {
 		go evm.Run(i, cfg)
 	}
