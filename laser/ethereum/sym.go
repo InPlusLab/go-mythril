@@ -145,7 +145,7 @@ func (m *Manager) Pop() *state.GlobalState {
 
 func (m *Manager) SignalLoop() {
 	fmt.Println("SignalLoop Start")
-	//start := time.Now()
+	start := time.Now()
 	for {
 		// fmt.Println("wait signal")
 		select {
@@ -158,8 +158,8 @@ func (m *Manager) SignalLoop() {
 			m.Duration += signal.Time
 
 			//if signal.Id == 0 {
-			//	duration := time.Since(start)
-			//	fmt.Println("miaomi:", duration.Seconds(), m.TotalStates-m.FinishedStates-len(m.WorkList), m.TotalStates, signal.Time)
+				duration := time.Since(start)
+				fmt.Println("miaomi:", duration.Seconds(), m.FinishedStates)
 			//}
 			if signal.NewStates == 0 && m.TotalStates == m.FinishedStates {
 				goto BREAK
@@ -213,7 +213,7 @@ func NewLaserEVM(ExecutionTimeout int, CreateTimeout int, TransactionCount int, 
 		Loader:      moduleLoader,
 		Manager:     NewManager(goFuncCount),
 	}
-	// evm.registerInstrHooks()
+	//evm.registerInstrHooks()
 	for i := 0; i < goFuncCount; i++ {
 		go evm.Run(i, cfg)
 	}
