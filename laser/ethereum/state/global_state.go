@@ -18,6 +18,8 @@ type GlobalState struct {
 	RLimitCount    int
 	NeedIsPossible bool
 	SkipTimes      int
+	// cloud9
+	ForkId string
 }
 
 func NewGlobalState(worldState *WorldState, env *Environment, ctx *z3.Context, txStack []BaseTransaction) *GlobalState {
@@ -33,6 +35,7 @@ func NewGlobalState(worldState *WorldState, env *Environment, ctx *z3.Context, t
 		RLimitCount:    0,
 		NeedIsPossible: false,
 		SkipTimes:      0,
+		ForkId: "?",
 	}
 }
 
@@ -63,6 +66,7 @@ func (globalState *GlobalState) Copy() *GlobalState {
 		RLimitCount:    globalState.RLimitCount,
 		NeedIsPossible: globalState.NeedIsPossible,
 		SkipTimes:      globalState.SkipTimes,
+		ForkId: globalState.ForkId,
 	}
 }
 
@@ -112,6 +116,10 @@ func (globalState *GlobalState) TranslateR(ctx *z3.Context) *GlobalState {
 		Z3ctx:          ctx,
 		LastReturnData: globalState.LastReturnData,
 		Annotations:    newAnnotations,
+		RLimitCount: globalState.RLimitCount,
+		NeedIsPossible: globalState.NeedIsPossible,
+		SkipTimes: globalState.SkipTimes,
+		ForkId: globalState.ForkId,
 	}
 }
 

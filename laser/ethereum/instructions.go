@@ -120,6 +120,7 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	}
 
 	// globalState.Mstate.Stack.PrintStack()
+	//fmt.Println("IN ins:", globalState.ForkId, globalState.GetCurrentInstruction().OpCode.Name, globalState.Mstate.Pc)
 
 	instr.ExePostHooks(globalState)
 
@@ -1045,7 +1046,7 @@ func (instr *Instruction) sha3_(globalState *state.GlobalState) []*state.GlobalS
 	}
 
 	result, cons := function_managers.NewKeccakFunctionManager(globalState.Z3ctx).CreateKeccak(data.Translate(globalState.Z3ctx))
-	//result := globalState.Z3ctx.NewBitvecVal(1,256)
+	//result := globalState.Z3ctx.NewBitvec("sha3",256)
 	//cons := globalState.Z3ctx.NewBitvecVal(1, 256).Eq(globalState.Z3ctx.NewBitvecVal(1, 256)).Simplify()
 	mstate.Stack.Append(result)
 	globalState.WorldState.Constraints.Add(cons)
@@ -1655,6 +1656,18 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 			fmt.Println("Pruned unreachable states-positive")
 		}
 	}
+
+	// set 0-1
+	if len(ret) == 2 {
+		if globalState.ForkId == "?" {
+			ret[0].ForkId = "0"
+			ret[1].ForkId = "1"
+		}else {
+			ret[0].ForkId += "0"
+			ret[1].ForkId += "1"
+		}
+	}
+
 	return ret
 }
 

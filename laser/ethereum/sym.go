@@ -145,7 +145,7 @@ func (m *Manager) Pop() *state.GlobalState {
 
 func (m *Manager) SignalLoop() {
 	fmt.Println("SignalLoop Start")
-	start := time.Now()
+	//start := time.Now()
 	for {
 		// fmt.Println("wait signal")
 		select {
@@ -157,10 +157,10 @@ func (m *Manager) SignalLoop() {
 
 			m.Duration += signal.Time
 
-			if signal.Id == 0 {
-				duration := time.Since(start)
-				fmt.Println("miaomi:", duration.Seconds(), m.TotalStates-m.FinishedStates-len(m.WorkList), m.TotalStates, signal.Time)
-			}
+			//if signal.Id == 0 {
+			//	duration := time.Since(start)
+			//	fmt.Println("miaomi:", duration.Seconds(), m.TotalStates-m.FinishedStates-len(m.WorkList), m.TotalStates, signal.Time)
+			//}
 			if signal.NewStates == 0 && m.TotalStates == m.FinishedStates {
 				goto BREAK
 			}
@@ -477,6 +477,7 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 		// fmt.Println("Run Wait", id)
 		// evm.Manager.LogInfo()
 		globalState := evm.Manager.Pop()
+		//fmt.Println("IN ins:", globalState.ForkId, globalState.GetCurrentInstruction().OpCode.Name)
 		// TODO canSkip here?
 		evm.Manager.ReqCh <- id
 		canSkip := <-evm.Manager.RespChs[id]
@@ -484,12 +485,13 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 		if globalState.NeedIsPossible {
 			if !canSkip || globalState.SkipTimes >= MaxSkipTimes {
 				sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
+				//sat := globalState.WorldState.Constraints.IsPossible()
 				globalState.SkipTimes = 0
 				// fmt.Println("skip failed", canSkip, globalState.SkipTimes, MaxSkipTimes)
 				if sat {
 					globalState.RLimitCount += rlimit
+					//fmt.Println("sat")
 				} else {
-					// fmt.Println("send signal", id)
 					evm.Manager.SignalCh <- Signal{
 						Id:        id,
 						NewStates: 0,
@@ -517,7 +519,6 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 		//evm.Trace = append(evm.Trace, curInstr.Address)
 		annotation.Add(curInstr.Address)
 
-		lastInstr := globalState.Environment.Code.InstructionList[globalState.Mstate.LastPc]
 		if curInstr.OpCode.Name == "JUMPDEST" {
 			// fmt.Println("InJumpdest-LastPc:", globalState.Mstate.LastPc)
 
@@ -526,7 +527,6 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 				if "*state.ContractCreationTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() && count < 8 {
 					goto EXEC
 				} else if count > evm.LoopsStrategy.Bound {
-					fmt.Println("hahah", lastInstr.OpCode.Name, lastInstr.Address)
 					fmt.Println("Loop bound reached, skipping state", count, evm.LoopsStrategy.Bound)
 					modules.CheckPotentialIssues(globalState)
 					fmt.Println("LenOpenStates:", evm.OpenStatesSync.Length())
@@ -537,7 +537,6 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 					//evm.CtxList[id] = nil
 					evm.CtxList.SetItem(id, nil)
 
-					fmt.Println("send signal", id)
 					evm.Manager.SignalCh <- Signal{
 						Id:        id,
 						NewStates: 0,
@@ -566,7 +565,7 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 				newStates = make([]*state.GlobalState, 0)
 			}
 			for _, s := range newStates {
-				s.NeedIsPossible = true
+				s.NeedIsPossible = false
 			}
 		} else {
 			for _, s := range newStates {
@@ -847,7 +846,7 @@ func OpenStateRelay(openState *state.WorldState, evm *LaserEVM, runtimeCode stri
 	constraint := tx.GetCaller().Eq(ACTORS.GetCreator()).Or(tx.GetCaller().Eq(ACTORS.GetAttacker()), tx.GetCaller().Eq(ACTORS.GetSomeGuy()))
 	globalState.WorldState.Constraints.Add(constraint)
 	globalState.WorldState.TransactionSequence = append(globalState.WorldState.TransactionSequence, tx)
-	globalState.NeedIsPossible = true
+	globalState.NeedIsPossible = false
 	return globalState
 }
 
