@@ -66,6 +66,13 @@ func (globalState *GlobalState) Copy() *GlobalState {
 
 	newMs := globalState.Mstate.DeepCopy()
 
+	var newRs *GlobalState
+	if globalState.RootState == nil {
+		newRs = nil
+	}else{
+		newRs = globalState.RootState.CopyForRoot()
+	}
+
 	return &GlobalState{
 		WorldState:     newWs,
 		Environment:    newEnv,
@@ -78,7 +85,40 @@ func (globalState *GlobalState) Copy() *GlobalState {
 		NeedIsPossible: globalState.NeedIsPossible,
 		SkipTimes:      globalState.SkipTimes,
 		ForkId: globalState.ForkId,
-		RootState: globalState.RootState,
+		RootState: newRs,
+	}
+}
+
+func (globalState *GlobalState) CopyForRoot() *GlobalState {
+
+	if globalState == nil {
+		fmt.Println("copy nil!")
+		return nil
+	}
+
+	newAnnotations := make([]StateAnnotation, 0)
+	for _, anno := range globalState.Annotations {
+		newAnnotations = append(newAnnotations, anno.Copy())
+	}
+	newWs := globalState.WorldState.Copy()
+	newEnv := globalState.Environment.Copy()
+	newEnv.ActiveAccount = newWs.AccountsExistOrLoad(newEnv.ActiveAccount.Address)
+
+	newMs := globalState.Mstate.DeepCopy()
+
+	return &GlobalState{
+		WorldState:     newWs,
+		Environment:    newEnv,
+		Mstate:         newMs,
+		TxStack:        globalState.TxStack,
+		Z3ctx:          globalState.Z3ctx,
+		LastReturnData: globalState.LastReturnData,
+		Annotations:    newAnnotations,
+		RLimitCount:    globalState.RLimitCount,
+		NeedIsPossible: globalState.NeedIsPossible,
+		SkipTimes:      globalState.SkipTimes,
+		ForkId: globalState.ForkId,
+		RootState: nil,
 	}
 }
 
@@ -90,7 +130,6 @@ func (globalState *GlobalState) Translate(ctx *z3.Context) {
 	if globalState.Z3ctx.GetRaw() == ctx.GetRaw() {
 		return
 	}
-	// fmt.Println("before changeStateContext:", globalState.GetCurrentInstruction().OpCode.Name, globalState, globalState.LastReturnData)
 
 	globalState.Z3ctx = ctx
 	// machineState stack & memory
@@ -110,10 +149,14 @@ func (globalState *GlobalState) Translate(ctx *z3.Context) {
 	}
 	globalState.Annotations = newAnnotations
 
-	//globalState.RootState.Translate(ctx)
+	globalState.RootState = globalState.RootState.TranslateR(ctx)
 }
 
 func (globalState *GlobalState) TranslateR(ctx *z3.Context) *GlobalState {
+	if globalState == nil{
+		return nil
+	}
+
 	newAnnotations := make([]StateAnnotation, 0)
 	for _, anno := range globalState.Annotations {
 		newAnnotations = append(newAnnotations, anno.Translate(ctx))
@@ -122,6 +165,7 @@ func (globalState *GlobalState) TranslateR(ctx *z3.Context) *GlobalState {
 	newEnv := globalState.Environment.Translate(ctx)
 	newEnv.ActiveAccount = newWs.AccountsExistOrLoad(newEnv.ActiveAccount.Address)
 	newMs := globalState.Mstate.Translate(ctx)
+	newRs := globalState.RootState.TranslateR(ctx)
 
 	return &GlobalState{
 		WorldState:     newWs,
@@ -135,7 +179,7 @@ func (globalState *GlobalState) TranslateR(ctx *z3.Context) *GlobalState {
 		NeedIsPossible: globalState.NeedIsPossible,
 		SkipTimes: globalState.SkipTimes,
 		ForkId: globalState.ForkId,
-		RootState: globalState.RootState,
+		RootState: newRs,
 	}
 }
 

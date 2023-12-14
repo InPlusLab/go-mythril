@@ -14,7 +14,6 @@ import (
 	"go-mythril/utils"
 	"reflect"
 	"strconv"
-	"time"
 )
 
 
@@ -167,7 +166,7 @@ func (m *Manager) SignalLoop() {
 
 			if signal.ForkFlag {
 				m.FinalStates += int(signal.Time)
-				fmt.Println(signal.Id, "relayStates++", m.FinalStates)
+				//fmt.Println(signal.Id, "relayStates++", m.FinalStates)
 			}
 			//if !signal.ForkFlag && signal.Id != -1 {
 			//	m.FinalStates += 1
@@ -486,28 +485,12 @@ func (evm *LaserEVM) inCtxList(globalState *state.GlobalState) bool {
 
 func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 	for {
-		jumpiCount := 0
 		globalState := evm.Manager.Pop()
 
-		fmt.Println("====pop from channel======", globalState.RootState == nil)
-		//
 		if globalState.ForkId != "?" {
-			fmt.Println(id, "#here")
-			fmt.Println(id, "here3", globalState.RootState == nil)
-			rootState := globalState.RootState.Copy()
-			rootState2 := rootState.Copy()
-			rootState.RootState = rootState2
-			fmt.Println(id, "here2", rootState == nil)
-			instrs := rootState.Environment.Code.InstructionList
-			opcode := instrs[rootState.Mstate.Pc].OpCode.Name
-			fmt.Println(id, "here4", opcode, rootState.Mstate.Pc)
-			fmt.Println(id, "here5", globalState.ForkId)
-			newCtx := z3.NewContext(cfg)
-			rootState.Translate(newCtx)
-			evm.RunWhenFork(id, globalState.ForkId, rootState ,cfg)
+			evm.RunWhenFork(id, globalState.ForkId, globalState.RootState, cfg)
 		} else {
 		EXECFor:
-			fmt.Println(id, "EXECFor")
 			// TODO canSkip here?
 			evm.Manager.ReqCh <- id
 			canSkip := <-evm.Manager.RespChs[id]
@@ -515,23 +498,19 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 			if globalState.NeedIsPossible {
 				if !canSkip || globalState.SkipTimes >= MaxSkipTimes {
 					sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
-					//sat := globalState.WorldState.Constraints.IsPossible()
 					globalState.SkipTimes = 0
-					// fmt.Println("skip failed", canSkip, globalState.SkipTimes, MaxSkipTimes)
 					if sat {
 						globalState.RLimitCount += rlimit
-						//fmt.Println("sat")
 					} else {
-						// fmt.Println("send signal", id)
 						evm.Manager.SignalCh <- Signal{
 							Id:        id,
 							NewStates: 0,
 						}
+						//fmt.Println(id, "throw state1", globalState.ForkId, globalState.GetCurrentInstruction().OpCode.Name)
 						continue
 					}
 				} else {
 					// skip success
-					// fmt.Println("skip success")
 					globalState.SkipTimes += 1
 				}
 			}
@@ -548,16 +527,12 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 			//evm.Trace = append(evm.Trace, curInstr.Address)
 			annotation.Add(curInstr.Address)
 
-			lastInstr := globalState.Environment.Code.InstructionList[globalState.Mstate.LastPc]
 			if curInstr.OpCode.Name == "JUMPDEST" {
-				// fmt.Println("InJumpdest-LastPc:", globalState.Mstate.LastPc)
-
 				if globalState.Mstate.LastPc == 0 {
 					count := evm.LoopsStrategy.GetLoopCount(annotation.GetTrace())
 					if "*state.ContractCreationTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() && count < 8 {
 						goto EXEC
 					} else if count > evm.LoopsStrategy.Bound {
-						fmt.Println("hahah", lastInstr.OpCode.Name, lastInstr.Address)
 						fmt.Println("Loop bound reached, skipping state", count, evm.LoopsStrategy.Bound)
 						modules.CheckPotentialIssues(globalState)
 						fmt.Println("LenOpenStates:", evm.OpenStatesSync.Length())
@@ -567,12 +542,11 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 						// decouple
 						//evm.CtxList[id] = nil
 						evm.CtxList.SetItem(id, nil)
-
-						fmt.Println("send signal", id)
 						evm.Manager.SignalCh <- Signal{
 							Id:        id,
 							NewStates: 0,
 						}
+						//fmt.Println(id, "throw state2", globalState.ForkId, globalState.GetCurrentInstruction().OpCode.Name)
 						continue
 					}
 				} else {
@@ -585,15 +559,12 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 		EXEC:
 			newStates, opcode := evm.ExecuteState(globalState)
 
-			fmt.Println(id,  opcode)
+			//fmt.Println(id,  opcode)
 
-			// Decouple
-			// TODO canSkip here?
-			// canskip
-			//evm.Manager.ReqCh <- id
-			//canSkip := <-evm.Manager.RespChs[id]
+			// setNeedIsPossible
 			if len(newStates) == 2 {
 				if globalState.RLimitCount > MaxRLimitCount {
+					//fmt.Println("run out of maxRlimit")
 					newStates = make([]*state.GlobalState, 0)
 				}
 				for _, s := range newStates {
@@ -604,35 +575,19 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 					s.NeedIsPossible = false
 				}
 			}
-
-			start := time.Now()
-
+			// translate when jumpi
 			if len(newStates) == 2 {
 				ctx := z3.NewContext(cfg)
 				newStates[1].Translate(ctx)
 				ctx0 := z3.NewContext(cfg)
 				newStates[0].Translate(ctx0)
 
-				if !evm.inCtxList(globalState) {
-					globalState.Z3ctx.Close()
-				}
-				// set forkId
-				jumpiCount++
-				//if globalState.ForkId == "?" {
-				//	newStates[0].ForkId = "0"
-				//	newStates[1].ForkId = "1"
-				//}else {
-				//	newStates[0].ForkId += "0"
-				//	newStates[1].ForkId += "1"
+				//if !evm.inCtxList(globalState) {
+				//	globalState.Z3ctx.Close()
 				//}
-				fmt.Println("jumpi:", jumpiCount, newStates[0].ForkId, newStates[1].ForkId)
 			}
-
-			var duration int64
-			duration = time.Since(start).Milliseconds()
-
-			fmt.Println(id, "done", opcode)
-			fmt.Println("===========================================================================")
+			//fmt.Println(id, "done", opcode)
+			//fmt.Println("===========================================================================")
 
 			endOpcodeList := []string{"STOP", "RETURN", "REVERT", "SELFDESTRUCT"}
 			if utils.In(opcode, endOpcodeList) {
@@ -640,25 +595,25 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 				evm.FinalState = globalState
 				if "*state.MessageCallTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() {
 					if opcode != "REVERT" {
-						// evm.OpenStatesSync.Append(globalState.WorldState)
 						relayGlobalState := OpenStateRelay(globalState.WorldState, evm, evm.RuntimeCode, cfg)
+						// put relayState in channel
 						if relayGlobalState != nil {
+							ctx := z3.NewContext(cfg)
+							relayGlobalState.Translate(ctx)
 							newStates = append(newStates, relayGlobalState)
 						}
 						modules.CheckPotentialIssues(globalState)
 						// for OpenStateRelay!!!
+						if len(newStates) == 1 {
+							evm.Manager.WorkList <- newStates[0]
+						}
 						evm.Manager.SignalCh <- Signal{
 							Id:        id,
 							NewStates: len(newStates),
-							Time:      duration,
-						}
-						if len(newStates) == 1 {
-							evm.Manager.WorkList <- newStates[0]
 						}
 						continue
 					}
 				}
-
 				// decouple
 				//evm.CtxList[id] = nil
 				evm.CtxList.SetItem(id, nil)
@@ -668,43 +623,37 @@ func (evm *LaserEVM) Run(id int, cfg *z3.Config) {
 			evm.LastAfterExecList[id] = len(newStates)
 
 			if len(newStates) == 2 {
-				fmt.Println("#1")
 				evm.Manager.WorkList <- newStates[1]
-				fmt.Println("#2")
 				globalState = newStates[0]
 			}
-
 			if len(newStates) == 1 {
 				globalState = newStates[0]
 			}
-
 			evm.Manager.SignalCh <- Signal{
 				Id:        id,
 				NewStates: len(newStates),
-				Time:      duration,
 			}
-
 			if len(newStates) != 0 {
-				fmt.Println("#4")
 				goto EXECFor
 			}
-			fmt.Println(id, "#5")
 		}
-		}
+	}
 
 	fmt.Println("Run Stop", id)
 }
 
-func (evm *LaserEVM) RunWhenFork(id int, forkId string, globalState *state.GlobalState, cfg *z3.Config) {
+func (evm *LaserEVM) RunWhenFork(id int, forkId string, rootState *state.GlobalState, cfg *z3.Config) {
 	jumpiCount := 0
 	relayCount := 0
-	//globalState.RootState = globalState
+	// when first come in, globalState.RootState == nil, and it will pass through the path!
+	globalState := rootState.Copy()
+	gRootState := rootState.CopyForRoot()
+	globalState.RootState = gRootState
+
 EXECFor:
 	// TODO canSkip here?
 	evm.Manager.ReqCh <- id
 	canSkip := <-evm.Manager.RespChs[id]
-
-	fmt.Println(id, "RunWhenFork", "EXECFor", globalState.RootState == nil)
 
 	//newCtx := z3.NewContext(cfg)
 	//globalState.Translate(newCtx)
@@ -712,23 +661,19 @@ EXECFor:
 	if globalState.NeedIsPossible {
 		if !canSkip || globalState.SkipTimes >= MaxSkipTimes {
 			sat, rlimit := globalState.WorldState.Constraints.IsPossibleRlimit()
-			//sat := globalState.WorldState.Constraints.IsPossible()
 			globalState.SkipTimes = 0
-			// fmt.Println("skip failed", canSkip, globalState.SkipTimes, MaxSkipTimes)
 			if sat {
 				globalState.RLimitCount += rlimit
-				//fmt.Println("sat")
 			} else {
-				// fmt.Println("send signal", id)
 				evm.Manager.SignalCh <- Signal{
 					Id:        id,
 					NewStates: 0,
 				}
+				//fmt.Println(id, "throw state1", globalState.ForkId, globalState.GetCurrentInstruction().OpCode.Name, "inRunWhenFork")
 				return
 			}
 		} else {
 			// skip success
-			// fmt.Println("skip success")
 			globalState.SkipTimes += 1
 		}
 	}
@@ -745,16 +690,12 @@ EXECFor:
 	//evm.Trace = append(evm.Trace, curInstr.Address)
 	annotation.Add(curInstr.Address)
 
-	lastInstr := globalState.Environment.Code.InstructionList[globalState.Mstate.LastPc]
 	if curInstr.OpCode.Name == "JUMPDEST" {
-		// fmt.Println("InJumpdest-LastPc:", globalState.Mstate.LastPc)
-
 		if globalState.Mstate.LastPc == 0 {
 			count := evm.LoopsStrategy.GetLoopCount(annotation.GetTrace())
 			if "*state.ContractCreationTransaction" == reflect.TypeOf(globalState.CurrentTransaction()).String() && count < 8 {
 				goto EXEC
 			} else if count > evm.LoopsStrategy.Bound {
-				fmt.Println("hahah", lastInstr.OpCode.Name, lastInstr.Address)
 				fmt.Println("Loop bound reached, skipping state", count, evm.LoopsStrategy.Bound)
 				modules.CheckPotentialIssues(globalState)
 				fmt.Println("LenOpenStates:", evm.OpenStatesSync.Length())
@@ -764,12 +705,11 @@ EXECFor:
 				// decouple
 				//evm.CtxList[id] = nil
 				evm.CtxList.SetItem(id, nil)
-
-				fmt.Println("send signal", id)
 				evm.Manager.SignalCh <- Signal{
 					Id:        id,
 					NewStates: 0,
 				}
+				//fmt.Println(id, "throw state2", globalState.ForkId, globalState.GetCurrentInstruction().OpCode.Name, "inRunWhenFork")
 				return
 			}
 		} else {
@@ -780,12 +720,11 @@ EXECFor:
 	}
 
 EXEC:
-	fmt.Println("RunWhenFork, before")
 	newStates, opcode := evm.ExecuteState(globalState)
-	fmt.Println(id, opcode)
-	fmt.Println("-----RunWhenFork------")
-	fmt.Println(id, "done", opcode)
-	fmt.Println("===========================================================================")
+
+	//fmt.Println(id, opcode)
+	//fmt.Println(id, "done", opcode)
+	//fmt.Println("===========================================================================")
 
 	if jumpiCount < len(forkId) {
 		relayCount += 1
@@ -793,32 +732,30 @@ EXEC:
 
 	if len(newStates) == 2 {
 		if globalState.RLimitCount > MaxRLimitCount {
+			//fmt.Println("run out of maxRlimit inRunWhenFork")
 			newStates = make([]*state.GlobalState, 0)
+			evm.Manager.SignalCh <- Signal{
+				Id:        id,
+				NewStates: len(newStates),
+			}
+			return
 		}
 		for _, s := range newStates {
 			s.NeedIsPossible = false
 		}
 		// set forkId
 		jumpiCount++
-		//if globalState.ForkId == "?" {
-		//	newStates[0].ForkId = "0"
-		//	newStates[1].ForkId = "1"
-		//}else {
-		//	newStates[0].ForkId += "0"
-		//	newStates[1].ForkId += "1"
-		//}
-
 		/* choose one path */
 		if jumpiCount > len(forkId){
 			// when a new "jumpi" op comes
-			//ctx := z3.NewContext(cfg)
-			//newStates[1].Translate(ctx)
-			//ctx0 := z3.NewContext(cfg)
-			//newStates[0].Translate(ctx0)
+			ctx := z3.NewContext(cfg)
+			newStates[1].Translate(ctx)
+			ctx0 := z3.NewContext(cfg)
+			newStates[0].Translate(ctx0)
 
-			if !evm.inCtxList(globalState) {
-				globalState.Z3ctx.Close()
-			}
+			//if !evm.inCtxList(globalState) {
+			//	globalState.Z3ctx.Close()
+			//}
 
 			evm.Manager.WorkList <- newStates[1]
 			globalState = newStates[0]
@@ -853,8 +790,6 @@ EXEC:
 		for _, s := range newStates {
 			s.NeedIsPossible = false
 		}
-
-		//relayFlag := jumpiCount < len(forkId)
 
 		if len(newStates) == 1 {
 			globalState = newStates[0]
@@ -912,6 +847,7 @@ EXEC:
 		}
 	}
 }
+
 
 
 func ExecuteContractCreation(evm *LaserEVM, creationCode string, contractName string, ctx *z3.Context, multiple bool, cfg *z3.Config) *state.Account {
@@ -1071,12 +1007,9 @@ func OpenStateInit(openState *state.WorldState, evm *LaserEVM, runtimeCode strin
 	globalState.WorldState.Constraints.Add(constraint)
 	globalState.WorldState.TransactionSequence = append(globalState.WorldState.TransactionSequence, tx)
 
-	// setRoot
+	// setRootState
 	rootState := globalState.Copy()
 	globalState.RootState = rootState
-	instrs := rootState.Environment.Code.InstructionList
-	opcode := instrs[rootState.Mstate.Pc].OpCode.Name
-	fmt.Println("+++++OpenStateInit++++", opcode, rootState.Mstate.Pc)
 
 	evm.Manager.WorkList <- globalState
 	evm.Manager.SignalCh <- Signal{
@@ -1134,9 +1067,6 @@ func OpenStateRelay(openState *state.WorldState, evm *LaserEVM, runtimeCode stri
 	// setRoot
 	rootState := globalState.Copy()
 	globalState.RootState = rootState
-	instrs := rootState.Environment.Code.InstructionList
-	opcode := instrs[rootState.Mstate.Pc].OpCode.Name
-	fmt.Println("+++++OpenStateRelay++++", opcode, rootState.Mstate.Pc)
 
 	return globalState
 }
@@ -1230,9 +1160,6 @@ func setupGlobalStateForExecution(evm *LaserEVM, tx state.BaseTransaction) {
 	// setRoot
 	rootState := globalState.Copy()
 	globalState.RootState = rootState
-	instrs := rootState.Environment.Code.InstructionList
-	opcode := instrs[rootState.Mstate.Pc].OpCode.Name
-	fmt.Println("+++++setupGlobalStateForExecution++++", opcode, rootState.Mstate.Pc)
 
 	evm.Manager.WorkList <- globalState
 	evm.Manager.SignalCh <- Signal{

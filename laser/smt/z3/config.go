@@ -6,7 +6,7 @@ import (
 )
 
 // #include <stdlib.h>
-// #cgo LDFLAGS: -L/home/chenhuanze/z3/build -lz3
+// #cgo LDFLAGS: -L/home/zhangn279/z3/build -lz3
 // #include "goZ3Config.h"
 import "C"
 

@@ -117,20 +117,11 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 		if instr.Opcode != "JUMPI" && instr.Opcode != "JUMP" && instr.Opcode != "RETURNSUB" {
 			state.Mstate.Pc++
 		}
-		if globalState.Mstate.Pc == 530 && instr.Opcode == "JUMP" {
-			fmt.Println("afterJump:", state.GetCurrentInstruction().OpCode.Name, state.Mstate.Pc)
-		}
-		if state.GetCurrentInstruction().OpCode.Name == "JUMPI" && state.Mstate.Pc == 516 {
-			fmt.Println("produce516:", globalState.ForkId, globalState.GetCurrentInstruction().OpCode.Name, globalState.Mstate.Pc)
-		}
-	}
-
-	if len(result) == 2 {
-		fmt.Println("produce2:", instr.Opcode)
 	}
 
 	//globalState.Mstate.Stack.PrintStackOneLine()
-	fmt.Println("IN ins:", globalState.ForkId, globalState.GetCurrentInstruction().OpCode.Name, globalState.Mstate.Pc)
+	//fmt.Println("IN ins:", globalState.ForkId, globalState.GetCurrentInstruction().OpCode.Name, globalState.Mstate.Pc)
+
 	instr.ExePostHooks(globalState)
 
 	// for _, state := range result {
@@ -1055,7 +1046,7 @@ func (instr *Instruction) sha3_(globalState *state.GlobalState) []*state.GlobalS
 	}
 
 	result, cons := function_managers.NewKeccakFunctionManager(globalState.Z3ctx).CreateKeccak(data.Translate(globalState.Z3ctx))
-	//result := globalState.Z3ctx.NewBitvecVal(1,256)
+	//result := globalState.Z3ctx.NewBitvec("sha3",256)
 	//cons := globalState.Z3ctx.NewBitvecVal(1, 256).Eq(globalState.Z3ctx.NewBitvecVal(1, 256)).Simplify()
 	mstate.Stack.Append(result)
 	globalState.WorldState.Constraints.Add(cons)
@@ -1535,7 +1526,6 @@ func (instr *Instruction) jump_(globalState *state.GlobalState) []*state.GlobalS
 }
 
 func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.GlobalState {
-	fmt.Println("IN jumpi_", globalState.RootState == nil)
 
 	ret := make([]*state.GlobalState, 0)
 
@@ -1569,9 +1559,8 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 
 	// False case
 	if negatedCond {
-		fmt.Println("test negative nil")
+		//fmt.Println("test negative nil")
 		newState := globalState.Copy()
-		fmt.Println("newState", newState.RootState == nil)
 		newState.Mstate.MinGasUsed += minGas
 		newState.Mstate.MaxGasUsed += maxGas
 		// manually increment PC
@@ -1594,10 +1583,8 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 	instruction := disassembly.InstructionList[index]
 	if instruction.OpCode.Name == "JUMPDEST" {
 		if positiveCond {
-			fmt.Println("test positive nil")
-
+			//fmt.Println("test positive nil")
 			newState := globalState.Copy()
-			fmt.Println("newState", newState.RootState == nil)
 			newState.Mstate.MinGasUsed += minGas
 			newState.Mstate.MaxGasUsed += maxGas
 
@@ -1634,9 +1621,6 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 			fmt.Println("Pruned unreachable states-positive")
 		}
 	}
-	for i, state := range ret {
-		fmt.Println("state[",i, "]", state.RootState == nil)
-	}
 	// set 0-1
 	if len(ret) == 2 {
 		if globalState.ForkId == "?" {
@@ -1645,13 +1629,6 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 		}else {
 			ret[0].ForkId += "0"
 			ret[1].ForkId += "1"
-		}
-	}
-
-	if globalState.ForkId == "0000"{
-		fmt.Println(globalState.Mstate.Pc, "0000-jumpi")
-		for _, state := range ret {
-			fmt.Println(state.ForkId, state.Mstate.Pc)
 		}
 	}
 
