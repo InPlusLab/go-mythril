@@ -1,6 +1,6 @@
 # PSG: Faster Vulnerability Detection of Smart Contracts
 ## Introduction
-PSG is a symbolic execution tool for vulnerability detection of smart contracts based on a **P**arallel-friendly architecture. PSG uses **S**tate-complexity-oriented halting algorithm and **G**reedy state exploration algorithm to improve its performance.
+PSG is a symbolic execution tool for vulnerability detection of smart contracts based on a **P**arallel-friendly architecture, **S**tate-complexity-oriented halting algorithm, and **G**reedy state exploration algorithm.
 We implement most part of PSG in Golang.
 ## Running Guide on Linux
 Before running PSG, Golang and Z3 should be installed first.  
