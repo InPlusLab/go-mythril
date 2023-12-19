@@ -31,6 +31,11 @@ make -j8
 sudo make install
 ```
 ![image](./png/5_installZ3.png)
+
+### Download PSG
+Click and download the zip file of this repo as [``go-mythril-A8D1.zip``](go-mythril-A8D1.zip) .  
+Or see it in the left of [https://anonymous.4open.science/r/go-mythril-A8D1/](https://anonymous.4open.science/r/go-mythril-A8D1/README.md).
+
 ### Run PSG
 Before running PSG, some configuration information should be changed.
 ```bash
