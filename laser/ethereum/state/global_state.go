@@ -1,7 +1,6 @@
 package state
 
 import (
-	"fmt"
 	"go-mythril/disassembler"
 	"go-mythril/laser/smt/z3"
 	"reflect"
@@ -16,6 +15,11 @@ type GlobalState struct {
 	TxStack        []BaseTransaction
 	LastReturnData *map[int64]*z3.Bitvec
 	Annotations    []StateAnnotation
+	RLimitCount    int
+	NeedIsPossible bool
+	SkipTimes      int
+	// cloud9
+	ForkId string
 }
 
 func NewGlobalState(worldState *WorldState, env *Environment, ctx *z3.Context, txStack []BaseTransaction) *GlobalState {
@@ -28,6 +32,10 @@ func NewGlobalState(worldState *WorldState, env *Environment, ctx *z3.Context, t
 		TxStack:        txStack,
 		LastReturnData: nil,
 		Annotations:    make([]StateAnnotation, 0),
+		RLimitCount:    0,
+		NeedIsPossible: false,
+		SkipTimes:      0,
+		ForkId: "?",
 	}
 }
 
@@ -55,6 +63,10 @@ func (globalState *GlobalState) Copy() *GlobalState {
 		Z3ctx:          globalState.Z3ctx,
 		LastReturnData: globalState.LastReturnData,
 		Annotations:    newAnnotations,
+		RLimitCount:    globalState.RLimitCount,
+		NeedIsPossible: globalState.NeedIsPossible,
+		SkipTimes:      globalState.SkipTimes,
+		ForkId: globalState.ForkId,
 	}
 }
 
@@ -62,20 +74,20 @@ func (globalState *GlobalState) Translate(ctx *z3.Context) {
 	if globalState.Z3ctx.GetRaw() == ctx.GetRaw() {
 		return
 	}
-	fmt.Println("before changeStateContext:", globalState.GetCurrentInstruction().OpCode.Name, globalState, globalState.LastReturnData)
+	// fmt.Println("before changeStateContext:", globalState.GetCurrentInstruction().OpCode.Name, globalState, globalState.LastReturnData)
 
 	globalState.Z3ctx = ctx
 	// machineState stack & memory
-	fmt.Println("glTrans1")
+	// fmt.Println("glTrans1")
 	globalState.Mstate = globalState.Mstate.Translate(ctx)
 	// worldState constraints
-	fmt.Println("glTrans2")
+	// fmt.Println("glTrans2")
 	globalState.WorldState = globalState.WorldState.Translate(ctx)
 	// env
-	fmt.Println("glTrans3")
+	// fmt.Println("glTrans3")
 	globalState.Environment = globalState.Environment.Translate(ctx)
 	// annotations
-	fmt.Println("glTrans4")
+	// fmt.Println("glTrans4")
 	newAnnotations := make([]StateAnnotation, 0)
 	for _, anno := range globalState.Annotations {
 		newAnnotations = append(newAnnotations, anno.Translate(ctx))
@@ -104,6 +116,10 @@ func (globalState *GlobalState) TranslateR(ctx *z3.Context) *GlobalState {
 		Z3ctx:          ctx,
 		LastReturnData: globalState.LastReturnData,
 		Annotations:    newAnnotations,
+		RLimitCount: globalState.RLimitCount,
+		NeedIsPossible: globalState.NeedIsPossible,
+		SkipTimes: globalState.SkipTimes,
+		ForkId: globalState.ForkId,
 	}
 }
 

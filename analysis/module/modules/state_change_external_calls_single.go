@@ -148,9 +148,9 @@ func (dm *StateChangeAfterCallSingle) ResetModule() {
 	dm.Issues = utils.NewSyncSlice()
 }
 func (dm *StateChangeAfterCallSingle) Execute(target *state.GlobalState) []*analysis.Issue {
-	fmt.Println("Entering analysis module: ", dm.Name)
+	// fmt.Println("Entering analysis module: ", dm.Name)
 	result := dm._execute(target)
-	fmt.Println("Exiting analysis module:", dm.Name)
+	// fmt.Println("Exiting analysis module:", dm.Name)
 	return result
 }
 

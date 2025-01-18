@@ -56,7 +56,7 @@ func NewInstruction(opcode string, prehooks []moduleExecFunc, posthooks []module
 func (instr *Instruction) ExePreHooks(globalState *state.GlobalState) {
 	modules.IsPreHook = true
 	for _, hook := range instr.PreHooks {
-		fmt.Println(instr.Opcode, ": preHook execute!")
+		// fmt.Println(instr.Opcode, ": preHook execute!")
 		hook(globalState)
 	}
 }
@@ -64,7 +64,7 @@ func (instr *Instruction) ExePreHooks(globalState *state.GlobalState) {
 func (instr *Instruction) ExePostHooks(globalState *state.GlobalState) {
 	modules.IsPreHook = false
 	for _, hook := range instr.PostHooks {
-		fmt.Println(instr.Opcode, ": postHook execute!")
+		// fmt.Println(instr.Opcode, ": postHook execute!")
 		hook(globalState)
 	}
 }
@@ -105,35 +105,39 @@ func (instr *Instruction) Evaluate(globalState *state.GlobalState) []*state.Glob
 	//	fmt.Println("Cons:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name )
 	//	globalState.WorldState.Constraints.PrintOneLine()
 	//}
-
+	
 	instr.ExePreHooks(globalState)
 
 	result := instr.Mutator(globalState)
 
-	fmt.Println("PC:", globalState.Mstate.Pc)
-	fmt.Println("Address:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name)
+	// fmt.Println("PC:", globalState.Mstate.Pc)
+	// fmt.Println("Address:", globalState.GetCurrentInstruction().Address, globalState.GetCurrentInstruction().OpCode.Name)
 	// has the same function of StateTransition in instructions.go
 	for _, state := range result {
 		if instr.Opcode != "JUMPI" && instr.Opcode != "JUMP" && instr.Opcode != "RETURNSUB" {
 			state.Mstate.Pc++
 		}
 	}
+
+	// globalState.Mstate.Stack.PrintStack()
+	//fmt.Println("IN ins:", globalState.ForkId, globalState.GetCurrentInstruction().OpCode.Name, globalState.Mstate.Pc)
+
 	instr.ExePostHooks(globalState)
 
-	for _, state := range result {
-		// For debug
-		//fmt.Println("Print:", globalState.GetCurrentInstruction().OpCode.Name)
+	// for _, state := range result {
+	// For debug
+	//fmt.Println("Print:", globalState.GetCurrentInstruction().OpCode.Name)
 
-		//state.Mstate.Stack.PrintStack()
-		//for i, con := range state.WorldState.Constraints.ConstraintList {
-		//	if i==3{
-		//		fmt.Println("PrintCons:", con.BoolString())
-		//	}
-		//}
-		//state.Mstate.Memory.PrintMemoryOneLine()
-		//state.Mstate.Memory.PrintMemory()
-		fmt.Println("StackLen:", state.Mstate.Stack.Length())
-	}
+	
+	//for i, con := range state.WorldState.Constraints.ConstraintList {
+	//	if i==3{
+	//		fmt.Println("PrintCons:", con.BoolString())
+	//	}
+	//}
+	//state.Mstate.Memory.PrintMemoryOneLine()
+	//state.Mstate.Memory.PrintMemory()
+	// fmt.Println("StackLen:", state.Mstate.Stack.Length())
+	// }
 	//fmt.Println("------------------------------------------------------------")
 
 	return result
@@ -294,7 +298,7 @@ func (instr *Instruction) Mutator(globalState *state.GlobalState) []*state.Globa
 	} else if instr.Opcode == "SELFDESTRUCT" {
 		instr.selfdestruct_(globalState)
 		ret := make([]*state.GlobalState, 0)
-		ret = append(ret, globalState)
+		//ret = append(ret, globalState)
 		return ret
 	} else if instr.Opcode == "REVERT" {
 		instr.revert_(globalState)
@@ -807,8 +811,8 @@ func (instr *Instruction) _calldata_copy_helper(globalState *state.GlobalState,
 	mstate *state.MachineState, mstart *z3.Bitvec, dstart *z3.Bitvec, size *z3.Bitvec) []*state.GlobalState {
 
 	ret := make([]*state.GlobalState, 0)
-	env := globalState.Environment
-	ctx := globalState.Z3ctx
+	// env := globalState.Environment
+	// ctx := globalState.Z3ctx
 
 	if mstart.Symbolic() {
 		fmt.Println("Unsupported symbolic memory offset in CALLDATACOPY")
@@ -833,29 +837,32 @@ func (instr *Instruction) _calldata_copy_helper(globalState *state.GlobalState,
 
 	if sizeV > 0 {
 		fmt.Println("size>0", sizeV)
-		mstate.MemExtend(mstart, sizeV)
-		// TODO: TypeError check for memExtend()
+		// mstate.MemExtend(mstart, sizeV)
+		// // TODO: TypeError check for memExtend()
 
-		iData := dstart
-		newMemory := make([]*z3.Bitvec, 0)
-		for i := 0; i < sizeV; i++ {
-			value := env.Calldata.Load(iData)
-			newMemory = append(newMemory, value)
-			//idataValue, _ := strconv.Atoi(iData.Value())
-			//iData = ctx.NewBitvecVal(idataValue+1, iData.BvSize())
-			iData = iData.BvAdd(ctx.NewBitvecVal(1, iData.BvSize())).Simplify()
-		}
+		// iData := dstart
+		// newMemory := make([]*z3.Bitvec, 0)
+		// for i := 0; i < sizeV; i++ {
+		// 	value := env.Calldata.Load(iData)
+		// 	newMemory = append(newMemory, value)
+		// 	//idataValue, _ := strconv.Atoi(iData.Value())
+		// 	//iData = ctx.NewBitvecVal(idataValue+1, iData.BvSize())
+		// 	iData = iData.BvAdd(ctx.NewBitvecVal(1, iData.BvSize())).Simplify()
+		// }
 
-		fmt.Println("idata")
-		//mstartValue, _ := strconv.ParseInt(mstart.Value(), 10, 64)
-		//fmt.Println(mstartValue, "-mstartOffset ", len(newMemory), "-length")
+		// fmt.Println("idata")
+		// //mstartValue, _ := strconv.ParseInt(mstart.Value(), 10, 64)
+		// //fmt.Println(mstartValue, "-mstartOffset ", len(newMemory), "-length")
 
-		for j := 0; j < len(newMemory); j++ {
-			//mstate.Memory.SetItem(mstartValue+int64(j), newMemory[j])
-			offset := mstart.BvAdd(ctx.NewBitvecVal(j, 256)).Simplify()
-			mstate.Memory.SetItem(offset, newMemory[j])
-		}
+		// for j := 0; j < len(newMemory); j++ {
+		// 	//mstate.Memory.SetItem(mstartValue+int64(j), newMemory[j])
+		// 	offset := mstart.BvAdd(ctx.NewBitvecVal(j, 256)).Simplify()
+		// 	mstate.Memory.SetItem(offset, newMemory[j])
+		// }
 		// IndexError check
+
+		mstate.MemExtend(mstart, 1)
+		mstate.Memory.SetItem(mstart, globalState.NewBitvec("calldata_calldata_copy", 8))
 	}
 
 	ret = append(ret, globalState)
@@ -980,7 +987,7 @@ func (instr *Instruction) codesize_(globalState *state.GlobalState) []*state.Glo
 	default:
 		noOfBytes = len(disassembly.Bytecode) / 2
 	}
-	mstate.Stack.Append(noOfBytes)
+	mstate.Stack.Append(globalState.Z3ctx.NewBitvecVal(noOfBytes, 256))
 
 	ret = append(ret, globalState)
 	return ret
@@ -1039,7 +1046,7 @@ func (instr *Instruction) sha3_(globalState *state.GlobalState) []*state.GlobalS
 	}
 
 	result, cons := function_managers.NewKeccakFunctionManager(globalState.Z3ctx).CreateKeccak(data.Translate(globalState.Z3ctx))
-	//result := globalState.Z3ctx.NewBitvecVal(1,256)
+	//result := globalState.Z3ctx.NewBitvec("sha3",256)
 	//cons := globalState.Z3ctx.NewBitvecVal(1, 256).Eq(globalState.Z3ctx.NewBitvecVal(1, 256)).Simplify()
 	mstate.Stack.Append(result)
 	globalState.WorldState.Constraints.Add(cons)
@@ -1552,7 +1559,7 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 
 	// False case
 	if negatedCond {
-		fmt.Println("test negative nil")
+		// fmt.Println("test negative nil")
 		newState := globalState.Copy()
 		newState.Mstate.MinGasUsed += minGas
 		newState.Mstate.MaxGasUsed += maxGas
@@ -1573,7 +1580,7 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 		//	tmpCons.Add(c)
 		//}
 
-		fmt.Println("negativeState:", newState)
+		// fmt.Println("negativeState:", newState)
 		ret = append(ret, newState)
 		//if newState.WorldState.Constraints.IsPossible() {
 		//	//if tmpCons.IsPossible() {
@@ -1610,7 +1617,7 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 	instruction := disassembly.InstructionList[index]
 	if instruction.OpCode.Name == "JUMPDEST" {
 		if positiveCond {
-			fmt.Println("test positive nil")
+			// fmt.Println("test positive nil")
 
 			newState := globalState.Copy()
 			newState.Mstate.MinGasUsed += minGas
@@ -1625,7 +1632,7 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 			//returnData[0] = newState.Z3ctx.NewBitvecVal(1, 256)
 			//newState.LastReturnData = &returnData
 
-			fmt.Println("positiveState:", newState)
+			// fmt.Println("positiveState:", newState)
 
 			//if globalState.GetCurrentInstruction().Address == 1005 {
 			//	fmt.Println("Jumpi1005 positiveCONSTRAINT:", newState.WorldState.Constraints.IsPossible())
@@ -1649,6 +1656,18 @@ func (instr *Instruction) jumpi_(globalState *state.GlobalState) []*state.Global
 			fmt.Println("Pruned unreachable states-positive")
 		}
 	}
+
+	// set 0-1
+	if len(ret) == 2 {
+		if globalState.ForkId == "?" {
+			ret[0].ForkId = "0"
+			ret[1].ForkId = "1"
+		}else {
+			ret[0].ForkId += "0"
+			ret[1].ForkId += "1"
+		}
+	}
+
 	return ret
 }
 

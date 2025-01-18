@@ -182,11 +182,19 @@ func (b *Bitvec) Translate(c *Context) *Bitvec {
 	if b.rawCtx == c.raw {
 		return b
 	}
+
+	//sortAst := C.Z3_sort_to_ast(b.rawCtx, b.rawSort)
+	//newSortAst := C.Z3_translate(b.rawCtx, sortAst, c.raw)
+
+	size := b.BvSize()
+
 	return &Bitvec{
 		rawCtx: c.raw,
 		rawAST: C.Z3_translate(b.rawCtx, b.rawAST, c.raw),
 		// TODO: sort translate?
-		rawSort:     b.rawSort,
+		//rawSort:     b.rawSort,
+		rawSort: C.Z3_mk_bv_sort(c.raw, C.uint(size)),
+		//rawSort: C.Z3_get_sort(c.raw, newSortAst),
 		symbolic:    b.symbolic,
 		Annotations: b.Annotations.Copy(),
 	}

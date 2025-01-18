@@ -1,17 +1,18 @@
 package analysis
 
 type Issue struct {
-	Contract        string
-	FunctionName    string
-	Address         int
-	SWCID           string
-	Title           string
-	Bytecode        []byte
-	Severity        string
-	DescriptionHead string
-	DescriptionTail string
-	GasUsed         []int
-	SourceLocation  int
+	Contract            string
+	FunctionName        string
+	Address             int
+	StateAddress        int
+	SWCID               string
+	Title               string
+	Bytecode            []byte
+	Severity            string
+	DescriptionHead     string
+	DescriptionTail     string
+	GasUsed             []int
+	SourceLocation      int
 	TransactionSequence map[string]interface{}
 }
 

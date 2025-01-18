@@ -1,7 +1,6 @@
 package state
 
 import (
-	"fmt"
 	"go-mythril/disassembler"
 	"go-mythril/laser/smt/z3"
 )
@@ -13,6 +12,9 @@ type WorldState struct {
 	StartingBalances    *z3.Array
 	Constraints         *Constraints
 	TransactionSequence []BaseTransaction
+	TransactionIdInt    int
+	TransactionCount    int
+	ContractAddress     *z3.Bitvec
 }
 
 func NewWordState(ctx *z3.Context) *WorldState {
@@ -37,6 +39,8 @@ func NewWordState(ctx *z3.Context) *WorldState {
 		StartingBalances:    startingBalances.(*z3.Array),
 		Constraints:         NewConstraints(),
 		TransactionSequence: make([]BaseTransaction, 0),
+		ContractAddress:     ctx.NewBitvecVal(0, 256),
+		TransactionIdInt:    1,
 	}
 
 	//ws.PutAccount(attackerAcc)
@@ -58,6 +62,9 @@ func (ws *WorldState) Copy() *WorldState {
 		StartingBalances:    ws.StartingBalances.DeepCopy().(*z3.Array),
 		Constraints:         ws.Constraints.DeepCopy(),
 		TransactionSequence: txSeq,
+		TransactionIdInt:    ws.TransactionIdInt,
+		TransactionCount:    ws.TransactionCount,
+		ContractAddress:     ws.ContractAddress.Copy(),
 	}
 	for _, acc := range ws.Accounts {
 		resWs.PutAccount(acc.Copy())
@@ -72,7 +79,7 @@ func (ws *WorldState) AccountsExistOrLoad(addr *z3.Bitvec) *Account {
 		return acc
 	} else {
 		// TODO: find in dynamicLoader
-		fmt.Println("don't getAccount in ws!")
+		// fmt.Println("don't getAccount in ws!")
 		return NewAccount(addr, ws.Balances, false, disassembler.NewDisasembly(""), "")
 	}
 }
@@ -106,7 +113,7 @@ func (ws *WorldState) Translate(ctx *z3.Context) *WorldState {
 		newV := v.Translate(ctx)
 		newConstraints.Add(newV)
 	}
-	fmt.Println("afterWS constraints translate")
+	// fmt.Println("afterWS constraints translate")
 	newAccounts := make(map[string]*Account)
 	for i, v := range ws.Accounts {
 		newAccounts[i] = v.Translate(ctx)
@@ -117,6 +124,9 @@ func (ws *WorldState) Translate(ctx *z3.Context) *WorldState {
 		StartingBalances:    ws.StartingBalances.Translate(ctx).(*z3.Array),
 		Constraints:         newConstraints,
 		TransactionSequence: ws.TransactionSequence,
+		TransactionIdInt:    ws.TransactionIdInt,
+		TransactionCount:    ws.TransactionCount,
+		ContractAddress:     ws.ContractAddress.Translate(ctx),
 	}
 	//ws.Accounts = newAccounts
 	//ws.Balances = ws.Balances.Translate(ctx).(*z3.Array)
